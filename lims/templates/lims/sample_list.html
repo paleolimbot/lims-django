@@ -1,0 +1,75 @@
+{% extends "lims/base.html" %}
+
+{% block title %}Samples{% endblock %}
+
+{% block content_title %}Samples{% endblock %}
+
+{% block content_main %}
+
+    {% if sample_list %}
+
+        {% include "lims/sample_pages.html" %}
+
+        <table class="object-list">
+            <thead>
+                <tr>
+                    <th>Sample ID</th>
+                    <th>User</th>
+                    <th>Location</th>
+                    <th>Modified</th>
+                    <th>Collected</th>
+                    <th>Tags</th>
+                </tr>
+            </thead>
+        
+        {% for sample in sample_list %}
+            <tr>
+                <td>
+                    {% if sample.pk %}
+                      <a href="{% url 'lims:sample_detail' sample.id %}">{{ sample.slug }}</a>
+                    {% else %}
+                      {{ sample.slug }}
+                    {% endif %}
+                </td>
+                <td>{% if sample.user %}{{ sample.user }}{% endif %}</td>
+                <td>{{ sample.location }}</td>
+                <td>{{ sample.modified }}</td>
+                <td>{% if sample.collected %}{{ sample.collected }}{% endif %}</td>
+                <td>
+                    {% for tag in sample.sampletag_set.all %}
+                      {{ tag }} <br/>
+                    {% endfor %}
+                </td>
+            </tr>
+
+        {% endfor %}
+        </table>
+
+        {% include "lims/sample_pages.html" %}
+
+    {% else %}
+
+        <p>No samples are available.</p>
+
+    {% endif %}
+
+{% endblock %}
+
+
+{% block content_related %}
+
+    <div class="content-related-actions">
+        <h3>User Actions</h3>
+        <ul>
+            <li><a href="{% url 'lims:sample_add' %}">Add Samples</a></li>
+        </ul>
+    </div>
+
+    <div class="content-related-actions">
+        <h3>Admin Actions</h3>
+        <ul>
+            <li><a href="{% url 'admin:lims_sample_changelist' %}">Admin View</a></li>
+        </ul>
+    </div>
+
+{% endblock %}

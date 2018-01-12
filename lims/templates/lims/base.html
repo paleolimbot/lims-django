@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CWRS LIMS | {% block title %}{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/base.css' %}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div id="container">
+        <div id="header">
+            <div id="branding">
+                <h1 id="site-name"><a href="{% url 'lims:index' %}">CWRS LIMS</a></h1>
+            </div>
+            <div id="user-tools">
+                <p>User tool info here</p>
+            </div>
+        </div>
+        <div id="content", class="colMS">
+            <h1>{% block content_title %}{% endblock %}</h1>
+            <div id="content-main">
+                {% block content_main %}{% endblock %}
+            </div>
+            <div id="content-related">
+                {% block content_related %}{% endblock %}
+            </div>
+            <br class="clear"/>
+        </div>
+        <div id="footer">
+            {% block footer %}{% endblock %}
+        </div>
+    </div>
+</body>
+</html>
