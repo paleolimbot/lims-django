@@ -1,14 +1,12 @@
 
-{% if sample_list.has_other_pages %}
 <div id="pages">
     <p>
         {% if prev_link %}
         <a href="?{{ prev_link }}">Previous</a>
         {% endif %}
-        Showing samples {{ sample_list.start_index }} to {{ sample_list.end_index }} of {{ paginator.count }}
+        Showing {{ object_list.start_index }} to {{ object_list.end_index }} of {{ paginator.count }}
         {% if next_link %}
         <a href="?{{ next_link }}">Next</a>
         {% endif %}
     </p>
 </div>
-{% endif %}

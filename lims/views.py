@@ -4,7 +4,7 @@ from django.shortcuts import redirect
 from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
-from django.core.paginator import Paginator, EmptyPage
+from django.core.paginator import Paginator
 
 from . import models
 
@@ -42,15 +42,40 @@ class SampleDetailView(LimsLoginMixin, generic.DetailView):
 
 class SampleAddView(LimsLoginMixin, generic.CreateView):
     model = models.Sample
-    fields = ['name', 'collected', 'project', 'location']
-    success_url = reverse_lazy('pylims:sample_list')
+    fields = ['name', 'collected', 'location']
+    success_url = reverse_lazy('lims:sample_list')
 
     def form_valid(self, form):
-        # This method is called when valid form data has been POSTed.
-        # It should return an HttpResponse.
-        # set the created by user using the request
         form.instance.user = self.request.user
         return super(SampleAddView, self).form_valid(form)
+
+
+class LocationListView(LimsLoginMixin, generic.ListView):
+    template_name = 'lims/location_list.html'
+    context_object_name = 'location_list'
+    paginate_by = 100
+
+    def get_queryset(self):
+        return models.Location.objects.all()
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(LocationListView, self).get_context_data(*args, **kwargs)
+        return context
+
+
+class LocationDetailView(LimsLoginMixin, generic.DeleteView):
+    template_name = 'lims/location_detail.html'
+    model = models.Location
+
+
+class LocationAddView(LimsLoginMixin, generic.CreateView):
+    model = models.Location
+    fields = ['name', 'slug', 'parent', 'geometry']
+    success_url = reverse_lazy('lims:location_list')
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        return super(LocationAddView, self).form_valid(form)
 
 
 TAG_QUERY_KEY = re.compile(r"^tag_(.*)$")
@@ -81,8 +106,8 @@ def filter_sample_table(queryset, q):
     order_by = values passed to QuerySet.order_by()
 
 
-    :param queryset: The quereyset of samples to filter
-    :param request: The request with a GET attribute
+    :param queryset: The queryset of samples to filter
+    :param q The QueryDict (e.g. request.GET)
     :return: A dictionary with additional context variables for the sample_table.html template
     """
 

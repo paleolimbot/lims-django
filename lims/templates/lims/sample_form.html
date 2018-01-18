@@ -1,14 +1,16 @@
+
 {% extends "lims/base.html" %}
 
-{% block title %}{{ sample.slug }}{% endblock %}
+{% block title %}New Sample{% endblock %}
 
-{% block content_title %}Sample: {{ sample.slug }}{% endblock %}
+{% block content_title %}New Sample{% endblock %}
 
 {% block content_main %}
 
-    <pre>
-        {{ sample }}
-    </pre>
+    <form action="" method="post">{% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="Create" />
+    </form>
 
 {% endblock %}
 
@@ -23,8 +25,9 @@
     <div class="content-related-actions">
         <h3>Admin Actions</h3>
         <ul>
-            <li><a href="{% url 'admin:lims_sample_change' sample.pk %}">Admin View</a></li>
+            <li><a href="{% url 'admin:lims_sample_add' %}">Admin View</a></li>
         </ul>
     </div>
 
 {% endblock %}
+

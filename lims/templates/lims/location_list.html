@@ -6,37 +6,31 @@
 
 {% block content_main %}
 
-    {% if sample_list %}
+    {% if location_list %}
 
-        {% include "lims/pagination.html" with object_list=sample_list %}
+        {% include "lims/pagination.html" with object_list=location_list %}
 
         <table class="object-list">
             <thead>
                 <tr>
-                    <th>Sample ID</th>
+                    <th>Name</th>
                     <th>User</th>
-                    <th>Location</th>
                     <th>Modified</th>
-                    <th>Collected</th>
+                    <th>Location</th>
                     <th>Tags</th>
                 </tr>
             </thead>
         
-        {% for sample in sample_list %}
+        {% for location in location_list %}
             <tr>
                 <td>
-                    <a href="{% url 'lims:sample_detail' sample.pk %}">{{ sample.slug }}</a>
+                    <a href="{% url 'lims:location_detail' location.id %}">{{ location.name }}</a>
                 </td>
-                <td>{% if sample.user %}{{ sample.user }}{% endif %}</td>
+                <td>{% if location.user %}{{ location.user }}{% endif %}</td>
+                <td>{{ location.modified }}</td>
+                <td>{% if location.geometry %}{{ location.geometry }}{% endif %}</td>
                 <td>
-                    {% if sample.location %}
-                    <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
-                    {% endif %}
-                </td>
-                <td>{{ sample.modified }}</td>
-                <td>{% if sample.collected %}{{ sample.collected }}{% endif %}</td>
-                <td>
-                    {% for tag in sample.tags.all %}
+                    {% for tag in location.tags.all %}
                       {{ tag }} <br/>
                     {% endfor %}
                 </td>
