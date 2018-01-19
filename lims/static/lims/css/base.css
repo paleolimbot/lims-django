@@ -1,6 +1,6 @@
 
 /*
-    LIMS styles (adds to the admin app stylesheet)
+    LIMS styles (adds to the admin app base.css stylesheet)
 */
 
 div#header-nav-menu {
@@ -19,6 +19,50 @@ div#header-nav-menu ul, div#header-nav-menu li {
 div#header-nav-menu li {
     margin-right: 10px;
 }
+
+/* Search form styles above the viewlist */
+
+#viewlist #toolbar {
+	padding: 8px 10px;
+	margin-bottom: 15px;
+	border-top: 1px solid #eee;
+	border-bottom: 1px solid #eee;
+	background: #f8f8f8;
+	color: #666;
+}
+
+#viewlist #toolbar form #searchbar {
+	height: 19px;
+	border: 1px solid #ccc;
+	padding: 2px 5px;
+	margin: 0;
+	vertical-align: top;
+	font-size: 13px;
+}
+
+#viewlist #toolbar form #searchbar:focus {
+	border-color: #999;
+}
+
+#viewlist #toolbar form input {
+	border-radius: 4px;
+	font-size: 14px;
+	padding: 5px;
+	color: #333;
+}
+
+#viewlist #toolbar form input[type="submit"] {
+	border: 1px solid #ccc;
+	padding: 2px 10px;
+	margin: 0;
+	vertical-align: middle;
+	background: #fff;
+	box-shadow: 0 -15px 20px -10px rgba(0, 0, 0, 0.15) inset;
+	cursor: pointer;
+	color: #333;
+}
+
+/* Pagination style */
 
 .paginator {
 	font-size: 13px;

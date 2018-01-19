@@ -4,7 +4,7 @@ from django.shortcuts import redirect, render
 from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
-from django.core.paginator import Paginator
+from django.db.models import Q
 
 from . import models
 
@@ -26,7 +26,8 @@ class SampleListView(LimsLoginMixin, generic.ListView):
         return query_string_filter(
             models.Sample.objects.all(),
             self.request.GET,
-            use=("location__slug", "slug__contains")
+            use=(),
+            search=('name', 'slug')
         ).order_by("-modified")
 
 
@@ -54,8 +55,8 @@ class LocationListView(LimsLoginMixin, generic.ListView):
         return query_string_filter(
             models.Location.objects.all(),
             self.request.GET,
-            # use=("slug__contains", )
-            use=UseEverything()
+            use=(),
+            search=('name', 'slug')
         ).order_by("-modified")
 
 
@@ -77,7 +78,18 @@ class LocationAddView(LimsLoginMixin, generic.CreateView):
 TAG_QUERY_KEY = re.compile(r"^tag_(.*)$")
 
 
-def query_string_filter(queryset, q, use=()):
+def query_string_filter(queryset, q, use=(), search=()):
+
+    if 'q' in q and search:
+        query = q['q']
+        search_queries = [{field + "__contains": query} for field in search]
+        final_q = None
+        for search_query in search_queries:
+            if final_q is None:
+                final_q = Q(**search_query)
+            else:
+                final_q = Q(**search_query) | final_q
+        queryset = queryset.filter(final_q)
 
     for key in q:
         if key in use:

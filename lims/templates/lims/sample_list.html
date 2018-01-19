@@ -7,6 +7,14 @@
 {% block content_main %}
 
     <div id="viewlist">
+        <div id="toolbar">
+            <div>
+                <form id="object-list-search">
+                    <input id="searchbar" size="40" name="q" value="{{ view.request.GET.q }}" type="text"/>
+                    <input value="Search" type="Submit"/>
+                </form>
+            </div>
+        </div>
 
     {% if object_list %}
 
