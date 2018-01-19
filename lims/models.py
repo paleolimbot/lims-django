@@ -47,7 +47,7 @@ class Sample(models.Model):
     created = models.DateTimeField("created", auto_now_add=True)
     modified = models.DateTimeField("modified", auto_now=True)
 
-    collected = models.DateTimeField("collected", blank=True, null=True)
+    collected = models.DateTimeField("collected")
     location = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True)
 
     def get_absolute_url(self):

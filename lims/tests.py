@@ -1,8 +1,9 @@
 
 from random import randint
 from django.test import TestCase
+from django.utils import timezone
 
-from .models import *
+from .models import Sample, Location, SampleTag, LocationTag
 
 
 def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_tags=3, clear=True):
@@ -16,7 +17,6 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
             models=(Location, ),
             queryset=lambda model: model.objects.filter(slug__startswith="test-")
         )
-
 
     for loc_num in range(n_locations):
         loc = Location(
@@ -66,6 +66,7 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
             name="Test Sample %s" % (sample_num + 1),
             location=parent_loc
         )
+        sample.collected = timezone.now()
         sample.save()
 
         n_tags = randint(0, max_tags)
@@ -91,4 +92,3 @@ def clear_models(models=(Sample, Location), queryset=lambda model: model.objects
             return
 
     raise Exception("Could not delete all models")
-

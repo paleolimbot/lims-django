@@ -16,7 +16,7 @@ class LimsAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         # save created user from admin login
-        if obj.user is None:
+        if obj.user is None and not obj.pk:
             obj.user = request.user
         obj.save()
 
@@ -36,9 +36,15 @@ class SampleTagInline(admin.TabularInline):
 @admin.register(Sample)
 class SampleAdmin(LimsAdmin):
     inlines = [SampleTagInline, ]
+    list_display = ('slug', 'user', 'location', 'modified', 'collected')
+    date_hierarchy = "collected"
+    autocomplete_fields = ['location', ]
+    search_fields = ['slug']
 
 
 @admin.register(Location)
 class LocationAdmin(LimsAdmin):
     inlines = [LocationTagInline, ]
     prepopulated_fields = {"slug": ("name", )}
+    list_display = ('name', 'slug', 'parent', 'user', 'modified')
+    search_fields = ['name', 'slug']
