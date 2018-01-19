@@ -1,8 +1,8 @@
 {% extends "lims/base.html" %}
 
-{% block title %}Samples{% endblock %}
+{% block title %}Locations{% endblock %}
 
-{% block content_title %}Samples{% endblock %}
+{% block content_title %}Locations{% endblock %}
 
 {% block content_main %}
 
@@ -43,7 +43,7 @@
 
     {% else %}
 
-        <p>No samples are available.</p>
+        <p>No locations are available.</p>
 
     {% endif %}
 
@@ -55,14 +55,14 @@
     <div class="content-related-actions">
         <h3>User Actions</h3>
         <ul>
-            <li><a href="{% url 'lims:sample_add' %}">Add Samples</a></li>
+            <li><a href="{% url 'lims:location_add' %}">Add Location</a></li>
         </ul>
     </div>
 
     <div class="content-related-actions">
         <h3>Admin Actions</h3>
         <ul>
-            <li><a href="{% url 'admin:lims_sample_changelist' %}">Admin View</a></li>
+            <li><a href="{% url 'admin:lims_location_changelist' %}">Admin View</a></li>
         </ul>
     </div>
 

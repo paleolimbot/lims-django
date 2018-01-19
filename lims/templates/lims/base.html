@@ -5,19 +5,41 @@
     <title>CWRS LIMS | {% block title %}{% endblock %}</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'admin/css/base.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'lims/css/base.css' %}">
     {% block head %}{% endblock %}
 </head>
 <body>
     <div id="container">
         <div id="header">
             <div id="branding">
-                <h1 id="site-name"><a href="{% url 'lims:index' %}">CWRS LIMS</a></h1>
+                <h1 id="site-name"><a href="{% url 'lims:index' %}">CWRS Sample List</a></h1>
+            </div>
+            <div id="header-nav-menu">
+                <ul>
+                    <li>
+                        <a href="{% url 'lims:sample_list' %}">Sample List</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'lims:location_list' %}">Location List</a>
+                    </li>
+                </ul>
             </div>
             <div id="user-tools">
-                <p>User tool info here</p>
+                {% if view.request.user.pk %}
+                    Welcome,
+                    {% if view.request.user.first_name %}
+                        {{ view.request.user.first_name }}.
+                    {% else %}
+                        {{ view.request.user.username }}.
+                    {% endif %}
+                    <a href="/admin/password_change">Change Password</a> /
+                    <a href="/admin/logout">Logout</a>
+                {% else %}
+                    <a href="/admin/login/?next={{ view.request.get_full_path }}">Login</a>
+                {% endif %}
             </div>
         </div>
-        <div id="content", class="colMS">
+        <div id="content" class="colMS">
             <h1>{% block content_title %}{% endblock %}</h1>
             <div id="content-main">
                 {% block content_main %}{% endblock %}

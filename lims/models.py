@@ -60,7 +60,7 @@ class Sample(models.Model):
 
     def set_slug(self):
         dt = self.collected if self.collected else self.created if self.created else timezone.now()
-        location_slug = slugify(self.location.slug[:10]) if self.location.slug else ""
+        location_slug = slugify(self.location.slug[:10]) if self.location else ""
         user = self.user.username if self.user else ""
         hint = slugify(self.name)
 

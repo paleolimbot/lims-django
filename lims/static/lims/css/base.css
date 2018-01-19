@@ -1,0 +1,21 @@
+
+/*
+    LIMS styles (adds to the admin app stylesheet)
+*/
+
+div#header-nav-menu {
+    float: left;
+	font-weight: 300;
+	font-size: 15px;
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
+}
+
+div#header-nav-menu ul, div#header-nav-menu li {
+    list-style: none;
+    display: inline;
+}
+
+div#header-nav-menu li {
+    margin-right: 10px;
+}

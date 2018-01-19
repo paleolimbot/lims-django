@@ -1,0 +1,33 @@
+
+{% extends "lims/base.html" %}
+
+{% block title %}New Location{% endblock %}
+
+{% block content_title %}New Location{% endblock %}
+
+{% block content_main %}
+
+    <form action="" method="post">{% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="Create" />
+    </form>
+
+{% endblock %}
+
+{% block content_related %}
+
+    <div class="content-related-actions">
+        <h3>User Actions</h3>
+        <ul>
+            <li>(None yet)</li>
+        </ul>
+    </div>
+    <div class="content-related-actions">
+        <h3>Admin Actions</h3>
+        <ul>
+            <li><a href="{% url 'admin:lims_location_add' %}">Admin View</a></li>
+        </ul>
+    </div>
+
+{% endblock %}
+

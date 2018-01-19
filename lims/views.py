@@ -1,6 +1,6 @@
 import re
 
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
@@ -14,6 +14,7 @@ class LimsLoginMixin(LoginRequiredMixin):
 
 
 def index(request):
+    # return render(request, 'lims/base.html', context={"view": {"request": request}})
     return redirect(reverse_lazy('lims:sample_list'))
 
 
@@ -146,11 +147,11 @@ def filter_sample_table(queryset, q):
         values = q.getlist(tag_key)
         # if any value is '__exists__', just filter anything that has that tag
         if any(value == "__exists__" for value in values):
-            queryset = queryset.filter(sampletag__key=tag)
+            queryset = queryset.filter(tags__key=tag)
         elif any(value == "" for value in values):
-            queryset = queryset.exclude(sampletag__key=tag)
+            queryset = queryset.exclude(tags__key=tag)
         else:
-            queryset = queryset.filter(sampletag__key=tag, sampletag__value__in=values)
+            queryset = queryset.filter(tags__key=tag, tags__value__in=values)
 
     # Ordering
     order_by = q.getlist("order_by", ['-modified'])
