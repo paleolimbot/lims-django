@@ -2,13 +2,15 @@
 
 {% block title %}Locations{% endblock %}
 
-{% block content_title %}Locations{% endblock %}
+{% block content_title %}Recent Locations{% endblock %}
 
 {% block content_main %}
 
     {% if object_list %}
 
        {% load lims_extras %}
+
+        {% pagination view page_obj %}
 
         <table class="object-list">
             <thead>

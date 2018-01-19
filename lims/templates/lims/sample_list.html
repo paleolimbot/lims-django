@@ -2,7 +2,7 @@
 
 {% block title %}Samples{% endblock %}
 
-{% block content_title %}Samples{% endblock %}
+{% block content_title %}Recent Samples{% endblock %}
 
 {% block content_main %}
 
@@ -12,11 +12,13 @@
 
         {% load lims_extras %}
 
+        {% pagination view page_obj %}
+
         <form id="viewlist-form" method="post">
             <table class="object-list">
                 <thead>
                     <tr>
-                        <th><input type="checkbox" name="samples-all"></th>
+                        <th><input type="checkbox" name="samples-all"/></th>
                         <th>Sample ID</th>
                         <th>User</th>
                         <th>Location</th>
