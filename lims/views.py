@@ -20,20 +20,14 @@ def index(request):
 
 class SampleListView(LimsLoginMixin, generic.ListView):
     template_name = 'lims/sample_list.html'
-    context_object_name = 'sample_list'
+    paginate_by = 100
 
     def get_queryset(self):
-        return models.Sample.objects.all()
-
-    def get_context_data(self, **kwargs):
-        context = super(SampleListView, self).get_context_data(**kwargs)
-        query_params = self.request.GET
-
-        # apply sample list filtering, ordering, and pagination based on query string params
-        sample_list_context = filter_sample_table(context['sample_list'], query_params)
-
-        context.update(sample_list_context)
-        return context
+        return query_string_filter(
+            models.Sample.objects.all(),
+            self.request.GET,
+            use=("location__slug", "slug__contains")
+        ).order_by("-modified")
 
 
 class SampleDetailView(LimsLoginMixin, generic.DetailView):
@@ -57,11 +51,7 @@ class LocationListView(LimsLoginMixin, generic.ListView):
     paginate_by = 100
 
     def get_queryset(self):
-        return models.Location.objects.all()
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(LocationListView, self).get_context_data(*args, **kwargs)
-        return context
+        return models.Location.objects.all().order_by("-modified")
 
 
 class LocationDetailView(LimsLoginMixin, generic.DeleteView):
@@ -80,6 +70,16 @@ class LocationAddView(LimsLoginMixin, generic.CreateView):
 
 
 TAG_QUERY_KEY = re.compile(r"^tag_(.*)$")
+
+
+def query_string_filter(queryset, q, use=()):
+
+    for key in q:
+        if key in use:
+            filter_args = {key: q.getlist(key)}
+            queryset = queryset.filter(**filter_args)
+
+    return queryset
 
 
 def filter_sample_table(queryset, q):

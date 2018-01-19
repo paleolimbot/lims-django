@@ -6,52 +6,62 @@
 
 {% block content_main %}
 
-    {% if sample_list %}
+    <div id="viewlist">
 
-        {% include "lims/pagination.html" with object_list=sample_list %}
+    {% if object_list %}
 
-        <table class="object-list">
-            <thead>
+        {% load lims_extras %}
+
+        <form id="viewlist-form" method="post">
+            <table class="object-list">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" name="samples-all"></th>
+                        <th>Sample ID</th>
+                        <th>User</th>
+                        <th>Location</th>
+                        <th>Modified</th>
+                        <th>Collected</th>
+                        <th>Tags</th>
+                    </tr>
+                </thead>
+
+            {% for sample in object_list %}
                 <tr>
-                    <th>Sample ID</th>
-                    <th>User</th>
-                    <th>Location</th>
-                    <th>Modified</th>
-                    <th>Collected</th>
-                    <th>Tags</th>
+                    <td><input type="checkbox" name="sample-{{ sample.pk }}"></td>
+                    <td>
+                        <a href="{% url 'lims:sample_detail' sample.pk %}">{{ sample.slug }}</a>
+                    </td>
+                    <td>{% if sample.user %}{{ sample.user }}{% endif %}</td>
+                    <td>
+                        {% if sample.location %}
+                        <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
+                        {% endif %}
+                    </td>
+                    <td>{{ sample.modified }}</td>
+                    <td>{% if sample.collected %}{{ sample.collected }}{% endif %}</td>
+                    <td>
+                        {% for tag in sample.tags.all %}
+                          {{ tag }} <br/>
+                        {% endfor %}
+                    </td>
                 </tr>
-            </thead>
-        
-        {% for sample in sample_list %}
-            <tr>
-                <td>
-                    <a href="{% url 'lims:sample_detail' sample.pk %}">{{ sample.slug }}</a>
-                </td>
-                <td>{% if sample.user %}{{ sample.user }}{% endif %}</td>
-                <td>
-                    {% if sample.location %}
-                    <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
-                    {% endif %}
-                </td>
-                <td>{{ sample.modified }}</td>
-                <td>{% if sample.collected %}{{ sample.collected }}{% endif %}</td>
-                <td>
-                    {% for tag in sample.tags.all %}
-                      {{ tag }} <br/>
-                    {% endfor %}
-                </td>
-            </tr>
 
-        {% endfor %}
-        </table>
+            {% endfor %}
 
-        {% include "lims/pagination.html" with object_list=sample_list %}
+            </table>
+
+            {% pagination view page_obj %}
+
+        </form>
 
     {% else %}
 
         <p>No samples are available.</p>
 
     {% endif %}
+
+    </div>
 
 {% endblock %}
 

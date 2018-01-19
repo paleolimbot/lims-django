@@ -6,9 +6,9 @@
 
 {% block content_main %}
 
-    {% if location_list %}
+    {% if object_list %}
 
-        {% include "lims/pagination.html" with object_list=location_list %}
+       {% load lims_extras %}
 
         <table class="object-list">
             <thead>
@@ -21,14 +21,14 @@
                 </tr>
             </thead>
         
-        {% for location in location_list %}
+        {% for location in object_list %}
+
             <tr>
                 <td>
-                    <a href="{% url 'lims:location_detail' location.id %}">{{ location.name }}</a>
+                    <a href="{% url 'lims:location_detail' location.pk %}">{{ location.name }}</a>
                 </td>
                 <td>{% if location.user %}{{ location.user }}{% endif %}</td>
                 <td>{{ location.modified }}</td>
-                <td>{% if location.geometry %}{{ location.geometry }}{% endif %}</td>
                 <td>
                     {% for tag in location.tags.all %}
                       {{ tag }} <br/>
@@ -37,9 +37,10 @@
             </tr>
 
         {% endfor %}
+
         </table>
 
-        {% include "lims/pagination.html" with object_list=sample_list %}
+        {% pagination view page_obj %}
 
     {% else %}
 
