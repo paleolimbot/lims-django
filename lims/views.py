@@ -1,10 +1,10 @@
-import re
 
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect
 from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.db.models import Q
+from django.forms import modelformset_factory
 
 from . import models
 
@@ -35,13 +35,26 @@ class SampleDetailView(LimsLoginMixin, generic.DetailView):
     model = models.Sample
 
 
-class SampleAddView(LimsLoginMixin, generic.CreateView):
-    model = models.Sample
-    fields = ['name', 'collected', 'location']
+class SampleAddView(LimsLoginMixin, generic.FormView):
     success_url = reverse_lazy('lims:sample_list')
+    form_class = modelformset_factory(
+        models.Sample,
+        fields=['name', 'collected', 'location'],
+        extra=3
+    )
+    template_name = 'lims/sample_form.html'
+
+    def get_form_kwargs(self):
+        kwargs = super(SampleAddView, self).get_form_kwargs()
+        kwargs["queryset"] = models.Sample.objects.none()
+        return kwargs
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
+        for sub_form in form:
+            if sub_form.has_changed():
+                sub_form.instance.user = self.request.user
+                sub_form.save()
+
         return super(SampleAddView, self).form_valid(form)
 
 
@@ -72,9 +85,6 @@ class LocationAddView(LimsLoginMixin, generic.CreateView):
     def form_valid(self, form):
         form.instance.user = self.request.user
         return super(LocationAddView, self).form_valid(form)
-
-
-TAG_QUERY_KEY = re.compile(r"^tag_(.*)$")
 
 
 def query_string_filter(queryset, q, use=(), search=(), search_func="icontains"):
