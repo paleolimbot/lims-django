@@ -14,7 +14,6 @@ class LimsLoginMixin(LoginRequiredMixin):
 
 
 def index(request):
-    # return render(request, 'lims/base.html', context={"view": {"request": request}})
     return redirect(reverse_lazy('lims:sample_list'))
 
 
@@ -78,11 +77,11 @@ class LocationAddView(LimsLoginMixin, generic.CreateView):
 TAG_QUERY_KEY = re.compile(r"^tag_(.*)$")
 
 
-def query_string_filter(queryset, q, use=(), search=()):
+def query_string_filter(queryset, q, use=(), search=(), search_func="icontains"):
 
     if 'q' in q and search:
         query = q['q']
-        search_queries = [{field + "__contains": query} for field in search]
+        search_queries = [{field + "__" + search_func: query} for field in search]
         final_q = None
         for search_query in search_queries:
             if final_q is None:
