@@ -3,7 +3,7 @@
     LIMS styles (adds to the admin app base.css stylesheet)
 */
 
-div#header-nav-menu {
+#header-nav-menu {
     float: left;
 	font-weight: 300;
 	font-size: 15px;
@@ -11,12 +11,12 @@ div#header-nav-menu {
 	text-transform: uppercase;
 }
 
-div#header-nav-menu ul, div#header-nav-menu li {
+#header-nav-menu ul, #header-nav-menu li {
     list-style: none;
     display: inline;
 }
 
-div#header-nav-menu li {
+#header-nav-menu li {
     margin-right: 10px;
 }
 
@@ -92,4 +92,23 @@ div#header-nav-menu li {
 	background: #79aec8;
 	text-decoration: none;
 	color: #fff;
+}
+
+/* Add form styles */
+
+#add-formset-list, .add-formset-fieldlist {
+    padding-left: 0;
+}
+
+#add-formset-list, #add-formset-list li {
+    display: inline-block;
+}
+
+.add-formset-fieldlist ul.errorlist {
+    width: auto;
+}
+
+.add-formset-fieldlist, .add-formset-fieldlist li {
+    list-style: none;
+    display: inline;
 }

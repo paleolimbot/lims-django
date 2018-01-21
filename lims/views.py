@@ -4,7 +4,8 @@ from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.db.models import Q
-from django.forms import modelformset_factory
+from django.forms import modelformset_factory, widgets, ModelForm, CharField
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
 from . import models
 
@@ -35,14 +36,43 @@ class SampleDetailView(LimsLoginMixin, generic.DetailView):
     model = models.Sample
 
 
+def validate_location_slug(value):
+    if value:
+        try:
+            models.Location.objects.get(slug=value)
+        except models.Location.DoesNotExist:
+            raise ValidationError("Location '%s' does not exist" % value)
+
+
+class SampleAddForm(ModelForm):
+    location_slug = CharField(validators=[validate_location_slug, ], required=False)
+
+    class Meta:
+        model = models.Sample
+        fields = ['collected', 'name', 'location_slug']
+        widgets = {'location': widgets.TextInput()}
+
+    def clean(self):
+        super(SampleAddForm, self).clean()
+        if not self.has_error('location_slug'):
+            try:
+                self.instance.location = models.Location.objects.get(
+                    slug=self.cleaned_data['location_slug']
+                )
+            except models.Location.DoesNotExist:
+                pass
+
+
 class SampleAddView(LimsLoginMixin, generic.FormView):
     success_url = reverse_lazy('lims:sample_list')
-    form_class = modelformset_factory(
-        models.Sample,
-        fields=['name', 'collected', 'location'],
-        extra=3
-    )
     template_name = 'lims/sample_form.html'
+
+    def get_form_class(self):
+        return modelformset_factory(
+            models.Sample,
+            form=SampleAddForm,
+            extra=3
+        )
 
     def get_form_kwargs(self):
         kwargs = super(SampleAddView, self).get_form_kwargs()
@@ -53,8 +83,8 @@ class SampleAddView(LimsLoginMixin, generic.FormView):
         for sub_form in form:
             if sub_form.has_changed():
                 sub_form.instance.user = self.request.user
-                sub_form.save()
 
+        form.save()
         return super(SampleAddView, self).form_valid(form)
 
 

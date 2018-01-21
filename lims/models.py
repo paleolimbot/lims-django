@@ -59,6 +59,8 @@ class Sample(models.Model):
         super(Sample, self).save(*args, **kwargs)
 
     def set_slug(self):
+        # TODO need a better strategy on sample IDs: append with something like "_2" instead of
+        # using longer datetimes
         dt = self.collected if self.collected else self.created if self.created else timezone.now()
         location_slug = slugify(self.location.slug[:10]) if self.location else ""
         user = self.user.username if self.user else ""
@@ -73,7 +75,7 @@ class Sample(models.Model):
                 self.slug = id_str
                 return
 
-        self.slug = str(self.pk)
+        raise ValueError("Cannot create unique sample ID for sample")
 
     def short_date(self, dt):
         return str(dt.date())

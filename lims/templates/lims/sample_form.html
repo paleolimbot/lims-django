@@ -7,14 +7,14 @@
 
 {% block content_main %}
 
-    <div id="add-form">
-        <form action="" method="post">
+    <div id="add-formset">
+        <form id="add-formset-form" action="" method="post">
             {% csrf_token %}
             {{ form.management_form }}
-            <ul>
+            <ul id="add-formset-list">
                 {% for sub_form in form %}
-                    <li>
-                        <ul>
+                    <li class="add-formset-item">
+                        <ul class="add-formset-fieldlist">
                             {{ sub_form.as_ul }}
                         </ul>
                     </li>
