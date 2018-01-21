@@ -1,3 +1,5 @@
+import re
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -54,37 +56,53 @@ class Sample(models.Model):
         return reverse_lazy('lims:sample_detail', kwargs={'pk': self.pk})
 
     def save(self, *args, **kwargs):
-        if not self.pk:
-            self.set_slug()
+        if not self.pk and not self.slug:
+            self.slug = self.calculate_slug()
         super(Sample, self).save(*args, **kwargs)
 
-    def set_slug(self):
-        # TODO need a better strategy on sample IDs: append with something like "_2" instead of
-        # using longer datetimes
-        dt = self.collected if self.collected else self.created if self.created else timezone.now()
+    def calculate_slug(self):
+
+        # get parts of the calculated sample slug
+        dt_str = str(self.collected.date())
         location_slug = slugify(self.location.slug[:10]) if self.location else ""
         user = self.user.username if self.user else ""
         hint = slugify(self.name)
 
-        for date_fun in [self.short_date, self.long_date, self.longest_date]:
-            dt_str = date_fun(dt)
-            id_str = "_".join(item for item in [user, dt_str, location_slug, hint] if item)
-            id_str = id_str[:55]
-            other_objects = Sample.objects.filter(slug=id_str)
-            if len(other_objects) == 0:
-                self.slug = id_str
-                return
+        suffix_index = 0
 
+        for iterations in range(20):
+
+            suffix = '_%d' % suffix_index if suffix_index else ''
+
+            # construct the sample slug
+            id_str_prefix = "_".join(item for item in [user, dt_str, location_slug, hint] if item)
+            id_str_prefix = id_str_prefix[:(55 - len(suffix))]
+            id_str = id_str_prefix + suffix
+
+            # make sure the id_str is unique
+            other_object_with_slug = Sample.objects.filter(slug=id_str)
+
+            if other_object_with_slug.count() == 0:
+                # no object with this slug, use it!
+                return id_str
+            else:
+                # an object exists with this slug, find objects that could
+                # possibly collide with the slug
+
+                possible_collisions = Sample.objects.filter(
+                    slug__startswith=id_str_prefix
+                ).values_list('slug', flat=True)
+
+                # find the maximum _suffix number for the slug
+                suffix_re = re.compile('_([0-9]+)$')
+                possible_collision_suffixes = [int(suffix_re.search(slug).group(1))
+                                               for slug in possible_collisions
+                                               if suffix_re.search(slug)]
+                suffix_index = max(possible_collision_suffixes) + 1 if possible_collision_suffixes else suffix_index + 1
+
+        # this could theoretically happen but would probably be very difficult
+        # because the previous code should resolve a valid sample ID in 2 iterations
         raise ValueError("Cannot create unique sample ID for sample")
-
-    def short_date(self, dt):
-        return str(dt.date())
-
-    def long_date(self, dt):
-        return "%sT%s.%s.%s" % (dt.date(), dt.hour, dt.minute, dt.second)
-
-    def longest_date(self, dt):
-        return ("%sT%s" % (dt.date(), dt.time())).replace(":", ".")
 
     def __str__(self):
         return self.slug
