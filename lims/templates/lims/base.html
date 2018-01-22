@@ -32,6 +32,9 @@
                     {% else %}
                         {{ view.request.user.username }}.
                     {% endif %}
+                    {% if view.request.user.is_staff %}
+                        <a href="/admin/lims">Admin Site</a> /
+                    {% endif %}
                     <a href="/admin/password_change">Change Password</a> /
                     <a href="/admin/logout">Logout</a>
                 {% else %}

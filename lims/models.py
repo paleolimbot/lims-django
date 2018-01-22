@@ -6,12 +6,20 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.urls import reverse_lazy
 
+from .geometry import validate_wkt, wkt_bounds
+
 
 class Location(models.Model):
     name = models.CharField(max_length=55)
     slug = models.SlugField(max_length=55, unique=True)
-    parent = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True)
-    geometry = models.TextField(blank=True)
+    parent = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True, related_name='children')
+    recursive_depth = models.IntegerField(default=0, editable=False)
+
+    geometry = models.TextField(blank=True, validators=[validate_wkt, ])
+    minx = models.FloatField(editable=False, blank=True, null=True, default=None)
+    maxx = models.FloatField(editable=False, blank=True, null=True, default=None)
+    miny = models.FloatField(editable=False, blank=True, null=True, default=None)
+    maxy = models.FloatField(editable=False, blank=True, null=True, default=None)
 
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False)
     created = models.DateTimeField("created", auto_now_add=True)
@@ -19,6 +27,23 @@ class Location(models.Model):
 
     def get_absolute_url(self):
         return reverse_lazy('lims:location_detail', kwargs={'pk': self.pk})
+
+    def calculate_recursive_depth(self):
+        if self.parent:
+            return self.parent.calculate_recursive_depth() + 1
+        else:
+            return 0
+
+    def save(self, *args, **kwargs):
+        # cache the recursive depth and bounds
+        self.recursive_depth = self.calculate_recursive_depth()
+        bounds = wkt_bounds(self.geometry)
+        self.minx = bounds['minx']
+        self.maxx = bounds['maxx']
+        self.miny = bounds['miny']
+        self.maxy = bounds['maxy']
+
+        super(Location, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -95,9 +120,9 @@ class Sample(models.Model):
 
                 # find the maximum _suffix number for the slug
                 suffix_re = re.compile('_([0-9]+)$')
-                possible_collision_suffixes = [int(suffix_re.search(slug).group(1))
-                                               for slug in possible_collisions
-                                               if suffix_re.search(slug)]
+                possible_collision_suffixes = [
+                    int(suffix_re.search(slug).group(1)) for slug in possible_collisions if suffix_re.search(slug)
+                ]
                 suffix_index = max(possible_collision_suffixes) + 1 if possible_collision_suffixes else suffix_index + 1
 
         # this could theoretically happen but would probably be very difficult

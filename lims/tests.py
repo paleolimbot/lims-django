@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.utils import timezone
 from django.db import transaction
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
 from .models import Sample, Location, SampleTag, LocationTag
 
@@ -140,6 +141,162 @@ def clear_models(models=(Sample, Location), queryset=lambda model: model.objects
             return
 
     raise Exception("Could not delete all models")
+
+
+class GeometryTestCase(TestCase):
+
+    def test_wkt_bounds(self):
+        """Test the wkt_bounds function"""
+        from .geometry import wkt_bounds
+        self.assertEqual(
+            wkt_bounds("(1 1)"),
+            {'minx': 1.0, 'maxx': 1.0, 'miny': 1.0, 'maxy': 1.0}
+        )
+        self.assertEqual(
+            wkt_bounds("(-1.45 -2.45) (1.75 2.75)"),
+            {'minx': -1.45, 'maxx': 1.75, 'miny': -2.45, 'maxy': 2.75}
+        )
+
+        self.assertEqual(
+            wkt_bounds("(-1.45 -2.45) (1.75 2.75) (0, 0)"),
+            {'minx': -1.45, 'maxx': 1.75, 'miny': -2.45, 'maxy': 2.75}
+        )
+
+        self.assertEqual(
+            wkt_bounds(''),
+            {'minx': None, 'maxx': None, 'miny': None, 'maxy': None}
+        )
+        self.assertEqual(
+            wkt_bounds(None),
+            {'minx': None, 'maxx': None, 'miny':  None, 'maxy': None}
+        )
+
+    def test_wkt_regex(self):
+        from .geometry import POINT, POLYGON, LINESTRING, MULTIPOINT, MULTIPOLYGON, MULTILINESTRING
+
+        # general tests
+        self.assertRegex('POINT (30 10)', POINT)
+        self.assertRegex('LINESTRING (30 10, 10 30, 40 40)', LINESTRING)
+        self.assertRegex('POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))', POLYGON)
+        self.assertRegex(
+            'POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10), (20 30, 35 35, 30 20, 20 30))',
+            POLYGON
+        )
+        self.assertRegex(
+            'MULTIPOINT ((10 40), (40 30), (20 20), (30 10))',
+            MULTIPOINT
+        )
+        self.assertRegex(
+            'MULTIPOINT (10 40, 40 30, 20 20, 30 10)',
+            MULTIPOINT
+        )
+        self.assertRegex(
+            'MULTILINESTRING ((10 10, 20 20, 10 40), (40 40, 30 30, 40 20, 30 10))',
+            MULTILINESTRING
+        )
+        self.assertRegex(
+            'MULTIPOLYGON (((40 40, 20 45, 45 30, 40 40)), ((20 35, 10 30, 10 10, 30 5, 45 20, 20 35), '
+            '(30 20, 20 15, 20 25, 30 20)))',
+            MULTIPOLYGON
+        )
+        self.assertRegex(
+            'MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)), ((15 5, 40 10, 10 20, 5 10, 15 5)))',
+            MULTIPOLYGON
+        )
+
+        # point tests
+        self.assertRegex('POINT (-30.6  10.1e7)', POINT)
+        self.assertRegex('POINT (30       10)', POINT)
+        self.assertRegex('POINT (  30  10 )', POINT)
+
+        # linestring tests
+        self.assertRegex('LINESTRING (30 10,10 30,40 40   )', LINESTRING)
+        self.assertRegex('LINESTRING (-30.0 10.8, .10 30E09, 40 0.40)', LINESTRING)
+
+        # polygon tests
+        self.assertRegex('POLYGON (    ( 30 10   , 40 40,20 40 , 10   20, 30 10))', POLYGON)
+        self.assertRegex(
+            'POLYGON ((35 10, 45 45, 15 40, 10 20, 35 10),(20 30, 35 35, 30 20, 20 30)  ,   (15 40,10 20,35 10))',
+            POLYGON
+        )
+
+    def test_geometry_id(self):
+
+        from .geometry import identify_geometry
+
+        self.assertEqual(identify_geometry('POINT (30 10)'), 'POINT')
+        self.assertEqual(identify_geometry('LINESTRING (30 10, 10 30, 40 40)'), 'LINESTRING')
+        self.assertEqual(identify_geometry('POLYGON ((30 10, 40 40, 20 40, 10 20, 30 10))'), 'POLYGON')
+        self.assertEqual(identify_geometry('MULTIPOINT ((10 40), (40 30), (20 20), (30 10))'), 'MULTIPOINT')
+        self.assertEqual(
+            identify_geometry('MULTILINESTRING ((10 10, 20 20, 10 40), (40 40, 30 30, 40 20, 30 10))'),
+            'MULTILINESTRING'
+        )
+        self.assertEqual(
+            identify_geometry('MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)), ((15 5, 40 10, 10 20, 5 10, 15 5)))'),
+            'MULTIPOLYGON'
+        )
+        self.assertIsNone(identify_geometry('MULTIPOLYGON with invalid geometry'))
+
+    def test_geometry_validator(self):
+
+        from .geometry import validate_wkt
+
+        self.assertIsNone(validate_wkt('POINT (30 10)'))
+        self.assertIsNone(validate_wkt(''))
+        self.assertIsNone(validate_wkt(None))
+        with self.assertRaisesRegex(ValidationError, "The value is not valid"):
+            validate_wkt('not valid wkt')
+
+
+class LocationRecursionTestCase(TestCase):
+
+    def test_recursive_locations(self):
+
+        parent_loc = Location.objects.create(name="Location1", slug="location-1")
+        child_loc = Location.objects.create(name="Sub Location 1", slug="sub-location-1", parent=parent_loc)
+        child_loc_2 = Location.objects.create(name="Sub Location 2", slug="sub-location-2", parent=parent_loc)
+        child_child_loc = Location.objects.create(name="Sub Sub Location", slug="sub-sub-location", parent=child_loc)
+
+        self.assertEqual(parent_loc.recursive_depth, 0)
+        self.assertEqual(child_loc.recursive_depth, 1)
+        self.assertEqual(child_loc_2.recursive_depth, 1)
+        self.assertEqual(child_child_loc.recursive_depth, 2)
+
+        self.assertEqual(
+            list(parent_loc.children.all().order_by('pk')),
+            list(Location.objects.all().filter(slug__startswith="sub-location").order_by('pk')),
+        )
+
+
+class LocationGeometryTestCase(TestCase):
+
+    def test_location_geometry(self):
+
+        location_no_geom = Location.objects.create(name="location1", slug="location1")
+        self.assertEqual(location_no_geom.geometry, '')
+        self.assertIsNone(location_no_geom.minx)
+        self.assertIsNone(location_no_geom.maxx)
+        self.assertIsNone(location_no_geom.miny)
+        self.assertIsNone(location_no_geom.maxy)
+
+        location_point = Location.objects.create(
+            name='location2', slug='location2', geometry='POINT (30 10)'
+        )
+        self.assertEqual(location_point.geometry, 'POINT (30 10)')
+        self.assertEqual(location_point.minx, 30)
+        self.assertEqual(location_point.maxx, 30)
+        self.assertEqual(location_point.miny, 10)
+        self.assertEqual(location_point.maxy, 10)
+
+        location_polygon = Location.objects.create(
+            name='location3', slug='location3',
+            geometry='MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)), ((15 5, 40 10, 10 20, 5 10, 15 5)))'
+        )
+        self.assertEqual(location_polygon.minx, 5)
+        self.assertEqual(location_polygon.maxx, 45)
+        self.assertEqual(location_polygon.miny, 5)
+        self.assertEqual(location_polygon.maxy, 40)
 
 
 class SampleTestCase(TestCase):
