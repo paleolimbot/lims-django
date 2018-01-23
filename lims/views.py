@@ -49,7 +49,7 @@ def validate_location_slug(value):
         try:
             models.Location.objects.get(slug=value)
         except models.Location.DoesNotExist:
-            raise ValidationError("Location '%s' does not exist" % value)
+            raise ValidationError("Location with this ID does not exist")
 
 
 def validate_json_tags_dict(value):
