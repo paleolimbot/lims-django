@@ -7,6 +7,7 @@ urlpatterns = [
     # the index page
     url(r'^$', views.index, name="index"),
     url(r'^sample/$', views.SampleListView.as_view(), name="sample_list"),
+    url(r'^sample/add_bulk$', views.SampleBulkAddView.as_view(), name="sample_add_bulk"),
     url(r'^sample/add$', views.SampleAddView.as_view(), name="sample_add"),
     url(r'^sample/(?P<pk>[0-9]+)$', views.SampleDetailView.as_view(), name="sample_detail"),
     url(r'^location/$', views.LocationListView.as_view(), name="location_list"),

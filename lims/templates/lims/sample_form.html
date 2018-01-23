@@ -1,34 +1,19 @@
 
 {% extends "lims/base.html" %}
 
-{% block title %}Bulk Add New Samples{% endblock %}
+{% block title %}Add New Sample{% endblock %}
 
-{% block content_title %}Bulk Add New Samples{% endblock %}
+{% block content_title %}Add New Sample{% endblock %}
 
 {% block content_main %}
 
-    <div id="add-formset">
-        <form id="add-formset-form" action="" method="post">
+    <div id="add-form-container">
+        <form id="add-form" action="" method="post">
             {% csrf_token %}
-            {{ form.management_form }}
-            <ul id="add-formset-list">
-            <li class="add-formset-item">
-                <ul class="add-formset-fieldlist" id="add-formset-header">
-                    <li>Collected Date</li>
-                    <li>Name</li>
-                    <li>Location ID</li>
-                    <li>Tags</li>
-                </ul>
-            </li>
-                {% for sub_form in form %}
-                    <li class="add-formset-item">
-                        <ul class="add-formset-fieldlist">
-                            {{ sub_form.as_ul }}
-                        </ul>
-                    </li>
-                {% endfor %}
-            </ul>
-        <input type="submit" value="Add samples" />
+            <table class="object-form">
+                {{ form.as_table }}
+            </table>
+            <input type="submit" value="Add sample" />
         </form>
     </div>
 
@@ -50,4 +35,3 @@
     </div>
 
 {% endblock %}
-

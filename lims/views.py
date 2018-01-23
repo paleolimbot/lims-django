@@ -85,17 +85,21 @@ class SampleAddForm(ModelForm):
                 pass
 
     def save(self, *args, **kwargs):
-        super(SampleAddForm, self).save(*args, **kwargs)
+        return_val = super(SampleAddForm, self).save(*args, **kwargs)
+
         # tags need the instance to exist in the DB before creating them...
-        for key, value in json.loads(self.cleaned_data['tag_json']).items():
-            str_value = value if isinstance(value, str) else json.dumps(value)
-            tag = models.SampleTag(key=key, value=str_value, object=self.instance)
-            tag.save()
+        if self.cleaned_data['tag_json']:
+            for key, value in json.loads(self.cleaned_data['tag_json']).items():
+                str_value = value if isinstance(value, str) else json.dumps(value)
+                tag = models.SampleTag(key=key, value=str_value, object=self.instance)
+                tag.save()
+
+        return return_val
 
 
-class SampleAddView(LimsLoginMixin, generic.FormView):
+class SampleBulkAddView(LimsLoginMixin, generic.FormView):
     success_url = reverse_lazy('lims:sample_list')
-    template_name = 'lims/sample_form.html'
+    template_name = 'lims/sample_bulk_form.html'
 
     def get_form_class(self):
         n_samples = self.request.GET.get('n_samples', 10)
@@ -111,7 +115,7 @@ class SampleAddView(LimsLoginMixin, generic.FormView):
         )
 
     def get_form_kwargs(self):
-        kwargs = super(SampleAddView, self).get_form_kwargs()
+        kwargs = super(SampleBulkAddView, self).get_form_kwargs()
         kwargs["queryset"] = models.Sample.objects.none()
         return kwargs
 
@@ -121,6 +125,16 @@ class SampleAddView(LimsLoginMixin, generic.FormView):
                 sub_form.instance.user = self.request.user
 
         form.save()
+        return super(SampleBulkAddView, self).form_valid(form)
+
+
+class SampleAddView(LimsLoginMixin, generic.CreateView):
+    success_url = reverse_lazy('lims:sample_list')
+    template_name = 'lims/sample_form.html'
+    form_class = SampleAddForm
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
         return super(SampleAddView, self).form_valid(form)
 
 
