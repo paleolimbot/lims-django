@@ -22,6 +22,9 @@
                     <li>
                         <a href="{% url 'lims:location_list' %}">Location List</a>
                     </li>
+                    <li>
+                        <a href="{% url 'lims:user_detail' view.request.user.pk %}">My Samples</a>
+                    </li>
                 </ul>
             </div>
             <div id="user-tools">
