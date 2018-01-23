@@ -12,6 +12,8 @@ from .geometry import validate_wkt, wkt_bounds
 class Location(models.Model):
     name = models.CharField(max_length=55)
     slug = models.SlugField(max_length=55, unique=True)
+    description = models.TextField(blank=True)
+
     parent = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True, related_name='children')
     recursive_depth = models.IntegerField(default=0, editable=False)
 
@@ -69,6 +71,7 @@ class LocationTag(models.Model):
 class Sample(models.Model):
     name = models.CharField(max_length=25, blank=True)
     slug = models.CharField(max_length=55, unique=True, editable=False)
+    description = models.TextField(blank=True)
 
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False)
     created = models.DateTimeField("created", auto_now_add=True)
