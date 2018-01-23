@@ -96,8 +96,8 @@ class Sample(models.Model):
         user = self.user.username[:15] if self.user else ""
         hint = slugify(self.name)
 
+        # this is constructed such that it should always finish in 2 iterations
         suffix_index = 0
-
         for iterations in range(20):
 
             suffix = '_%d' % suffix_index if suffix_index else ''

@@ -58,4 +58,4 @@ def pagination(view, page):
             end = mark_safe(' class="end"') if item == paginator.num_pages - 1 else ''
             links.append(format_html('<a href="?{}"{}>{}</a>', query_dict.urlencode(), end, page_num))
 
-    return mark_safe('<p class="paginator">%s</p>' % " ".join(links))
+    return mark_safe(" ".join(links))

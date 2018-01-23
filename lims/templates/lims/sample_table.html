@@ -1,0 +1,56 @@
+
+{% extends 'lims/object_table.html' %}
+
+{% block page_list_top %}{{ block.super }} {{ paginator.count }} samples{% endblock %}
+
+{% block page_list_bottom %}{{ block.super }} {{ paginator.count }} samples{% endblock %}
+
+{% block objects_table %}
+
+    <form id="viewlist-form" method="post">
+            <table class="object-list">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" name="samples-all"/></th>
+                        <th>Sample ID</th>
+                        <th>User</th>
+                        <th>Location</th>
+                        <th>Modified</th>
+                        <th>Collected</th>
+                        <th>Tags</th>
+                    </tr>
+                </thead>
+
+            {% for sample in object_list %}
+                <tr>
+                    <td><input type="checkbox" name="sample-{{ sample.pk }}"></td>
+                    <td>
+                        <a href="{% url 'lims:sample_detail' sample.pk %}">{{ sample.slug }}</a>
+                    </td>
+                    <td>{% if sample.user %}{{ sample.user }}{% endif %}</td>
+                    <td>
+                        {% if sample.location %}
+                        <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
+                        {% endif %}
+                    </td>
+                    <td>{{ sample.modified }}</td>
+                    <td>{% if sample.collected %}{{ sample.collected }}{% endif %}</td>
+                    <td>
+                        {% for tag in sample.tags.all %}
+                          {{ tag }} <br/>
+                        {% endfor %}
+                    </td>
+                </tr>
+
+            {% endfor %}
+
+            </table>
+        </form>
+
+{% endblock %}
+
+{% block no_objects %}
+
+    <p>No samples are available.</p>
+
+{% endblock %}

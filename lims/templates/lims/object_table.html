@@ -1,0 +1,64 @@
+
+{% if object_list %}
+
+    {% block objects %}
+
+        {% load lims_extras %}
+
+        {% block pagination_top %}
+            <p class="paginator">
+                {% block page_list_top %}
+                    {% pagination view page_obj %}
+                {% endblock %}
+            </p>
+        {% endblock %}
+
+        {% block objects_table %}
+
+            <form id="viewlist-form" method="post">
+                <table class="object-list">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" name="select-objects-all"/></th>
+                            <th>Object string</th>
+                        </tr>
+                    </thead>
+
+                {% for object in object_list %}
+                    <tr>
+                        <td><input type="checkbox" name="select-object-{{ object.pk }}"></td>
+                        <td>
+                            {% if object.get_absolute_url %}
+                                <a href="{{ object.get_absolute_url }}">{{ object }}</a>
+                            {% else %}
+                                {{ object }}
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                {% endfor %}
+
+                </table>
+            </form>
+
+        {% endblock objects_table %}
+
+        {% block pagination_bottom %}
+            <p class="paginator">
+                {% block page_list_bottom %}
+                    {% pagination view page_obj %}
+                {% endblock %}
+            </p>
+        {% endblock %}
+
+    {% endblock objects %}
+
+{% else %}
+
+    {% block no_objects %}
+
+        <p>No objects are available.</p>
+
+    {% endblock %}
+
+{% endif %}
