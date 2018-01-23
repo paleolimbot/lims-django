@@ -67,6 +67,7 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
             loc = Location.objects.create(
                 name="Test Sub Location %d" % (loc_num + 1),
                 slug="test-sub-location-%d" % (loc_num + 1),
+                geometry="POINT (%d %d)" % (randint(-179, 180), randint(-85, 86)),
                 parent=parent_loc,
                 user=test_user
             )
