@@ -1,5 +1,6 @@
 
 import re
+import json
 
 from django.shortcuts import redirect
 from django.views import generic
@@ -51,8 +52,21 @@ def validate_location_slug(value):
             raise ValidationError("Location '%s' does not exist" % value)
 
 
+def validate_json_tags_dict(value):
+    if not value:
+        return
+    try:
+        obj = json.loads(value)
+        if not isinstance(obj, dict):
+            raise ValidationError("Value is not a valid JSON object")
+
+    except ValueError:
+        raise ValidationError("Value is not valid JSON")
+
+
 class SampleAddForm(ModelForm):
     location_slug = CharField(validators=[validate_location_slug, ], required=False)
+    tag_json = CharField(validators=[validate_json_tags_dict, ], required=False)
 
     class Meta:
         model = models.Sample
@@ -61,6 +75,7 @@ class SampleAddForm(ModelForm):
 
     def clean(self):
         super(SampleAddForm, self).clean()
+
         if not self.has_error('location_slug'):
             try:
                 self.instance.location = models.Location.objects.get(
@@ -69,16 +84,30 @@ class SampleAddForm(ModelForm):
             except models.Location.DoesNotExist:
                 pass
 
+    def save(self, *args, **kwargs):
+        super(SampleAddForm, self).save(*args, **kwargs)
+        # tags need the instance to exist in the DB before creating them...
+        for key, value in json.loads(self.cleaned_data['tag_json']).items():
+            str_value = value if isinstance(value, str) else json.dumps(value)
+            tag = models.SampleTag(key=key, value=str_value, object=self.instance)
+            tag.save()
+
 
 class SampleAddView(LimsLoginMixin, generic.FormView):
     success_url = reverse_lazy('lims:sample_list')
     template_name = 'lims/sample_form.html'
 
     def get_form_class(self):
+        n_samples = self.request.GET.get('n_samples', 10)
+        try:
+            n_samples = int(n_samples)
+        except ValueError:
+            n_samples = 10
+
         return modelformset_factory(
             models.Sample,
             form=SampleAddForm,
-            extra=3
+            extra=n_samples
         )
 
     def get_form_kwargs(self):
@@ -179,6 +208,7 @@ class UserDetailView(LimsLoginMixin, generic.DeleteView):
         context['location_page_kwarg'] = 'location_page'
 
         return context
+
 
 def query_string_filter(queryset, query_dict, use=(), search=(), search_func="icontains", prefix=''):
 
