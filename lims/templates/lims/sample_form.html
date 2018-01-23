@@ -1,9 +1,9 @@
 
 {% extends "lims/base.html" %}
 
-{% block title %}New Sample{% endblock %}
+{% block title %}Bulk Add New Samples{% endblock %}
 
-{% block content_title %}New Sample{% endblock %}
+{% block content_title %}Bulk Add New Samples{% endblock %}
 
 {% block content_main %}
 
@@ -12,6 +12,14 @@
             {% csrf_token %}
             {{ form.management_form }}
             <ul id="add-formset-list">
+            <li class="add-formset-item">
+                <ul class="add-formset-fieldlist" id="add-formset-header">
+                    <li>Collected Date</li>
+                    <li>Name</li>
+                    <li>Location ID</li>
+                    <li>Tags</li>
+                </ul>
+            </li>
                 {% for sub_form in form %}
                     <li class="add-formset-item">
                         <ul class="add-formset-fieldlist">

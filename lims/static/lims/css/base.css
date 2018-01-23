@@ -107,15 +107,31 @@
     padding-left: 0;
 }
 
-#add-formset-list, #add-formset-list li {
-    display: inline-block;
+#add-formset-list {
+    display:table;
 }
 
-.add-formset-fieldlist ul.errorlist {
-    width: auto;
+.add-formset-item {
+    display: table-row-group;
 }
 
-.add-formset-fieldlist, .add-formset-fieldlist li {
-    list-style: none;
-    display: inline;
+.add-formset-fieldlist {
+    display: table-row;
 }
+
+.add-formset-fieldlist li {
+    display: table-cell;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+#add-formset-header li {
+    text-align: left;
+    font-weight: bold;
+    padding-bottom: 2px;
+}
+
+#add-formset-list label {
+    display:none;
+}
+
