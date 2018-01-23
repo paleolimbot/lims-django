@@ -93,7 +93,7 @@ class Sample(models.Model):
         # get parts of the calculated sample slug
         dt_str = str(self.collected.date())
         location_slug = slugify(self.location.slug[:10]) if self.location else ""
-        user = self.user.username if self.user else ""
+        user = self.user.username[:15] if self.user else ""
         hint = slugify(self.name)
 
         suffix_index = 0
