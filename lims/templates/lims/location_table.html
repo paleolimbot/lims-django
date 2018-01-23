@@ -24,7 +24,11 @@
                 <td>
                     <a href="{% url 'lims:location_detail' location.pk %}">{{ location.name }}</a>
                 </td>
-                <td>{% if location.user %}{{ location.user }}{% endif %}</td>
+                <td>
+                    {% if location.user %}
+                        <a href="{% url 'lims:user_detail' location.user.pk %}">{{ location.user }}</a>
+                    {% endif %}
+                </td>
                 <td>{{ location.modified }}</td>
                 <td>
                     {%  if location.parent %}

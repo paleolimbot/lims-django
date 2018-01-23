@@ -6,7 +6,7 @@
 
 {% block content_main %}
 
-    <table>
+    <table class="object-info">
         <tr>
             <th>Identifier</th>
             <td>{{ location.slug }}</td>
@@ -25,7 +25,11 @@
         </tr>
         <tr>
             <th>User</th>
-            <td>{{ location.user }}</td>
+            <td>
+                {% if location.user %}
+                    <a href="{% url 'lims:user_detail' location.user.pk %}">{{ location.user }}</a>
+                {% endif %}
+            </td>
         </tr>
         <tr>
             <th>Date Modified (Created)</th>
@@ -41,13 +45,24 @@
                 {% endif %}
             </td>
         </tr>
+        <tr>
+            <th>Tags</th>
+            <td></td>
+        </tr>
+        {% if sample.tags.all %}
+            {% for tag in sample.tags.all %}
+                <tr><td>{{ tag.key }}</td><td>{{ tag.value }}</td></tr>
+            {% endfor %}
+        {% else %}
+            <tr><td>(none specified)</td><td></td></tr>
+        {% endif %}
     </table>
 
-    <h2>Sub-locations</h2>
+    <h2><a id="locations">Sub-locations</a></h2>
 
     {% include 'lims/location_table.html' with page_obj=location_page_obj page_kwarg=location_page_kwarg %}
 
-    <h2>Recent Samples</h2>
+    <h2><a id="samples">Recent Samples</a></h2>
 
     {% include 'lims/sample_table.html' with page_obj=sample_page_obj page_kwarg=sample_page_kwarg %}
 

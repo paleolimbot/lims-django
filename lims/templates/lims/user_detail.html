@@ -1,0 +1,56 @@
+
+{% extends "lims/base.html" %}
+
+{% block title %}{{ user.username }}{% endblock %}
+
+{% block content_title %}User: {{ user.username }}{% endblock %}
+
+{% block content_main %}
+
+    <table class="object-info">
+        <tr>
+            <th>Name</th>
+            <td>
+                {% if user.first_name or user.last_name %}
+                    {{ user.first_name }} {{ user.last_name }}
+                {% else %}
+                    (none specified)
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Email</th>
+            <td><a href="mailto:{{ user.email }}">{{ user.email }}</a></td>
+        </tr>
+        <tr>
+            <th>Joined</th>
+            <td>{{ user.date_joined }}</td>
+        </tr>
+    </table>
+
+    <h2><a id="samples">Recent Samples</a></h2>
+
+    {% include 'lims/sample_table.html' with page_obj=sample_page_obj page_kwarg=sample_page_kwarg %}
+
+    <h2><a id="locations">User Locations></a></h2>
+
+    {% include 'lims/location_table.html' with page_obj=location_page_obj page_kwarg=location_page_kwarg %}
+
+{% endblock %}
+
+{% block content_related %}
+
+    <div class="content-related-actions">
+        <h3>User Actions</h3>
+        <ul>
+            <li>(None yet)</li>
+        </ul>
+    </div>
+    <div class="content-related-actions">
+        <h3>Admin Actions</h3>
+        <ul>
+            <li><a href="{% url 'admin:auth_user_change' user.pk %}">Admin View</a></li>
+        </ul>
+    </div>
+
+{% endblock %}

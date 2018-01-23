@@ -6,9 +6,47 @@
 
 {% block content_main %}
 
-    <pre>
-        {{ sample }}
-    </pre>
+    <table class="object-info">
+        <tr>
+            <th>Sample ID</th>
+            <td>{{ sample.slug }}</td>
+        </tr>
+        <tr>
+            <th>User</th>
+            <td>
+                {% if sample.user %}
+                    <a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Location</th>
+            <td>
+                {% if sample.location %}
+                    <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Collected Date</th>
+            <td>{{ sample.collected }}</td>
+        </tr>
+        <tr>
+            <th>Date Modified (Created)</th>
+            <td>{{ sample.modified }} ({{ sample.created }})</td>
+        </tr>
+        <tr>
+            <th>Tags</th>
+            <td></td>
+        </tr>
+        {% if sample.tags.all %}
+            {% for tag in sample.tags.all %}
+                <tr><td>{{ tag.key }}</td><td>{{ tag.value }}</td></tr>
+            {% endfor %}
+        {% else %}
+            <tr><td>(none specified)</td><td></td></tr>
+        {% endif %}
+    </table>
 
 {% endblock %}
 

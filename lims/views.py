@@ -10,6 +10,7 @@ from django.forms import modelformset_factory, widgets, ModelForm, CharField
 from django.core.exceptions import ValidationError
 from django.http.request import QueryDict
 from django.core.paginator import Paginator
+from django.contrib.auth.models import User
 
 from . import models
 
@@ -149,6 +150,35 @@ class LocationAddView(LimsLoginMixin, generic.CreateView):
         form.instance.user = self.request.user
         return super(LocationAddView, self).form_valid(form)
 
+
+class UserDetailView(LimsLoginMixin, generic.DeleteView):
+    template_name = 'lims/user_detail.html'
+    model = User
+
+    def get_context_data(self, **kwargs):
+        context = super(UserDetailView, self).get_context_data(**kwargs)
+
+        # setup the child samples list
+        samples = query_string_filter(
+            context['user'].sample_set.order_by('-modified'),
+            self.request.GET,
+            prefix='sample_'
+        )
+        sample_paginator = Paginator(samples, per_page=100)
+        context['sample_page_obj'] = sample_paginator.page(self.request.GET.get('sample_page', 1))
+        context['sample_page_kwarg'] = 'sample_page'
+
+        # setup the child locations list
+        locations = query_string_filter(
+            context['user'].location_set.order_by('-modified'),
+            self.request.GET,
+            prefix='location_'
+        )
+        location_paginator = Paginator(locations, per_page=10)
+        context['location_page_obj'] = location_paginator.page(self.request.GET.get('location_page', 1))
+        context['location_page_kwarg'] = 'location_page'
+
+        return context
 
 def query_string_filter(queryset, query_dict, use=(), search=(), search_func="icontains", prefix=''):
 

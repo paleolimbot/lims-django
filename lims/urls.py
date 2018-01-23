@@ -12,5 +12,6 @@ urlpatterns = [
     url(r'^location/$', views.LocationListView.as_view(), name="location_list"),
     url(r'^location/add$', views.LocationAddView.as_view(), name="location_add"),
     url(r'^location/(?P<pk>[0-9]+)$', views.LocationDetailView.as_view(), name="location_detail"),
+    url(r'^user/(?P<pk>[0-9]+)$', views.UserDetailView.as_view(), name="user_detail"),
 ]
 
