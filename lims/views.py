@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.forms import modelformset_factory, widgets, ModelForm, CharField
 from django.core.exceptions import ValidationError
 from django.http.request import QueryDict
+from django.core.paginator import Paginator
 
 from . import models
 
@@ -112,6 +113,31 @@ class LocationListView(LimsLoginMixin, generic.ListView):
 class LocationDetailView(LimsLoginMixin, generic.DeleteView):
     template_name = 'lims/location_detail.html'
     model = models.Location
+
+    def get_context_data(self, **kwargs):
+        context = super(LocationDetailView, self).get_context_data(**kwargs)
+
+        # setup the child samples list
+        samples = query_string_filter(
+            context['location'].sample_set.order_by('-modified'),
+            self.request.GET,
+            prefix='sample_'
+        )
+        sample_paginator = Paginator(samples, per_page=100)
+        context['sample_page_obj'] = sample_paginator.page(self.request.GET.get('sample_page', 1))
+        context['sample_page_kwarg'] = 'sample_page'
+
+        # setup the child locations list
+        locations = query_string_filter(
+            context['location'].children.order_by('-modified'),
+            self.request.GET,
+            prefix='location_'
+        )
+        location_paginator = Paginator(locations, per_page=10)
+        context['location_page_obj'] = location_paginator.page(self.request.GET.get('location_page', 1))
+        context['location_page_kwarg'] = 'location_page'
+
+        return context
 
 
 class LocationAddView(LimsLoginMixin, generic.CreateView):

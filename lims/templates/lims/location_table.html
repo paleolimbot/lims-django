@@ -1,9 +1,9 @@
 
 {% extends 'lims/object_table.html' %}
 
-{% block page_list_top %}{{ block.super }} {{ paginator.count }} locations{% endblock %}
+{% block page_list_top %}{{ block.super }} {{ page_obj.paginator.count }} locations{% endblock %}
 
-{% block page_list_bottom %}{{ block.super }} {{ paginator.count }} locations{% endblock %}
+{% block page_list_bottom %}{{ block.super }} {{ page_obj.paginator.count }} locations{% endblock %}
 
 {% block objects_table %}
 
@@ -18,7 +18,7 @@
             </tr>
         </thead>
 
-        {% for location in object_list %}
+        {% for location in page_obj %}
 
             <tr>
                 <td>

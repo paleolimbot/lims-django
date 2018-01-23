@@ -6,9 +6,50 @@
 
 {% block content_main %}
 
-    <pre>
-        {{ location }}
-    </pre>
+    <table>
+        <tr>
+            <th>Identifier</th>
+            <td>{{ location.slug }}</td>
+        </tr>
+        <tr>
+            <th>Description</th>
+            <td>{{ location.description|linebreaksbr|default:'(none provided)' }}</td>
+        </tr>
+        <tr>
+            <th>Parent Location</th>
+            <td>
+                {% if location.parent %}
+                    <a href="{% url 'lims:location_detail' location.parent.pk %}">{{ location.parent }}</a>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>User</th>
+            <td>{{ location.user }}</td>
+        </tr>
+        <tr>
+            <th>Date Modified (Created)</th>
+            <td>{{ location.modified }} ({{ location.created }})</td>
+        </tr>
+        <tr>
+            <th>Location</th>
+            <td>
+                {% if location.geometry %}
+                    {{ location.geometry|truncatechars:100 }}
+                {% else %}
+                    (No location provided)
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <h2>Sub-locations</h2>
+
+    {% include 'lims/location_table.html' with page_obj=location_page_obj page_kwarg=location_page_kwarg %}
+
+    <h2>Recent Samples</h2>
+
+    {% include 'lims/sample_table.html' with page_obj=sample_page_obj page_kwarg=sample_page_kwarg %}
 
 {% endblock %}
 

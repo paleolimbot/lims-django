@@ -62,6 +62,13 @@
 	color: #333;
 }
 
+/* Set additional styles for the object list */
+
+#viewlist-form, .object-list {
+    width: 100%
+}
+
+
 /* Pagination style */
 
 .paginator {

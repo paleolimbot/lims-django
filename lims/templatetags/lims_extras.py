@@ -7,11 +7,12 @@ register = Library()
 
 
 @register.simple_tag
-def pagination(view, page):
+def pagination(view, page, page_var=None):
     """
     Generate the series of links to the pages in a paginated list.
     """
-    paginator, page_num, page_var = page.paginator, page.number, view.page_kwarg
+    paginator, page_num = page.paginator, page.number
+    page_var = page_var if page_var else view.page_kwarg
 
     ON_EACH_SIDE = 3
     ON_ENDS = 2

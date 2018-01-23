@@ -1,16 +1,18 @@
 
-{% if object_list %}
+{% if page_obj %}
 
     {% block objects %}
 
         {% load lims_extras %}
 
         {% block pagination_top %}
-            <p class="paginator">
-                {% block page_list_top %}
-                    {% pagination view page_obj %}
-                {% endblock %}
-            </p>
+            {% if page_obj.paginator.num_pages > 1 %}
+                <p class="paginator">
+                    {% block page_list_top %}
+                        {% pagination view page_obj page_kwarg %}
+                    {% endblock %}
+                </p>
+            {% endif %}
         {% endblock %}
 
         {% block objects_table %}
@@ -24,7 +26,7 @@
                         </tr>
                     </thead>
 
-                {% for object in object_list %}
+                {% for object in page_obj %}
                     <tr>
                         <td><input type="checkbox" name="select-object-{{ object.pk }}"></td>
                         <td>
@@ -44,11 +46,13 @@
         {% endblock objects_table %}
 
         {% block pagination_bottom %}
-            <p class="paginator">
-                {% block page_list_bottom %}
-                    {% pagination view page_obj %}
-                {% endblock %}
-            </p>
+            {% if page_obj.paginator.num_pages > 1 %}
+                <p class="paginator">
+                    {% block page_list_bottom %}
+                        {% pagination view page_obj page_kwarg %}
+                    {% endblock %}
+                </p>
+            {% endif %}
         {% endblock %}
 
     {% endblock objects %}
