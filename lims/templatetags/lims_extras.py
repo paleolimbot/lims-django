@@ -11,7 +11,7 @@ def pagination(view, page):
     """
     Generate the series of links to the pages in a paginated list.
     """
-    paginator, page_num = page.paginator, page.number
+    paginator, page_num, page_var = page.paginator, page.number, view.page_kwarg
 
     ON_EACH_SIDE = 3
     ON_ENDS = 2
@@ -49,7 +49,7 @@ def pagination(view, page):
             links.append("...")
             continue
 
-        query_dict["page"] = item + 1
+        query_dict[page_var] = item + 1
         page_num = item + 1
 
         if page_num == page.number:

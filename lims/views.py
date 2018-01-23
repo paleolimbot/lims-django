@@ -1,11 +1,14 @@
 
+import re
+
 from django.shortcuts import redirect
 from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.db.models import Q
 from django.forms import modelformset_factory, widgets, ModelForm, CharField
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.exceptions import ValidationError
+from django.http.request import QueryDict
 
 from . import models
 
@@ -21,13 +24,15 @@ def index(request):
 class SampleListView(LimsLoginMixin, generic.ListView):
     template_name = 'lims/sample_list.html'
     paginate_by = 100
+    page_kwarg = 'sample_page'
 
     def get_queryset(self):
         return query_string_filter(
             models.Sample.objects.all(),
             self.request.GET,
             use=(),
-            search=('name', 'slug')
+            search=('name', 'slug'),
+            prefix='sample_'
         ).order_by("-modified")
 
 
@@ -92,13 +97,15 @@ class LocationListView(LimsLoginMixin, generic.ListView):
     template_name = 'lims/location_list.html'
     context_object_name = 'location_list'
     paginate_by = 100
+    page_kwarg = 'location_page'
 
     def get_queryset(self):
         return query_string_filter(
             models.Location.objects.all(),
             self.request.GET,
             use=(),
-            search=('name', 'slug')
+            search=('name', 'slug'),
+            prefix='location_'
         ).order_by("-modified")
 
 
@@ -117,7 +124,16 @@ class LocationAddView(LimsLoginMixin, generic.CreateView):
         return super(LocationAddView, self).form_valid(form)
 
 
-def query_string_filter(queryset, q, use=(), search=(), search_func="icontains"):
+def query_string_filter(queryset, query_dict, use=(), search=(), search_func="icontains", prefix=''):
+
+    q = QueryDict(mutable=True)
+    if prefix:
+        prefix_re = re.compile('^' + prefix)
+        for key in query_dict:
+            if prefix_re.match(key):
+                q.setlist(prefix_re.sub('', key), query_dict.getlist(key))
+    else:
+        q = query_dict.copy()
 
     if 'q' in q and search:
         query = q['q']
