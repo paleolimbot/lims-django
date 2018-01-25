@@ -12,6 +12,7 @@
 }
 
 #header-nav-menu ul, #header-nav-menu li {
+	padding-left:0;
     list-style: none;
     display: inline;
 }
