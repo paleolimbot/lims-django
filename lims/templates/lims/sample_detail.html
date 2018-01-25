@@ -1,8 +1,8 @@
 {% extends "lims/base.html" %}
 
-{% block title %}{{ sample.slug }}{% endblock %}
+{% block title %}View {{ sample.slug }}{% endblock %}
 
-{% block content_title %}Sample: {{ sample.slug }}{% endblock %}
+{% block content_title %}View Sample{% endblock %}
 
 {% block content_main %}
 
@@ -14,6 +14,10 @@
         <tr>
             <th>Sample Name</th>
             <td>{{ sample.name }}</td>
+        </tr>
+        <tr>
+            <th>Description</th>
+            <td>{{ sample.description|linebreaksbr|default:'(none provided)' }}</td>
         </tr>
         <tr>
             <th>User</th>
@@ -59,7 +63,7 @@
     <div class="content-related-actions">
         <h3>User Actions</h3>
         <ul>
-            <li>(None yet)</li>
+            <li><a href="{% url 'lims:sample_change' sample.pk %}">Update Sample</a></li>
         </ul>
     </div>
     <div class="content-related-actions">

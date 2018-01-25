@@ -10,10 +10,14 @@
     <div id="add-form-container">
         <form id="add-form" action="" method="post">
             {% csrf_token %}
-            <table class="object-form">
+            <table class="object-info">
+                <tr>
+                    <th>Sample ID</th>
+                    <td>{{ sample.slug }}</td>
+                </tr>
                 {{ form.as_table }}
             </table>
-            <input type="submit" value="Add sample" />
+            <input type="submit" value="{% block submit_text %}Create Sample{% endblock %}" />
         </form>
     </div>
 

@@ -7,7 +7,7 @@ from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.db.models import Q
-from django.forms import modelformset_factory, widgets, ModelForm, CharField
+from django.forms import modelformset_factory, ModelForm, CharField, Textarea
 from django.core.exceptions import ValidationError
 from django.http.request import QueryDict
 from django.core.paginator import Paginator
@@ -66,12 +66,15 @@ def validate_json_tags_dict(value):
 
 class SampleAddForm(ModelForm):
     location_slug = CharField(validators=[validate_location_slug, ], required=False)
-    tag_json = CharField(validators=[validate_json_tags_dict, ], required=False)
+    tag_json = CharField(
+        validators=[validate_json_tags_dict, ],
+        required=False,
+        widget=Textarea(attrs={'rows': 2, 'cols': 40})
+    )
 
     class Meta:
         model = models.Sample
-        fields = ['collected', 'name', 'location_slug']
-        widgets = {'location': widgets.TextInput()}
+        fields = ['collected', 'name', 'description', 'location_slug']
 
     def clean(self):
         super(SampleAddForm, self).clean()
@@ -90,8 +93,12 @@ class SampleAddForm(ModelForm):
         # tags need the instance to exist in the DB before creating them...
         if self.cleaned_data['tag_json']:
             for key, value in json.loads(self.cleaned_data['tag_json']).items():
-                str_value = value if isinstance(value, str) else json.dumps(value)
-                tag = models.SampleTag(key=key, value=str_value, object=self.instance)
+                object_tags_with_key = self.instance.tags.filter(key=key)
+                if object_tags_with_key:
+                    tag = object_tags_with_key[0]
+                else:
+                    tag = models.SampleTag(object=self.instance, key=key)
+                tag.value = value if isinstance(value, str) else json.dumps(value)
                 tag.save()
 
         return return_val
@@ -136,6 +143,23 @@ class SampleAddView(LimsLoginMixin, generic.CreateView):
     def form_valid(self, form):
         form.instance.user = self.request.user
         return super(SampleAddView, self).form_valid(form)
+
+
+class SampleChangeView(LimsLoginMixin, generic.UpdateView):
+    model = models.Sample
+    template_name = 'lims/sample_change.html'
+    form_class = SampleAddForm
+
+    def get_form(self, form_class=None):
+        form = super(SampleChangeView, self).get_form(form_class=form_class)
+        if self.object.location:
+            form.initial['location_slug'] = self.object.location.slug
+
+        tag_dict = {tag.key: tag.value for tag in self.object.tags.all()}
+        if tag_dict:
+            form.initial['tag_json'] = json.dumps(tag_dict)
+
+        return form
 
 
 class LocationListView(LimsLoginMixin, generic.ListView):
@@ -186,12 +210,18 @@ class LocationDetailView(LimsLoginMixin, generic.DeleteView):
 
 class LocationAddView(LimsLoginMixin, generic.CreateView):
     model = models.Location
-    fields = ['name', 'slug', 'parent', 'geometry']
+    fields = ['name', 'slug', 'description', 'parent', 'geometry']
     success_url = reverse_lazy('lims:location_list')
 
     def form_valid(self, form):
         form.instance.user = self.request.user
         return super(LocationAddView, self).form_valid(form)
+
+
+class LocationChangeView(LimsLoginMixin, generic.UpdateView):
+    model = models.Location
+    template_name = 'lims/location_change.html'
+    fields = ['name', 'slug', 'description', 'parent', 'geometry']
 
 
 class UserDetailView(LimsLoginMixin, generic.DeleteView):
