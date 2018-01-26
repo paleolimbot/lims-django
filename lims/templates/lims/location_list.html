@@ -1,15 +1,21 @@
 {% extends "lims/base.html" %}
 
+{% load static %}
+
 {% block title %}Locations{% endblock %}
 
 {% block content_title %}Recent Locations{% endblock %}
 
 {% block content_main %}
+
     <div id="viewlist">
         <div id="toolbar">
             <div>
                 <form id="object-list-search">
-                    <input id="searchbar" size="40" name="location_q" value="{{ view.request.GET.location_q }}" type="text"/>
+                    <label for="searchbar">
+                        <img src="{% static 'admin/img/search.svg' %}"/>
+                    </label>
+                    <input id="searchbar" name="location_q" value="{{ view.request.GET.location_q }}" type="text"/>
                     <input value="Search" type="Submit"/>
                 </form>
             </div>

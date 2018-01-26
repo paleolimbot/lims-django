@@ -63,6 +63,11 @@
 	color: #333;
 }
 
+#viewlist #toolbar label img {
+	vertical-align: middle;
+	margin-right: 4px;
+}
+
 /* Set additional styles for the object list */
 
 #viewlist-form, .object-list {

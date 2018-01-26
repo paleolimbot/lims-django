@@ -1,5 +1,7 @@
 {% extends "lims/base.html" %}
 
+{% load static %}
+
 {% block title %}Samples{% endblock %}
 
 {% block content_title %}Recent Samples{% endblock %}
@@ -10,7 +12,10 @@
         <div id="toolbar">
             <div>
                 <form id="object-list-search">
-                    <input id="searchbar" size="40" name="sample_q" value="{{ view.request.GET.sample_q }}" type="text"/>
+                    <label for="searchbar">
+                        <img src="{% static 'admin/img/search.svg' %}"/>
+                    </label>
+                    <input id="searchbar" name="sample_q" value="{{ view.request.GET.sample_q }}" type="text"/>
                     <input value="Search" type="Submit"/>
                 </form>
             </div>
