@@ -1,0 +1,14 @@
+
+<div class="actions">
+    <label>Action:
+        <select name="action">
+            <option value="" selected="">---------</option>
+            {% if actions %}
+                {% for action in actions %}
+                    <option value="{{ action.value }}">{{ action.label }}</option>
+                {% endfor %}
+            {% endif %}
+        </select>
+    </label>
+    <button type="submit" class="button" title="Run the selected action" name="index">Go</button>
+</div>

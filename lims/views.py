@@ -7,11 +7,15 @@ from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.db.models import Q
+from django.db import transaction, IntegrityError
 from django.forms import modelformset_factory, ModelForm, CharField, Textarea
 from django.core.exceptions import ValidationError
 from django.http.request import QueryDict
+from django.http import Http404
 from django.core.paginator import Paginator
 from django.contrib.auth.models import User
+from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 from . import models
 
@@ -20,14 +24,66 @@ class LimsLoginMixin(LoginRequiredMixin):
     login_url = '/admin/login/'
 
 
+class MultiDeleteView(generic.ListView):
+    model = None
+    success_url = None
+
+    def get_queryset(self):
+        id_in = self.request.GET.getlist('id__in')
+        queryset = self.model.objects.all().filter(id__in=id_in)
+        if not queryset:
+            raise Http404('Could not find any objects to delete')
+        if len(id_in) != queryset.count():
+            raise Http404('Could not find all requested objects to delete')
+        return queryset
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(MultiDeleteView, self).get_context_data(*args, **kwargs)
+        if hasattr(self, 'errors'):
+            context['errors'] = self.errors
+        return context
+
+    def post(self, request):
+        queryset = self.get_queryset()
+        errors = []
+
+        try:
+            with transaction.atomic():
+                queryset.delete()
+        except IntegrityError as e:
+            if hasattr(e, 'protected_objects') and e.protected_objects:
+                link_list = [format_html('<a href="{}">{}</a>', obj.get_absolute_url(), str(obj))
+                             for obj in e.protected_objects[:10]]
+                items_str = ', '.join(link_list)
+                if len(e.protected_objects) > 10:
+                    items_str += '...plus %d more objects' % (len(e.protected_objects) - 10)
+                errors.append(mark_safe('Some items could not be deleted due to relationships with other objects. '
+                                        'These objects may include the following: ' + items_str))
+            else:
+                errors.append('Some items could not be deleted: %s' % e)
+
+        if errors:
+            self.errors = errors
+            return self.get(request)
+        else:
+            return redirect(self.success_url)
+
+
 def index(request):
     return redirect(reverse_lazy('lims:sample_list'))
 
 
 class SampleListView(LimsLoginMixin, generic.ListView):
     template_name = 'lims/sample_list.html'
-    paginate_by = 100
+    paginate_by = 50
     page_kwarg = 'sample_page'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(SampleListView, self).get_context_data(*args, **kwargs)
+        context['actions'] = [
+            {'value': 'delete-samples', 'label': 'Delete selected samples'}
+        ]
+        return context
 
     def get_queryset(self):
         return query_string_filter(
@@ -162,10 +218,34 @@ class SampleChangeView(LimsLoginMixin, generic.UpdateView):
         return form
 
 
+class SampleDeleteView(LimsLoginMixin, MultiDeleteView):
+    model = models.Sample
+    template_name = 'lims/sample_delete.html'
+    success_url = reverse_lazy('lims:sample_list')
+
+
+def sample_action(request, pk=None, action=None):
+
+    if action and pk:
+        ids_query = QueryDict('id__in=' + pk)
+    else:
+        post_vars = request.POST
+        if not post_vars or 'action' not in post_vars:
+            raise Http404('No action provided')
+
+        ids_query = extract_selected_ids(post_vars, 'sample-([0-9]+)-selected')
+        action = post_vars['action']
+
+    if action == 'delete-samples':
+        return redirect(reverse_lazy('lims:sample_delete') + '?' + ids_query.urlencode())
+    else:
+        raise Http404('Unrecognized action: "%s"' % action)
+
+
 class LocationListView(LimsLoginMixin, generic.ListView):
     template_name = 'lims/location_list.html'
     context_object_name = 'location_list'
-    paginate_by = 100
+    paginate_by = 50
     page_kwarg = 'location_page'
 
     def get_queryset(self):
@@ -176,6 +256,13 @@ class LocationListView(LimsLoginMixin, generic.ListView):
             search=('name', 'slug'),
             prefix='location_'
         ).order_by("-modified")
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(LocationListView, self).get_context_data(*args, **kwargs)
+        context['actions'] = [
+            {'value': 'delete-locations', 'label': 'Delete selected locations'}
+        ]
+        return context
 
 
 class LocationDetailView(LimsLoginMixin, generic.DeleteView):
@@ -195,6 +282,11 @@ class LocationDetailView(LimsLoginMixin, generic.DeleteView):
         context['sample_page_obj'] = sample_paginator.page(self.request.GET.get('sample_page', 1))
         context['sample_page_kwarg'] = 'sample_page'
 
+        # add some actions for the child samples
+        context['sample_actions'] = [
+            {'value': 'delete-samples', 'label': 'Delete selected samples'}
+        ]
+
         # setup the child locations list
         locations = query_string_filter(
             context['location'].children.order_by('-modified'),
@@ -204,6 +296,11 @@ class LocationDetailView(LimsLoginMixin, generic.DeleteView):
         location_paginator = Paginator(locations, per_page=10)
         context['location_page_obj'] = location_paginator.page(self.request.GET.get('location_page', 1))
         context['location_page_kwarg'] = 'location_page'
+
+        # add some actions for the child locations
+        context['location_actions'] = [
+            {'value': 'delete-locations', 'label': 'Delete selected locations'}
+        ]
 
         return context
 
@@ -224,6 +321,30 @@ class LocationChangeView(LimsLoginMixin, generic.UpdateView):
     fields = ['name', 'slug', 'description', 'parent', 'geometry']
 
 
+class LocationDeleteView(LimsLoginMixin, MultiDeleteView):
+    model = models.Location
+    template_name = 'lims/location_delete.html'
+    success_url = reverse_lazy('lims:location_list')
+
+
+def location_action(request, pk=None, action=None):
+
+    if action and pk:
+        ids_query = QueryDict('id__in=' + pk)
+    else:
+        post_vars = request.POST
+        if not post_vars or 'action' not in post_vars:
+            raise Http404('No action provided')
+
+        ids_query = extract_selected_ids(post_vars, 'location-([0-9]+)-selected')
+        action = post_vars['action']
+
+    if action == 'delete-locations':
+        return redirect(reverse_lazy('lims:location_delete') + '?' + ids_query.urlencode())
+    else:
+        raise Http404('Unrecognized action: "%s"' % action)
+
+
 class UserDetailView(LimsLoginMixin, generic.DeleteView):
     template_name = 'lims/user_detail.html'
     model = User
@@ -241,6 +362,11 @@ class UserDetailView(LimsLoginMixin, generic.DeleteView):
         context['sample_page_obj'] = sample_paginator.page(self.request.GET.get('sample_page', 1))
         context['sample_page_kwarg'] = 'sample_page'
 
+        # add some actions for the child samples
+        context['sample_actions'] = [
+            {'value': 'delete-samples', 'label': 'Delete selected samples'}
+        ]
+
         # setup the child locations list
         locations = query_string_filter(
             context['user'].location_set.order_by('-modified'),
@@ -251,7 +377,23 @@ class UserDetailView(LimsLoginMixin, generic.DeleteView):
         context['location_page_obj'] = location_paginator.page(self.request.GET.get('location_page', 1))
         context['location_page_kwarg'] = 'location_page'
 
+        # add some actions for the child locations
+        context['location_actions'] = [
+            {'value': 'delete-locations', 'label': 'Delete selected locations'}
+        ]
+
         return context
+
+
+def extract_selected_ids(data, regex_str):
+    regex = re.compile(regex_str)
+    ids = []
+    for key, value in data.items():
+        if regex.match(key) and value:
+            ids.append(int(regex.search(key)[1]))
+    ids_query = QueryDict(mutable=True)
+    ids_query.setlist('id__in', ids)
+    return ids_query
 
 
 def query_string_filter(queryset, query_dict, use=(), search=(), search_func="icontains", prefix=''):

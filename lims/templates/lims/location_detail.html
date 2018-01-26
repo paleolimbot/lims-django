@@ -60,11 +60,11 @@
 
     <h2><a id="locations">Sub-locations</a></h2>
 
-    {% include 'lims/location_table.html' with page_obj=location_page_obj page_kwarg=location_page_kwarg %}
+    {% include 'lims/location_table.html' with page_obj=location_page_obj page_kwarg=location_page_kwarg actions=location_actions %}
 
     <h2><a id="samples">Recent Samples</a></h2>
 
-    {% include 'lims/sample_table.html' with page_obj=sample_page_obj page_kwarg=sample_page_kwarg %}
+    {% include 'lims/sample_table.html' with page_obj=sample_page_obj page_kwarg=sample_page_kwarg actions=sample_actions %}
 
 {% endblock %}
 
@@ -74,6 +74,7 @@
         <h3>User Actions</h3>
         <ul>
             <li><a href="{% url 'lims:location_change' location.pk %}">Update Location</a></li>
+            <li><a href="{% url 'lims:location_item_action' location.pk 'delete-locations' %}">Delete Location</a></li>
         </ul>
     </div>
     <div class="content-related-actions">

@@ -7,44 +7,59 @@
 
 {% block objects_table %}
 
-    <table class="object-list">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>User</th>
-                <th>Modified</th>
-                <th>Location</th>
-                <th>Tags</th>
-            </tr>
-        </thead>
+    <form id="location-viewlist-form" method="post" action="{% url 'lims:location_action' %}">
 
-        {% for location in page_obj %}
+        {% csrf_token %}
 
-            <tr>
-                <td>
-                    <a href="{% url 'lims:location_detail' location.pk %}">{{ location.name }}</a>
-                </td>
-                <td>
-                    {% if location.user %}
-                        <a href="{% url 'lims:user_detail' location.user.pk %}">{{ location.user }}</a>
-                    {% endif %}
-                </td>
-                <td>{{ location.modified }}</td>
-                <td>
-                    {%  if location.parent %}
-                        <a href="{% url 'lims:location_detail' location.parent.pk %}">{{ location.parent.name }}</a>
-                    {% endif %}
-                </td>
-                <td>
-                    {% for tag in location.tags.all %}
-                         {{ tag }} <br/>
-                    {% endfor %}
-                </td>
-            </tr>
+        {% include 'lims/object_table_actions.html' %}
 
-        {% endfor %}
+        <table class="object-list">
+            <thead>
+                <tr>
+                    <th>
+                        <input title="Select all samples" type="checkbox" name="locations-select-all"/>
+                    </th>
+                    <th>Name</th>
+                    <th>User</th>
+                    <th>Modified</th>
+                    <th>Location</th>
+                    <th>Tags</th>
+                </tr>
+            </thead>
 
-    </table>
+            {% for location in page_obj %}
+
+                <tr>
+                    <td>
+                        <input title="Select {{ location }}" type="checkbox" name="location-{{ location.pk }}-selected"/>
+                    </td>
+                    <td>
+                        <a href="{% url 'lims:location_detail' location.pk %}">{{ location.name }}</a>
+                    </td>
+                    <td>
+                        {% if location.user %}
+                            <a href="{% url 'lims:user_detail' location.user.pk %}">{{ location.user }}</a>
+                        {% endif %}
+                    </td>
+                    <td>{{ location.modified }}</td>
+                    <td>
+                        {%  if location.parent %}
+                            <a href="{% url 'lims:location_detail' location.parent.pk %}">{{ location.parent.name }}</a>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% for tag in location.tags.all %}
+                             {{ tag }} <br/>
+                        {% endfor %}
+                    </td>
+                </tr>
+
+            {% endfor %}
+
+        </table>
+
+    </form>
+
 
 {% endblock %}
 

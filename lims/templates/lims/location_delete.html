@@ -1,0 +1,62 @@
+
+{% extends "lims/base.html" %}
+
+{% block title %}Delete Locations{% endblock %}
+
+{% block content_title %}Delete Locations?{% endblock %}
+
+{% block content_main %}
+
+    <div id="confirm-delete-container">
+
+        <form action="" method="post">{% csrf_token %}
+
+            {% if errors %}
+
+                <div id="delete-errors">
+
+                    <p>There were problems deleting locations:</p>
+
+                    <ul>
+                        {% for error in errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+
+                </div>
+
+            {% endif %}
+
+            <p>Are you sure you want to delete the following locations?</p>
+
+            <ul>
+                {% for location in object_list %}
+                    <li><a href="{{ location.get_absolute_url }}">{{ location }}</a></li>
+                {% endfor %}
+            </ul>
+            <input type="submit" value="Confirm" />
+        </form>
+
+    </div>
+
+{% endblock %}
+
+
+{% block content_related %}
+
+    <div class="content-related-actions">
+        <h3>User Actions</h3>
+        <ul>
+            <li>(none)</li>
+        </ul>
+    </div>
+
+    <div class="content-related-actions">
+        <h3>Admin Actions</h3>
+        <ul>
+            <li><a href="{% url 'admin:lims_location_changelist' %}">Admin View</a></li>
+        </ul>
+    </div>
+
+{% endblock %}
+

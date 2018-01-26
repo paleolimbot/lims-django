@@ -7,49 +7,58 @@
 
 {% block objects_table %}
 
-    <form id="viewlist-form" method="post">
-            <table class="object-list">
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" name="samples-all"/></th>
-                        <th>Sample ID</th>
-                        <th>User</th>
-                        <th>Location</th>
-                        <th>Modified</th>
-                        <th>Collected</th>
-                        <th>Tags</th>
-                    </tr>
-                </thead>
+    <form id="sample-viewlist-form" method="post" action="{% url 'lims:sample_action' %}">
 
-            {% for sample in page_obj %}
+        {% csrf_token %}
+
+        {% include 'lims/object_table_actions.html' %}
+
+        <table class="object-list">
+            <thead>
                 <tr>
-                    <td><input type="checkbox" name="sample-{{ sample.pk }}"></td>
-                    <td>
-                        <a href="{% url 'lims:sample_detail' sample.pk %}">{{ sample.slug }}</a>
-                    </td>
-                    <td>
-                        {% if sample.user %}
-                            <a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if sample.location %}
-                        <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
-                        {% endif %}
-                    </td>
-                    <td>{{ sample.modified }}</td>
-                    <td>{% if sample.collected %}{{ sample.collected }}{% endif %}</td>
-                    <td>
-                        {% for tag in sample.tags.all %}
-                          {{ tag }} <br/>
-                        {% endfor %}
-                    </td>
+                    <th>
+                        <input title="Select all samples" type="checkbox" name="samples-select-all"/>
+                    </th>
+                    <th>Sample ID</th>
+                    <th>User</th>
+                    <th>Location</th>
+                    <th>Modified</th>
+                    <th>Collected</th>
+                    <th>Tags</th>
                 </tr>
+            </thead>
 
-            {% endfor %}
+        {% for sample in page_obj %}
+            <tr>
+                <td>
+                    <input title="Select {{ sample }}" type="checkbox" name="sample-{{ sample.pk }}-selected">
+                </td>
+                <td>
+                    <a href="{% url 'lims:sample_detail' sample.pk %}">{{ sample.slug }}</a>
+                </td>
+                <td>
+                    {% if sample.user %}
+                        <a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if sample.location %}
+                        <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
+                    {% endif %}
+                </td>
+                <td>{{ sample.modified }}</td>
+                <td>{% if sample.collected %}{{ sample.collected }}{% endif %}</td>
+                <td>
+                    {% for tag in sample.tags.all %}
+                      {{ tag }} <br/>
+                    {% endfor %}
+                </td>
+            </tr>
 
-            </table>
-        </form>
+        {% endfor %}
+
+        </table>
+    </form>
 
 {% endblock %}
 

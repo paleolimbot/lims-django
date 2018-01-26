@@ -64,6 +64,7 @@
         <h3>User Actions</h3>
         <ul>
             <li><a href="{% url 'lims:sample_change' sample.pk %}">Update Sample</a></li>
+            <li><a href="{% url 'lims:sample_item_action' sample.pk 'delete-samples' %}">Delete Sample</a></li>
         </ul>
     </div>
     <div class="content-related-actions">

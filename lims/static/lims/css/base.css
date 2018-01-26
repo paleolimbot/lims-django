@@ -68,6 +68,52 @@
 	margin-right: 4px;
 }
 
+.object-list-container .actions {
+	padding: 10px;
+	background: #fff;
+	border-top: none;
+	border-bottom: none;
+	line-height: 24px;
+	color: #999;
+}
+
+.object-list-container .actions select:focus {
+	border-color: #999;
+}
+
+.object-list-container .actions label {
+	display: inline-block;
+	vertical-align: middle;
+	font-size: 13px;
+}
+
+.object-list-container .actions select {
+	vertical-align: top;
+	height: 24px;
+	background: none;
+	color: #000;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-size: 14px;
+	padding: 0 0 0 4px;
+	margin: 0;
+	margin-left: 10px;
+}
+
+.object-list-container .actions .button {
+	font-size: 13px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	background: #fff;
+	box-shadow: 0 -15px 20px -10px rgba(0, 0, 0, 0.15) inset;
+	cursor: pointer;
+	height: 24px;
+	line-height: 1;
+	padding: 4px 8px;
+	margin: 0;
+	color: #333;
+}
+
 /* Set additional styles for the object list */
 
 #viewlist-form, .object-list {
