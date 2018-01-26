@@ -7,7 +7,7 @@
 
 {% block objects_table %}
 
-    <form id="location-viewlist-form" method="post" action="{% url 'lims:location_action' %}">
+    <form id="location-viewlist-form" method="post" action="{% url 'lims:location_action' %}?from={{ view.request.get_full_path }}">
 
         {% csrf_token %}
 

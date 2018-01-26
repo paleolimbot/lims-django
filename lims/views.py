@@ -26,7 +26,10 @@ class LimsLoginMixin(LoginRequiredMixin):
 
 class MultiDeleteView(generic.ListView):
     model = None
-    success_url = None
+    success_url = reverse_lazy('lims:index')
+
+    def get_success_url(self):
+        return self.request.GET.get('from', self.success_url)
 
     def get_queryset(self):
         id_in = self.request.GET.getlist('id__in')
@@ -66,7 +69,7 @@ class MultiDeleteView(generic.ListView):
             self.errors = errors
             return self.get(request)
         else:
-            return redirect(self.success_url)
+            return redirect(self.get_success_url())
 
 
 def index(request):
@@ -236,6 +239,9 @@ def sample_action(request, pk=None, action=None):
         ids_query = extract_selected_ids(post_vars, 'sample-([0-9]+)-selected')
         action = post_vars['action']
 
+    if 'from' in request.GET:
+        ids_query['from'] = request.GET['from']
+
     if action == 'delete-samples':
         return redirect(reverse_lazy('lims:sample_delete') + '?' + ids_query.urlencode())
     else:
@@ -338,6 +344,9 @@ def location_action(request, pk=None, action=None):
 
         ids_query = extract_selected_ids(post_vars, 'location-([0-9]+)-selected')
         action = post_vars['action']
+
+    if 'from' in request.GET:
+        ids_query['from'] = request.GET['from']
 
     if action == 'delete-locations':
         return redirect(reverse_lazy('lims:location_delete') + '?' + ids_query.urlencode())
