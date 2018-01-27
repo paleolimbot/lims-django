@@ -50,6 +50,7 @@ class BaseObjectModel(models.Model):
             # owners and staff can do anything
             return True
         elif action == 'add':
+            # any logged in user can add samples
             return True
         elif action == 'view':
             # any logged in user can view
