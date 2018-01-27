@@ -9,6 +9,19 @@ from .. import models
 from .accounts import LimsLoginMixin
 
 
+class UserAwareForm(ModelForm):
+
+    def clean(self):
+        # check that user can add/edit this sample
+        if not self.instance.pk and not self.instance.user_can(self.user, 'add'):
+            raise ValidationError('User is not allowed to add this sample')
+        if self.instance.pk and not self.instance.user_can(self.user, 'edit'):
+            raise ValidationError('User is not allowed to edit this sample')
+
+        self.instance.user = self.user
+        super().clean()
+
+
 def validate_location_slug(value):
     if value:
         try:
@@ -29,7 +42,7 @@ def validate_json_tags_dict(value):
         raise ValidationError("Value is not valid JSON")
 
 
-class SampleAddForm(ModelForm):
+class SampleAddForm(UserAwareForm):
     location_slug = CharField(validators=[validate_location_slug, ], required=False)
     tag_json = CharField(
         validators=[validate_json_tags_dict, ],
@@ -43,7 +56,6 @@ class SampleAddForm(ModelForm):
 
     def clean(self):
         super(SampleAddForm, self).clean()
-
         if not self.has_error('location_slug'):
             try:
                 self.instance.location = models.Location.objects.get(
@@ -101,9 +113,13 @@ class SampleBulkAddView(LimsLoginMixin, generic.FormView):
 
 
 class SampleAddView(LimsLoginMixin, generic.CreateView):
-    success_url = reverse_lazy('lims:sample_list')
     template_name = 'lims/sample_form.html'
     form_class = SampleAddForm
+
+    def get_form(self, *args, **kwargs):
+        form = super().get_form(*args, **kwargs)
+        form.user = self.request.user
+        return form
 
     def form_valid(self, form):
         form.instance.user = self.request.user
@@ -116,7 +132,9 @@ class SampleChangeView(LimsLoginMixin, generic.UpdateView):
     form_class = SampleAddForm
 
     def get_form(self, form_class=None):
-        form = super(SampleChangeView, self).get_form(form_class=form_class)
+        form = super().get_form(form_class=form_class)
+        form.user = self.request.user
+
         if self.object.location:
             form.initial['location_slug'] = self.object.location.slug
 
@@ -127,14 +145,21 @@ class SampleChangeView(LimsLoginMixin, generic.UpdateView):
         return form
 
 
+class LocationForm(UserAwareForm):
+
+    class Meta:
+        model = models.Location
+        fields = ['name', 'slug', 'description', 'parent', 'geometry']
+
+
 class LocationAddView(LimsLoginMixin, generic.CreateView):
     model = models.Location
-    fields = ['name', 'slug', 'description', 'parent', 'geometry']
-    success_url = reverse_lazy('lims:location_list')
+    form_class = LocationForm
 
-    def form_valid(self, form):
-        form.instance.user = self.request.user
-        return super(LocationAddView, self).form_valid(form)
+    def get_form(self, *args, **kwargs):
+        form = super().get_form(*args, **kwargs)
+        form.user = self.request.user
+        return form
 
 
 class LocationChangeView(LimsLoginMixin, generic.UpdateView):

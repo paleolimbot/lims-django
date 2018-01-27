@@ -11,10 +11,12 @@
         <form id="add-form" action="" method="post">
             {% csrf_token %}
             <table class="object-info">
-                <tr>
-                    <th>Sample ID</th>
-                    <td>{{ sample.slug }}</td>
-                </tr>
+                {% if sample.pk %}
+                    <tr>
+                        <th>Sample ID</th>
+                        <td>{{ sample.slug }}</td>
+                    </tr>
+                {% endif %}
                 {{ form.as_table }}
             </table>
             <input type="submit" value="{% block submit_text %}Create Sample{% endblock %}" />

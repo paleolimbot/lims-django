@@ -17,35 +17,7 @@
             {% endif %}
         {% endblock %}
 
-        {% block objects_table %}
-
-            <form id="viewlist-form" method="post">
-                <table class="object-list">
-                    <thead>
-                        <tr>
-                            <th><input type="checkbox" name="select-objects-all"/></th>
-                            <th>Object string</th>
-                        </tr>
-                    </thead>
-
-                {% for object in page_obj %}
-                    <tr>
-                        <td><input type="checkbox" name="select-object-{{ object.pk }}"></td>
-                        <td>
-                            {% if object.get_absolute_url %}
-                                <a href="{{ object.get_absolute_url }}">{{ object }}</a>
-                            {% else %}
-                                {{ object }}
-                            {% endif %}
-                        </td>
-                    </tr>
-
-                {% endfor %}
-
-                </table>
-            </form>
-
-        {% endblock objects_table %}
+        {% block objects_table %}{% endblock objects_table %}
 
         {% block pagination_bottom %}
             {% if page_obj.paginator.num_pages > 1 %}

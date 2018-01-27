@@ -5,8 +5,18 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.utils.text import slugify
 from django.urls import reverse_lazy
+from django.utils.html import format_html
 
 from .geometry import validate_wkt, wkt_bounds
+
+
+class ObjectPermissionError(PermissionError):
+
+    def __init(self, obj, *args):
+        super().__init__(*args)
+
+    def get_object(self):
+        return self.args[0]
 
 
 class BaseObjectModel(models.Model):
@@ -23,6 +33,32 @@ class BaseObjectModel(models.Model):
 
     def get_absolute_url(self):
         raise NotImplementedError()
+
+    def get_link(self):
+        return format_html('<a href="{}">{}</a>', self.get_absolute_url(), self)
+
+    def get_checkbox(self):
+        return format_html('<input title="Select {}" type="checkbox" name="object-{}-selected"/>',
+                           self, self.pk)
+
+    def user_can(self, user, action):
+        # non-existent users can't do anything
+        if not user.pk:
+            return False
+
+        if user.is_staff or user == self.user:
+            # owners and staff can do anything
+            return True
+        elif action == 'add':
+            return True
+        elif action == 'view':
+            # any logged in user can view
+            return True
+        else:
+            return False
+
+    def __str__(self):
+        return self.name
 
 
 class Tag(models.Model):
@@ -74,9 +110,6 @@ class Location(BaseObjectModel):
         self.maxy = bounds['maxy']
 
         super(Location, self).save(*args, **kwargs)
-
-    def __str__(self):
-        return self.name
 
 
 class LocationTag(Tag):

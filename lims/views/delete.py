@@ -40,16 +40,14 @@ class MultiDeleteView(generic.ListView):
         try:
             with transaction.atomic():
                 for obj in queryset:
-                    if current_user.is_staff or obj.user.pk == current_user.pk:
+                    if obj.user_can(current_user, 'delete'):
                         obj.delete()
                     else:
-                        raise PermissionError(current_user, obj)
+                        raise models.ObjectPermissionError(obj)
 
         except IntegrityError as e:
             if hasattr(e, 'protected_objects') and e.protected_objects:
-                link_list = [format_html('<a href="{}">{}</a>', obj.get_absolute_url(), str(obj))
-                             for obj in e.protected_objects[:10]]
-                items_str = ', '.join(link_list)
+                items_str = ', '.join(obj.get_link() for obj in e.protected_objects[:10])
                 if len(e.protected_objects) > 10:
                     items_str += '...plus %d more objects' % (len(e.protected_objects) - 10)
                 errors.append(mark_safe('Some items could not be deleted due to relationships with other objects. '
@@ -57,11 +55,10 @@ class MultiDeleteView(generic.ListView):
             else:
                 errors.append('Some items could not be deleted: %s' % e)
 
-        except PermissionError as e:
+        except models.ObjectPermissionError as e:
             errors.append(
-                format_html('User <a href="{}">{}</a> is not allowed to delete sample <a href="{}">{}</a>.',
-                            reverse_lazy('lims:user_detail', e.args[0].pk),
-                            e.args[0], e.args[1].get_absolute_url(), e.args[1])
+                format_html('You are not allowed to delete sample <a href="{}">{}</a>.',
+                            e.get_object().get_absolute_url(), e.get_object())
             )
 
         if errors:

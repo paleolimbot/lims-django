@@ -21,8 +21,8 @@
                     </th>
                     <th>Sample ID</th>
                     <th>User</th>
-                    <th>Location</th>
                     <th>Modified</th>
+                    <th>Location</th>
                     <th>Collected</th>
                     <th>Tags</th>
                 </tr>
@@ -30,24 +30,17 @@
 
             {% for sample in page_obj %}
                 <tr>
-                    <td>
-                        <input title="Select {{ sample }}" type="checkbox" name="object-{{ sample.pk }}-selected">
-                    </td>
-                    <td>
-                        <a href="{% url 'lims:sample_detail' sample.pk %}">{{ sample.slug }}</a>
-                    </td>
-                    <td>
-                        {% if sample.user %}
-                            <a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>
-                        {% endif %}
-                    </td>
+                    <td>{{ sample.get_checkbox }}</td>
+                    <td>{{ sample.get_link }}</td>
+                    <td>{% if sample.user %}<a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>{% endif %}</td>
+                    <td>{{ location.modified }}</td>
                     <td>
                         {% if sample.location %}
-                            <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
+                            {{ sample.location.get_link }}
                         {% endif %}
                     </td>
                     <td>{{ sample.modified }}</td>
-                    <td>{% if sample.collected %}{{ sample.collected }}{% endif %}</td>
+                    <td>{{ sample.collected }}</td>
                     <td>
                         {% for tag in sample.tags.all %}
                           {{ tag }} <br/>

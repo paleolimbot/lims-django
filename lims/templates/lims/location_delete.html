@@ -13,17 +13,11 @@
 
             {% if errors %}
 
-                <div id="delete-errors">
-
-                    <p>There were problems deleting locations:</p>
-
-                    <ul>
-                        {% for error in errors %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-                    </ul>
-
-                </div>
+                <ul class="errorlist">
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
 
             {% endif %}
 
