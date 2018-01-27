@@ -42,7 +42,7 @@
                     {% if view.request.user.is_staff %}
                         <a href="{% url 'admin:index' %}">Admin Site</a> /
                     {% endif %}
-                    <a href="/admin/password_change">Account</a> /
+                    <a href="{% url 'lims:account' %}">Account</a> /
                     <a href="{% url 'lims:logout' %}">Logout</a>
                 </div>
 

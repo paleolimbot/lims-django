@@ -8,8 +8,9 @@ urlpatterns = [
     url(r'^$', views.IndexView.as_view(), name="index"),
 
     # login/account pages
-    url(r'^login$', views.LoginView.as_view(), name='login'),
-    url(r'^logout$', views.LogoutView.as_view(), name='logout'),
+    url(r'^account/$', views.AccountView.as_view(), name='account'),
+    url(r'^login/$', views.LoginView.as_view(), name='login'),
+    url(r'^logout/$', views.LogoutView.as_view(), name='logout'),
 
     # sample static views
     url(r'^sample/$', views.SampleListView.as_view(), name="sample_list"),

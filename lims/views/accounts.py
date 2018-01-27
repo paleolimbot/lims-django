@@ -53,3 +53,7 @@ class LogoutView(generic.TemplateView):
 
         logout(request)
         return super(LogoutView, self).dispatch(request, *args, **kwargs)
+
+
+class AccountView(LimsLoginMixin, generic.TemplateView):
+    template_name = 'lims/account.html'
