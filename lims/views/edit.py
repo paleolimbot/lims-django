@@ -134,6 +134,28 @@ class BaseObjectChangeView(generic.UpdateView):
         return form
 
 
+class SampleAddView(LimsLoginMixin, BaseObjectAddView):
+    template_name = 'lims/sample_form.html'
+    form_class = SampleForm
+
+
+class SampleChangeView(LimsLoginMixin, BaseObjectChangeView):
+    model = models.Sample
+    template_name = 'lims/sample_change.html'
+    form_class = SampleForm
+
+
+class LocationAddView(LimsLoginMixin, BaseObjectAddView):
+    template_name = 'lims/location_form.html'
+    form_class = LocationForm
+
+
+class LocationChangeView(LimsLoginMixin, BaseObjectChangeView):
+    model = models.Location
+    template_name = 'lims/location_change.html'
+    form_class = LocationForm
+
+
 class SampleBulkAddView(LimsLoginMixin, generic.FormView):
     success_url = reverse_lazy('lims:sample_list')
     template_name = 'lims/sample_bulk_form.html'
@@ -166,31 +188,5 @@ class SampleBulkAddView(LimsLoginMixin, generic.FormView):
         return kwargs
 
     def form_valid(self, form):
-        for sub_form in form:
-            if sub_form.has_changed():
-                sub_form.instance.user = self.request.user
-
         form.save()
         return super(SampleBulkAddView, self).form_valid(form)
-
-
-class SampleAddView(LimsLoginMixin, BaseObjectAddView):
-    template_name = 'lims/sample_form.html'
-    form_class = SampleForm
-
-
-class SampleChangeView(LimsLoginMixin, BaseObjectChangeView):
-    model = models.Sample
-    template_name = 'lims/sample_change.html'
-    form_class = SampleForm
-
-
-class LocationAddView(LimsLoginMixin, BaseObjectAddView):
-    template_name = 'lims/location_form.html'
-    form_class = LocationForm
-
-
-class LocationChangeView(LimsLoginMixin, BaseObjectChangeView):
-    model = models.Location
-    template_name = 'lims/location_change.html'
-    form_class = LocationForm
