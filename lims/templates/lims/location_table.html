@@ -31,7 +31,7 @@
 
                 <tr>
                     <td>
-                        <input title="Select {{ location }}" type="checkbox" name="location-{{ location.pk }}-selected"/>
+                        <input title="Select {{ location }}" type="checkbox" name="object-{{ location.pk }}-selected"/>
                     </td>
                     <td>
                         <a href="{% url 'lims:location_detail' location.pk %}">{{ location.name }}</a>

@@ -28,34 +28,34 @@
                 </tr>
             </thead>
 
-        {% for sample in page_obj %}
-            <tr>
-                <td>
-                    <input title="Select {{ sample }}" type="checkbox" name="sample-{{ sample.pk }}-selected">
-                </td>
-                <td>
-                    <a href="{% url 'lims:sample_detail' sample.pk %}">{{ sample.slug }}</a>
-                </td>
-                <td>
-                    {% if sample.user %}
-                        <a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if sample.location %}
-                        <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
-                    {% endif %}
-                </td>
-                <td>{{ sample.modified }}</td>
-                <td>{% if sample.collected %}{{ sample.collected }}{% endif %}</td>
-                <td>
-                    {% for tag in sample.tags.all %}
-                      {{ tag }} <br/>
-                    {% endfor %}
-                </td>
-            </tr>
+            {% for sample in page_obj %}
+                <tr>
+                    <td>
+                        <input title="Select {{ sample }}" type="checkbox" name="object-{{ sample.pk }}-selected">
+                    </td>
+                    <td>
+                        <a href="{% url 'lims:sample_detail' sample.pk %}">{{ sample.slug }}</a>
+                    </td>
+                    <td>
+                        {% if sample.user %}
+                            <a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if sample.location %}
+                            <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
+                        {% endif %}
+                    </td>
+                    <td>{{ sample.modified }}</td>
+                    <td>{% if sample.collected %}{{ sample.collected }}{% endif %}</td>
+                    <td>
+                        {% for tag in sample.tags.all %}
+                          {{ tag }} <br/>
+                        {% endfor %}
+                    </td>
+                </tr>
 
-        {% endfor %}
+            {% endfor %}
 
         </table>
     </form>

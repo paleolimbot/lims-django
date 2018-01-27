@@ -227,27 +227,6 @@ class SampleDeleteView(LimsLoginMixin, MultiDeleteView):
     success_url = reverse_lazy('lims:sample_list')
 
 
-def sample_action(request, pk=None, action=None):
-
-    if action and pk:
-        ids_query = QueryDict('id__in=' + pk)
-    else:
-        post_vars = request.POST
-        if not post_vars or 'action' not in post_vars:
-            raise Http404('No action provided')
-
-        ids_query = extract_selected_ids(post_vars, 'sample-([0-9]+)-selected')
-        action = post_vars['action']
-
-    if 'from' in request.GET:
-        ids_query['from'] = request.GET['from']
-
-    if action == 'delete-samples':
-        return redirect(reverse_lazy('lims:sample_delete') + '?' + ids_query.urlencode())
-    else:
-        raise Http404('Unrecognized action: "%s"' % action)
-
-
 class LocationListView(LimsLoginMixin, generic.ListView):
     template_name = 'lims/location_list.html'
     context_object_name = 'location_list'
@@ -333,27 +312,6 @@ class LocationDeleteView(LimsLoginMixin, MultiDeleteView):
     success_url = reverse_lazy('lims:location_list')
 
 
-def location_action(request, pk=None, action=None):
-
-    if action and pk:
-        ids_query = QueryDict('id__in=' + pk)
-    else:
-        post_vars = request.POST
-        if not post_vars or 'action' not in post_vars:
-            raise Http404('No action provided')
-
-        ids_query = extract_selected_ids(post_vars, 'location-([0-9]+)-selected')
-        action = post_vars['action']
-
-    if 'from' in request.GET:
-        ids_query['from'] = request.GET['from']
-
-    if action == 'delete-locations':
-        return redirect(reverse_lazy('lims:location_delete') + '?' + ids_query.urlencode())
-    else:
-        raise Http404('Unrecognized action: "%s"' % action)
-
-
 class UserDetailView(LimsLoginMixin, generic.DeleteView):
     template_name = 'lims/user_detail.html'
     model = User
@@ -394,8 +352,47 @@ class UserDetailView(LimsLoginMixin, generic.DeleteView):
         return context
 
 
-def extract_selected_ids(data, regex_str):
-    regex = re.compile(regex_str)
+LOCATION_ACTIONS = {
+    'delete-locations': reverse_lazy('lims:location_delete')
+}
+
+SAMPLE_ACTIONS = {
+    'delete-samples': reverse_lazy('lims:sample_delete')
+}
+
+
+def location_action(request, pk=None, action=None):
+    return do_action(request, pk, action, LOCATION_ACTIONS)
+
+
+def sample_action(request, pk=None, action=None):
+    return do_action(request, pk, action, SAMPLE_ACTIONS)
+
+
+def do_action(request, pk, action, action_dict):
+
+    if action and pk:
+        ids_query = QueryDict('id__in=' + pk)
+    else:
+        post_vars = request.POST
+        if not post_vars or 'action' not in post_vars:
+            raise Http404('No action provided')
+
+        ids_query = extract_selected_ids(post_vars)
+        action = post_vars['action']
+
+    if action not in action_dict:
+        raise Http404('Unrecognized action: "%s"' % action)
+
+    if 'from' in request.GET:
+        ids_query['from'] = request.GET['from']
+
+    action_url = action_dict[action]
+    return redirect(action_url + '?' + ids_query.urlencode())
+
+
+def extract_selected_ids(data):
+    regex = re.compile(r'object-([0-9]+)-selected')
     ids = []
     for key, value in data.items():
         if regex.match(key) and value:
