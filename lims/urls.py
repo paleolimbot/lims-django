@@ -7,6 +7,10 @@ urlpatterns = [
     # the index page
     url(r'^$', views.index, name="index"),
 
+    # login/account pages
+    url(r'^login$', views.LoginView.as_view(), name='login'),
+    url(r'^logout$', views.LogoutView.as_view(), name='logout'),
+
     # sample static views
     url(r'^sample/$', views.SampleListView.as_view(), name="sample_list"),
     url(r'^sample/add_bulk$', views.SampleBulkAddView.as_view(), name="sample_add_bulk"),

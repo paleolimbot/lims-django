@@ -1,0 +1,12 @@
+
+{% extends 'lims/base.html' %}
+
+{% block title %}Logout{% endblock %}
+
+{% block content_title %}Logout Successful{% endblock %}
+
+{% block content_main %}
+
+    <p>Logout successful. <a href="{% url 'lims:login' %}">Log back in again</a>.</p>
+
+{% endblock %}

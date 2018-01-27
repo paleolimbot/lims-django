@@ -5,13 +5,14 @@ import json
 from django.shortcuts import redirect
 from django.views import generic
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import authenticate, login, logout
 from django.urls import reverse_lazy
 from django.db.models import Q
 from django.db import transaction, IntegrityError
-from django.forms import modelformset_factory, ModelForm, CharField, Textarea
+from django.forms import modelformset_factory, ModelForm, CharField, Textarea, Form, PasswordInput
 from django.core.exceptions import ValidationError
 from django.http.request import QueryDict
-from django.http import Http404
+from django.http import Http404, HttpResponseForbidden, HttpResponseBadRequest
 from django.core.paginator import Paginator
 from django.contrib.auth.models import User
 from django.utils.safestring import mark_safe
@@ -21,7 +22,50 @@ from . import models
 
 
 class LimsLoginMixin(LoginRequiredMixin):
-    login_url = '/admin/login/'
+    login_url = reverse_lazy('lims:login')
+
+
+class LoginForm(Form):
+    username = CharField()
+    password = CharField(widget=PasswordInput)
+
+    def clean(self):
+        super(LoginForm, self).clean()
+        user = authenticate(username=self.cleaned_data['username'], password=self.cleaned_data['password'])
+        if user is None:
+            raise ValidationError('Please enter a valid username and password.')
+
+
+class LoginView(generic.FormView):
+    form_class = LoginForm
+    template_name = 'lims/account_login.html'
+
+    def form_valid(self, form):
+
+        redirect_success_url = self.request.GET['next'] if 'next' in self.request.GET else reverse_lazy('lims:index')
+
+        username = form.cleaned_data['username']
+        password = form.cleaned_data['password']
+        user = authenticate(self.request, username=username, password=password)
+        if user is not None:
+            login(self.request, user)
+            return redirect(redirect_success_url)
+
+        else:
+            return HttpResponseForbidden('Login credentials not valid')
+
+
+class LogoutView(generic.TemplateView):
+    template_name = 'lims/account_logout.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        # not using LimsLoginMixin because that would redirect the user (confusingly)
+        # to the logout page...
+        if not request.user.pk:
+            return redirect(reverse_lazy('lims:login'))
+
+        logout(request)
+        return super(LogoutView, self).dispatch(request, *args, **kwargs)
 
 
 class MultiDeleteView(generic.ListView):
@@ -47,12 +91,18 @@ class MultiDeleteView(generic.ListView):
         return context
 
     def post(self, request):
+        current_user = request.user
         queryset = self.get_queryset()
         errors = []
 
         try:
             with transaction.atomic():
-                queryset.delete()
+                for obj in queryset:
+                    if current_user.is_staff or obj.user.pk == current_user.pk:
+                        obj.delete()
+                    else:
+                        raise PermissionError(current_user, obj)
+
         except IntegrityError as e:
             if hasattr(e, 'protected_objects') and e.protected_objects:
                 link_list = [format_html('<a href="{}">{}</a>', obj.get_absolute_url(), str(obj))
@@ -64,6 +114,13 @@ class MultiDeleteView(generic.ListView):
                                         'These objects may include the following: ' + items_str))
             else:
                 errors.append('Some items could not be deleted: %s' % e)
+
+        except PermissionError as e:
+            errors.append(
+                format_html('User <a href="{}">{}</a> is not allowed to delete sample <a href="{}">{}</a>.',
+                            reverse_lazy('lims:user_detail', e.args[0].pk),
+                            e.args[0], e.args[1].get_absolute_url(), e.args[1])
+            )
 
         if errors:
             self.errors = errors
@@ -376,13 +433,13 @@ def do_action(request, pk, action, action_dict):
     else:
         post_vars = request.POST
         if not post_vars or 'action' not in post_vars:
-            raise Http404('No action provided')
+            return HttpResponseBadRequest('No action provided')
 
         ids_query = extract_selected_ids(post_vars)
         action = post_vars['action']
 
     if action not in action_dict:
-        raise Http404('Unrecognized action: "%s"' % action)
+        return HttpResponseBadRequest('Unrecognized action: "%s"' % action)
 
     if 'from' in request.GET:
         ids_query['from'] = request.GET['from']

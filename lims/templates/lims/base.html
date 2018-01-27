@@ -16,21 +16,23 @@
             <div id="branding">
                 <h1 id="site-name"><a href="{% url 'lims:index' %}">CWRS LIMS</a></h1>
             </div>
-            <div id="header-nav-menu">
-                <ul>
-                    <li>
-                        <a href="{% url 'lims:sample_list' %}">Sample List</a>
-                    </li>
-                    <li>
-                        <a href="{% url 'lims:location_list' %}">Location List</a>
-                    </li>
-                    <li>
-                        <a href="{% url 'lims:user_detail' view.request.user.pk %}">My Samples</a>
-                    </li>
-                </ul>
-            </div>
-            <div id="user-tools">
-                {% if view.request.user.pk %}
+
+            {% if view.request.user.pk %}
+                <div id="header-nav-menu">
+                    <ul>
+                        <li>
+                            <a href="{% url 'lims:sample_list' %}">Sample List</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'lims:location_list' %}">Location List</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'lims:user_detail' view.request.user.pk %}">My Samples</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div id="user-tools">
                     Welcome,
                     {% if view.request.user.first_name %}
                         {{ view.request.user.first_name }}.
@@ -38,14 +40,13 @@
                         {{ view.request.user.username }}.
                     {% endif %}
                     {% if view.request.user.is_staff %}
-                        <a href="/admin/lims">Admin Site</a> /
+                        <a href="{% url 'admin:index' %}">Admin Site</a> /
                     {% endif %}
                     <a href="/admin/password_change">Change Password</a> /
-                    <a href="/admin/logout">Logout</a>
-                {% else %}
-                    <a href="/admin/login/?next={{ view.request.get_full_path }}">Login</a>
-                {% endif %}
-            </div>
+                    <a href="{% url 'lims:logout' %}">Logout</a>
+                </div>
+
+            {% endif %}
         </div>
         <div id="content" class="colMS">
             <h1>{% block content_title %}{% endblock %}</h1>
