@@ -17,9 +17,10 @@ class LoginForm(forms.Form):
 
     def clean(self):
         super(LoginForm, self).clean()
-        user = authenticate(username=self.cleaned_data['username'], password=self.cleaned_data['password'])
-        if user is None:
-            raise forms.ValidationError('Please enter a valid username and password.')
+        if not self.errors:
+            user = authenticate(username=self.cleaned_data['username'], password=self.cleaned_data['password'])
+            if user is None:
+                raise forms.ValidationError('Please enter a valid username and password.')
 
 
 class LoginView(generic.FormView):

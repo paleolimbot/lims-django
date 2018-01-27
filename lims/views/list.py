@@ -1,9 +1,7 @@
 
 import re
 
-from django.shortcuts import redirect
 from django.views import generic
-from django.urls import reverse_lazy
 from django.http import QueryDict
 from django.db.models import Q
 
