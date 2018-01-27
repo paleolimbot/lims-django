@@ -1,7 +1,4 @@
 
-from django.shortcuts import redirect
-from django.urls import reverse_lazy
-
 from .accounts import *
 from .actions import *
 from .delete import *
@@ -9,6 +6,10 @@ from .edit import *
 from .list import *
 from .detail import *
 
+from django.views import generic
 
-def index(request):
-    return redirect(reverse_lazy('lims:sample_list'))
+
+class IndexView(LimsLoginMixin, generic.RedirectView):
+    permanent = False
+    query_string = False
+    pattern_name = 'lims:sample_list'

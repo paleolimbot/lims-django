@@ -1,24 +1,36 @@
-
 {% extends 'lims/base.html' %}
 
 {% block title %}Log in{% endblock %}
 
-{% block content_title %}User Login{% endblock %}
+{% block head %}
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'admin/css/login.css' %}">
+{% endblock %}
 
-{% block content_main %}
+{% block body_attrs %} class="login"{% endblock %}
 
-    <form action="{{ view.request.get_full_path }}" method="post" id="login-form">
+{% block content_title_tag %}{% endblock %}
 
-        {% csrf_token %}
+{% block content_tag %}
 
-        <table>
-            {{ form.as_table }}
-        </table>
+    <div id="content" class="colM">
 
-        <p>Forgot password? Contact the site administrator.</p>
+        <form action="{{ view.request.get_full_path }}" method="post" id="login-form">
 
-        <input title="Log in" type="submit" value="Log in" />
+            {% csrf_token %}
 
-    </form>
+            <table id="login-form-table">
+                {{ form.as_table }}
+            </table>
+
+            <p>Forgot password? Contact the site administrator.</p>
+
+            <input title="Log in" type="submit" value="Log in" />
+
+        </form>
+
+    </div>
 
 {% endblock %}
+
+{% block content_related_tag %}{% endblock %}

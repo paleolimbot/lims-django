@@ -5,12 +5,12 @@
     <title>CWRS LIMS | {% block title %}{% endblock %}</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'admin/css/base.css' %}">
+    {% block head %}{% endblock %}
     <link rel="stylesheet" type="text/css" href="{% static 'lims/css/base.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'admin/css/responsive.css' %}">
     <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    {% block head %}{% endblock %}
 </head>
-<body>
+<body{% block body_attrs %}{% endblock %}>
     <div id="container">
         <div id="header">
             <div id="branding">
@@ -42,22 +42,28 @@
                     {% if view.request.user.is_staff %}
                         <a href="{% url 'admin:index' %}">Admin Site</a> /
                     {% endif %}
-                    <a href="/admin/password_change">Change Password</a> /
+                    <a href="/admin/password_change">Account</a> /
                     <a href="{% url 'lims:logout' %}">Logout</a>
                 </div>
 
             {% endif %}
         </div>
+        {% block content_tag %}
         <div id="content" class="colMS">
-            <h1>{% block content_title %}{% endblock %}</h1>
+            {% block content_title_tag %}<h1>{% block content_title %}{% endblock %}</h1>{% endblock %}
+            {% block content_main_tag %}
             <div id="content-main">
                 {% block content_main %}{% endblock %}
             </div>
+            {% endblock %}
+            {% block content_related_tag %}
             <div id="content-related">
                 {% block content_related %}{% endblock %}
             </div>
+            {% endblock %}
             <br class="clear"/>
         </div>
+        {% endblock %}
         <div id="footer">
             {% block footer %}{% endblock %}
         </div>

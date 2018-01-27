@@ -188,3 +188,9 @@
     display:none;
 }
 
+
+/* additional login styles */
+
+#login-form-table th {
+    vertical-align: middle;
+}
