@@ -121,10 +121,6 @@ class SampleAddView(LimsLoginMixin, generic.CreateView):
         form.user = self.request.user
         return form
 
-    def form_valid(self, form):
-        form.instance.user = self.request.user
-        return super(SampleAddView, self).form_valid(form)
-
 
 class SampleChangeView(LimsLoginMixin, generic.UpdateView):
     model = models.Sample
