@@ -9,11 +9,43 @@ from django.urls import reverse_lazy
 from .geometry import validate_wkt, wkt_bounds
 
 
-class Location(models.Model):
+class BaseObjectModel(models.Model):
     name = models.CharField(max_length=55)
     slug = models.SlugField(max_length=55, unique=True)
     description = models.TextField(blank=True)
 
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
+    created = models.DateTimeField("created", auto_now_add=True)
+    modified = models.DateTimeField("modified", auto_now=True)
+
+    class Meta:
+        abstract = True
+
+    def get_absolute_url(self):
+        raise NotImplementedError()
+
+
+class Tag(models.Model):
+    object = models.ForeignKey(BaseObjectModel, on_delete=models.CASCADE, related_name='tags')
+    key = models.CharField(max_length=55)
+    value = models.TextField(blank=True)
+
+    created = models.DateTimeField("created", auto_now_add=True)
+    modified = models.DateTimeField("modified", auto_now=True)
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        # update parent object modified tag
+        self.object.modified = timezone.now()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return '%s="%s"' % (self.key, self.value)
+
+
+class Location(BaseObjectModel):
     parent = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True, related_name='children')
     recursive_depth = models.IntegerField(default=0, editable=False)
 
@@ -22,10 +54,6 @@ class Location(models.Model):
     maxx = models.FloatField(editable=False, blank=True, null=True, default=None)
     miny = models.FloatField(editable=False, blank=True, null=True, default=None)
     maxy = models.FloatField(editable=False, blank=True, null=True, default=None)
-
-    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False)
-    created = models.DateTimeField("created", auto_now_add=True)
-    modified = models.DateTimeField("modified", auto_now=True)
 
     def get_absolute_url(self):
         return reverse_lazy('lims:location_detail', kwargs={'pk': self.pk})
@@ -51,32 +79,11 @@ class Location(models.Model):
         return self.name
 
 
-class LocationTag(models.Model):
+class LocationTag(Tag):
     object = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="tags")
-    key = models.CharField(max_length=55)
-    value = models.TextField(blank=True)
-
-    created = models.DateTimeField("created", auto_now_add=True)
-    modified = models.DateTimeField("modified", auto_now=True)
-
-    def save(self, *args, **kwargs):
-        # update parent object modified tag
-        self.object.modified = timezone.now()
-        super(LocationTag, self).save(*args, **kwargs)
-
-    def __str__(self):
-        return '%s="%s"' % (self.key, self.value)
 
 
-class Sample(models.Model):
-    name = models.CharField(max_length=25, blank=True)
-    slug = models.CharField(max_length=55, unique=True, editable=False)
-    description = models.TextField(blank=True)
-
-    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False)
-    created = models.DateTimeField("created", auto_now_add=True)
-    modified = models.DateTimeField("modified", auto_now=True)
-
+class Sample(BaseObjectModel):
     collected = models.DateTimeField("collected")
     location = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True)
 
@@ -136,18 +143,5 @@ class Sample(models.Model):
         return self.slug
 
 
-class SampleTag(models.Model):
+class SampleTag(Tag):
     object = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name="tags")
-    key = models.CharField(max_length=55)
-    value = models.TextField(blank=True)
-
-    created = models.DateTimeField("created", auto_now_add=True)
-    modified = models.DateTimeField("modified", auto_now=True)
-
-    def save(self, *args, **kwargs):
-        # update parent object modified tag
-        self.object.modified = timezone.now()
-        super(SampleTag, self).save(*args, **kwargs)
-
-    def __str__(self):
-        return '%s="%s"' % (self.key, self.value)
