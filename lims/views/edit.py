@@ -3,23 +3,10 @@ import json
 
 from django.views import generic
 from django.urls import reverse_lazy
-from django.forms import modelformset_factory, ModelForm, CharField, Textarea, ValidationError
+from django.forms import modelformset_factory, ModelForm, CharField, Textarea, ValidationError, TextInput
 
 from .. import models
 from .accounts import LimsLoginMixin
-
-
-class UserAwareForm(ModelForm):
-
-    def clean(self):
-        # check that user can add/edit this sample
-        if not self.instance.pk and not self.instance.user_can(self.user, 'add'):
-            raise ValidationError('User is not allowed to add this sample')
-        if self.instance.pk and not self.instance.user_can(self.user, 'edit'):
-            raise ValidationError('User is not allowed to edit this sample')
-
-        self.instance.user = self.user
-        super().clean()
 
 
 def validate_location_slug(value):
@@ -42,7 +29,10 @@ def validate_json_tags_dict(value):
         raise ValidationError("Value is not valid JSON")
 
 
-class SampleAddForm(UserAwareForm):
+class BaseObjectModelForm(ModelForm):
+    TagClass = None
+    location_field = None
+
     location_slug = CharField(validators=[validate_location_slug, ], required=False)
     tag_json = CharField(
         validators=[validate_json_tags_dict, ],
@@ -50,22 +40,33 @@ class SampleAddForm(UserAwareForm):
         widget=Textarea(attrs={'rows': 2, 'cols': 40})
     )
 
-    class Meta:
-        model = models.Sample
-        fields = ['collected', 'name', 'description', 'location_slug']
-
     def clean(self):
-        super(SampleAddForm, self).clean()
+        if not hasattr(self, 'user') or not self.user.pk:
+            raise ValidationError('Unknown user attempting to make changes')
+
+        # check that user can add/edit this sample
+        if not self.instance.pk and not self.instance.user_can(self.user, 'add'):
+            raise ValidationError('User is not allowed to add this sample')
+        if self.instance.pk and not self.instance.user_can(self.user, 'edit'):
+            raise ValidationError('User is not allowed to edit this sample')
+
+        # set the user
+        self.instance.user = self.user
+
+        # clean the form
+        super().clean()
+
+        # set location object
         if not self.has_error('location_slug'):
             try:
-                self.instance.location = models.Location.objects.get(
+                setattr(self.instance, self.location_field, models.Location.objects.get(
                     slug=self.cleaned_data['location_slug']
-                )
+                ))
             except models.Location.DoesNotExist:
                 pass
 
     def save(self, *args, **kwargs):
-        return_val = super(SampleAddForm, self).save(*args, **kwargs)
+        return_val = super().save(*args, **kwargs)
 
         # tags need the instance to exist in the DB before creating them...
         if self.cleaned_data['tag_json']:
@@ -74,11 +75,63 @@ class SampleAddForm(UserAwareForm):
                 if object_tags_with_key:
                     tag = object_tags_with_key[0]
                 else:
-                    tag = models.SampleTag(object=self.instance, key=key)
+                    tag = self.TagClass(object=self.instance, key=key)
                 tag.value = value if isinstance(value, str) else json.dumps(value)
                 tag.save()
 
         return return_val
+
+
+class SampleForm(BaseObjectModelForm):
+    TagClass = models.SampleTag
+    location_field = 'location'
+
+    class Meta:
+        model = models.Sample
+        fields = ['collected', 'name', 'description', 'location_slug', 'tag_json']
+
+
+class SampleBulkAddForm(SampleForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields:
+            self.fields[field].widget = TextInput()
+
+
+class LocationForm(BaseObjectModelForm):
+    TagClass = models.LocationTag
+    location_field = 'parent'
+
+    class Meta:
+        model = models.Location
+        fields = ['name', 'slug', 'description', 'location_slug', 'geometry', 'tag_json']
+
+
+class BaseObjectAddView(generic.CreateView):
+
+    def get_form(self, *args, **kwargs):
+        form = super().get_form(*args, **kwargs)
+        form.user = self.request.user
+        return form
+
+
+class BaseObjectChangeView(generic.UpdateView):
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class=form_class)
+        form.user = self.request.user
+
+        loc = getattr(self.object, form.location_field)
+
+        if loc:
+            form.initial['location_slug'] = loc.slug
+
+        tag_dict = {tag.key: tag.value for tag in self.object.tags.all()}
+        if tag_dict:
+            form.initial['tag_json'] = json.dumps(tag_dict)
+
+        return form
 
 
 class SampleBulkAddView(LimsLoginMixin, generic.FormView):
@@ -94,9 +147,18 @@ class SampleBulkAddView(LimsLoginMixin, generic.FormView):
 
         return modelformset_factory(
             models.Sample,
-            form=SampleAddForm,
+            form=SampleBulkAddForm,
             extra=n_samples
         )
+
+    def get_form(self, form_class=None):
+        if form_class is None:
+            form_class = self.get_form_class()
+        formset = form_class(**self.get_form_kwargs())
+
+        for form in formset:
+            form.user = self.request.user
+        return formset
 
     def get_form_kwargs(self):
         kwargs = super(SampleBulkAddView, self).get_form_kwargs()
@@ -112,53 +174,23 @@ class SampleBulkAddView(LimsLoginMixin, generic.FormView):
         return super(SampleBulkAddView, self).form_valid(form)
 
 
-class SampleAddView(LimsLoginMixin, generic.CreateView):
+class SampleAddView(LimsLoginMixin, BaseObjectAddView):
     template_name = 'lims/sample_form.html'
-    form_class = SampleAddForm
-
-    def get_form(self, *args, **kwargs):
-        form = super().get_form(*args, **kwargs)
-        form.user = self.request.user
-        return form
+    form_class = SampleForm
 
 
-class SampleChangeView(LimsLoginMixin, generic.UpdateView):
+class SampleChangeView(LimsLoginMixin, BaseObjectChangeView):
     model = models.Sample
     template_name = 'lims/sample_change.html'
-    form_class = SampleAddForm
-
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class=form_class)
-        form.user = self.request.user
-
-        if self.object.location:
-            form.initial['location_slug'] = self.object.location.slug
-
-        tag_dict = {tag.key: tag.value for tag in self.object.tags.all()}
-        if tag_dict:
-            form.initial['tag_json'] = json.dumps(tag_dict)
-
-        return form
+    form_class = SampleForm
 
 
-class LocationForm(UserAwareForm):
-
-    class Meta:
-        model = models.Location
-        fields = ['name', 'slug', 'description', 'parent', 'geometry']
-
-
-class LocationAddView(LimsLoginMixin, generic.CreateView):
-    model = models.Location
+class LocationAddView(LimsLoginMixin, BaseObjectAddView):
+    template_name = 'lims/location_form.html'
     form_class = LocationForm
 
-    def get_form(self, *args, **kwargs):
-        form = super().get_form(*args, **kwargs)
-        form.user = self.request.user
-        return form
 
-
-class LocationChangeView(LimsLoginMixin, generic.UpdateView):
+class LocationChangeView(LimsLoginMixin, BaseObjectChangeView):
     model = models.Location
     template_name = 'lims/location_change.html'
-    fields = ['name', 'slug', 'description', 'parent', 'geometry']
+    form_class = LocationForm

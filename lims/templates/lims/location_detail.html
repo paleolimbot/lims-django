@@ -36,12 +36,12 @@
             <td>{{ location.modified }} ({{ location.created }})</td>
         </tr>
         <tr>
-            <th>Location</th>
+            <th>Geometry</th>
             <td>
                 {% if location.geometry %}
                     {{ location.geometry|truncatechars:100 }}
                 {% else %}
-                    (No location provided)
+                    (No geometry provided)
                 {% endif %}
             </td>
         </tr>
@@ -49,8 +49,8 @@
             <th>Tags</th>
             <td></td>
         </tr>
-        {% if sample.tags.all %}
-            {% for tag in sample.tags.all %}
+        {% if location.tags.all %}
+            {% for tag in location.tags.all %}
                 <tr><td>{{ tag.key }}</td><td>{{ tag.value }}</td></tr>
             {% endfor %}
         {% else %}

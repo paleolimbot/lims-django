@@ -33,13 +33,12 @@
                     <td>{{ sample.get_checkbox }}</td>
                     <td>{{ sample.get_link }}</td>
                     <td>{% if sample.user %}<a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>{% endif %}</td>
-                    <td>{{ location.modified }}</td>
+                    <td>{{ sample.modified }}</td>
                     <td>
                         {% if sample.location %}
                             {{ sample.location.get_link }}
                         {% endif %}
                     </td>
-                    <td>{{ sample.modified }}</td>
                     <td>{{ sample.collected }}</td>
                     <td>
                         {% for tag in sample.tags.all %}
