@@ -67,5 +67,10 @@
             {% block footer %}{% endblock %}
         </div>
     </div>
+
+{% block scripts %}
+    <script src="{% static 'lims/js/jquery-3.3.1.js' %}"></script>
+    <script src="{% static 'lims/js/tables.js' %}"></script>
+{% endblock %}
 </body>
 </html>
