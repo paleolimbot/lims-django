@@ -3,6 +3,7 @@ from django.views import generic
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import PasswordChangeForm
 from django import forms
 from django.http import HttpResponseForbidden
 
@@ -57,3 +58,19 @@ class LogoutView(generic.TemplateView):
 
 class AccountView(LimsLoginMixin, generic.TemplateView):
     template_name = 'lims/accounts/account.html'
+
+
+class ChangePasswordView(LimsLoginMixin, generic.FormView):
+    template_name = 'lims/accounts/account_change_password.html'
+    form_class = PasswordChangeForm
+    success_url = reverse_lazy('lims:account')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        # actually change the password
+        form.save()
+        return super().form_valid(form)

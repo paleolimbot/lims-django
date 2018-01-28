@@ -11,6 +11,7 @@ urlpatterns = [
     url(r'^account/$', views.AccountView.as_view(), name='account'),
     url(r'^login/$', views.LoginView.as_view(), name='login'),
     url(r'^logout/$', views.LogoutView.as_view(), name='logout'),
+    url(r'^account/change_password/$', views.ChangePasswordView.as_view(), name='change_password'),
 
     # sample static views
     url(r'^sample/$', views.SampleListView.as_view(), name="sample_list"),

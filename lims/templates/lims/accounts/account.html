@@ -11,6 +11,7 @@
    <ul>
    <li><a href="{% url 'lims:logout' %}">Logout</a></li>
    <li><a href="{% url 'lims:user_detail' view.request.user.pk %}">My samples</a></li>
+   <li><a href="{% url 'lims:change_password' %}">Change Password</a></li>
    </ul>
 
 {% endblock %}
