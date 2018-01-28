@@ -49,17 +49,16 @@
             {% endif %}
         </div>
         {% block content_tag %}
-        <div id="content" class="colMS">
+        <div id="content" class="flex">
             {% block content_title_tag %}<h1>{% block content_title %}{% endblock %}</h1>{% endblock %}
             {% block content_main_tag %}
             <div id="content-main">
+                {% block object_tools %}{% endblock %}
                 {% block content_main %}{% endblock %}
             </div>
             {% endblock %}
+
             {% block content_related_tag %}
-            <div id="content-related">
-                {% block content_related %}{% endblock %}
-            </div>
             {% endblock %}
             <br class="clear"/>
         </div>

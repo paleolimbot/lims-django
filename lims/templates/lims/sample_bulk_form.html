@@ -5,6 +5,14 @@
 
 {% block content_title %}Bulk Add New Samples{% endblock %}
 
+{% block object_tools %}
+    <ul class="object-tools">
+        {% if view.request.user.is_staff %}
+             <li><a href="{% url 'admin:lims_sample_add' %}">Admin View</a></li>
+        {% endif %}
+    </ul>
+{% endblock %}
+
 {% block content_main %}
 
     <div id="add-formset-container">
@@ -34,21 +42,3 @@
     </div>
 
 {% endblock %}
-
-{% block content_related %}
-
-    <div class="content-related-actions">
-        <h3>User Actions</h3>
-        <ul>
-            <li>(None yet)</li>
-        </ul>
-    </div>
-    <div class="content-related-actions">
-        <h3>Admin Actions</h3>
-        <ul>
-            <li><a href="{% url 'admin:lims_sample_add' %}">Admin View</a></li>
-        </ul>
-    </div>
-
-{% endblock %}
-

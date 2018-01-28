@@ -5,21 +5,13 @@
 
 {% block content_title %}Update Sample{% endblock %}
 
-{% block submit_text %}Update Sample{% endblock %}
-
-{% block content_related %}
-
-    <div class="content-related-actions">
-        <h3>User Actions</h3>
-        <ul>
-            <li><a href="{% url 'lims:sample_detail' sample.pk %}">View Sample</a></li>
-        </ul>
-    </div>
-    <div class="content-related-actions">
-        <h3>Admin Actions</h3>
-        <ul>
-            <li><a href="{% url 'admin:lims_sample_change' sample.pk %}">Admin View</a></li>
-        </ul>
-    </div>
-
+{% block object_tools %}
+    <ul class="object-tools">
+        {% if view.request.user.is_staff %}
+             <li><a href="{% url 'admin:lims_sample_change' sample.pk %}">Admin View</a></li>
+        {% endif %}
+        <li><a href="{% url 'lims:sample_detail' sample.pk %}">View Sample</a></li>
+    </ul>
 {% endblock %}
+
+{% block submit_text %}Update Sample{% endblock %}

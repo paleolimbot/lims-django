@@ -6,6 +6,16 @@
 
 {% block content_title %}Recent Samples{% endblock %}
 
+{% block object_tools %}
+    <ul class="object-tools">
+        {% if view.request.user.is_staff %}
+             <li><a href="{% url 'admin:lims_sample_changelist' %}">Admin View</a></li>
+        {% endif %}
+        <li><a class="addlink" href="{% url 'lims:sample_add' %}">Add Sample</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' %}">Bulk Add Samples</a></li>
+    </ul>
+{% endblock %}
+
 {% block content_main %}
 
     <div id="viewlist">
@@ -23,26 +33,6 @@
 
     {% include 'lims/sample_table.html' %}
 
-    </div>
-
-{% endblock %}
-
-
-{% block content_related %}
-
-    <div class="content-related-actions">
-        <h3>User Actions</h3>
-        <ul>
-            <li><a href="{% url 'lims:sample_add' %}">Add Sample</a></li>
-            <li><a href="{% url 'lims:sample_add_bulk' %}">Bulk Add Samples</a></li>
-        </ul>
-    </div>
-
-    <div class="content-related-actions">
-        <h3>Admin Actions</h3>
-        <ul>
-            <li><a href="{% url 'admin:lims_sample_changelist' %}">Admin View</a></li>
-        </ul>
     </div>
 
 {% endblock %}
