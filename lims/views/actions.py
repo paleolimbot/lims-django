@@ -50,7 +50,7 @@ def extract_selected_ids(data):
     ids = []
     for key, value in data.items():
         if regex.match(key) and value:
-            ids.append(int(regex.search(key)[1]))
+            ids.append(int(regex.search(key).group(1)))
     ids_query = QueryDict(mutable=True)
     ids_query.setlist('id__in', ids)
     return ids_query
