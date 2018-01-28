@@ -10,11 +10,10 @@
     <ul class="object-tools">
         {% if view.request.user.is_staff %}
             <li><a href="{% url 'admin:lims_location_changelist' %}">Admin View</a></li>
-            <li><a class="addlink" href="{% url 'lims:location_add' %}">Add Location</a></li>
         {% endif %}
+        <li><a class="addlink" href="{% url 'lims:location_add' %}">Add Location</a></li>
     </ul>
 {% endblock %}
-
 
 {% block content_main %}
 
