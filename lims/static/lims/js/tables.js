@@ -64,7 +64,9 @@ function registerTableForm(formId) {
 
 $(function() {
     // find sample, location lists and register the click listeners
-    if(registerTableForm('#sample-viewlist-form') || registerTableForm('#location-viewlist-form')) {
+    var hasSampleTable = registerTableForm('#sample-viewlist-form');
+    var hasLocationTable = registerTableForm('#location-viewlist-form');
+    if(hasSampleTable || hasLocationTable) {
 
         // register the onKeyDown listener for the shift key
         window.shiftKeyDown = false;
@@ -72,5 +74,6 @@ $(function() {
             console.log('shift key pressed');
             window.shiftKeyDown = e.shiftKey;
         } );
+
     }
 });
