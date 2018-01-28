@@ -38,8 +38,8 @@ class SampleAdmin(LimsAdmin):
     inlines = [SampleTagInline, ]
     list_display = ('slug', 'user', 'location', 'modified', 'collected')
     date_hierarchy = "collected"
-    autocomplete_fields = ['location', ]
-    search_fields = ['slug']
+    autocomplete_fields = ['location', 'user']
+    search_fields = ['slug', ]
 
 
 @admin.register(Location)
@@ -47,4 +47,5 @@ class LocationAdmin(LimsAdmin):
     inlines = [LocationTagInline, ]
     prepopulated_fields = {"slug": ("name", )}
     list_display = ('name', 'slug', 'parent', 'user', 'modified')
+    autocomplete_fields = ['parent', 'user']
     search_fields = ['name', 'slug']

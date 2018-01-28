@@ -23,7 +23,7 @@ class ObjectPermissionError(PermissionError):
 
 class BaseObjectModel(models.Model):
     name = models.CharField(max_length=55)
-    slug = models.SlugField(max_length=55, unique=True)
+    slug = models.SlugField(max_length=55, unique=True, blank=True)
     description = models.TextField(blank=True)
 
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
@@ -32,6 +32,14 @@ class BaseObjectModel(models.Model):
 
     class Meta:
         abstract = True
+
+    def save(self, *args, **kwargs):
+        if not self.pk and not self.slug:
+            self.slug = self.calculate_slug()
+        super().save(*args, **kwargs)
+
+    def calculate_slug(self):
+        return slugify(self.name)
 
     def get_absolute_url(self):
         raise NotImplementedError()
@@ -115,7 +123,7 @@ class Location(BaseObjectModel):
         self.miny = bounds['miny']
         self.maxy = bounds['maxy']
 
-        super(Location, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
 
 class LocationTag(Tag):
@@ -128,11 +136,6 @@ class Sample(BaseObjectModel):
 
     def get_absolute_url(self):
         return reverse_lazy('lims:sample_detail', kwargs={'pk': self.pk})
-
-    def save(self, *args, **kwargs):
-        if not self.pk and not self.slug:
-            self.slug = self.calculate_slug()
-        super(Sample, self).save(*args, **kwargs)
 
     def calculate_slug(self):
 
