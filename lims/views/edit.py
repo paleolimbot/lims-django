@@ -161,11 +161,11 @@ class SampleBulkAddView(LimsLoginMixin, generic.FormView):
     template_name = 'lims/sample_bulk_form.html'
 
     def get_form_class(self):
-        n_samples = self.request.GET.get('n_samples', 10)
+        n_samples = self.request.GET.get('n_samples', 5)
         try:
             n_samples = int(n_samples)
         except ValueError:
-            n_samples = 10
+            n_samples = 5
 
         return modelformset_factory(
             models.Sample,

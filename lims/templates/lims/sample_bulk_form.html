@@ -22,11 +22,32 @@
             <ul id="add-formset-list">
             <li class="add-formset-item">
                 <ul class="add-formset-fieldlist" id="add-formset-header">
-                    <li>Collected Date</li>
-                    <li>Name</li>
-                    <li>Description</li>
-                    <li>Location ID</li>
-                    <li>Tags</li>
+                    <li>
+                        Collected Date <br/>
+                        <a href="#" id="collected-today">Today</a> /
+                        <a href="#" id="collected-fill">Fill down</a> /
+                        <a href="#" id="collected-clear">Clear</a>
+                    </li>
+                    <li>
+                        Name <br/>
+                        <a href="#" id="name-fill">Fill down</a> /
+                        <a href="#" id="name-clear">Clear</a>
+                    </li>
+                    <li>
+                        Description <br/>
+                        <a href="#" id="description-fill">Fill down</a> /
+                        <a href="#" id="description-clear">Clear</a>
+                    </li>
+                    <li>
+                        Location ID <br/>
+                        <a href="#" id="location_slug-fill">Fill down</a> /
+                        <a href="#" id="location_slug-clear">Clear</a>
+                    </li>
+                    <li>
+                        Tags <br/>
+                        <a href="#" id="tag_json-fill">Fill down</a> /
+                        <a href="#" id="tag_json-clear">Clear</a>
+                    </li>
                 </ul>
             </li>
                 {% for sub_form in form %}
@@ -37,8 +58,18 @@
                     </li>
                 {% endfor %}
             </ul>
+            <p>
+                Add <input id="add-formset-more-number" type="text" size="2" title="Add" value="1"/> more forms
+                <button id="add-formset-more-go">Go</button>
+            </p>
         <input type="submit" value="Add samples" />
         </form>
     </div>
 
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    {% load static %}
+    <script src="{% static 'lims/js/sample_bulk_form.js' %}"></script>
 {% endblock %}

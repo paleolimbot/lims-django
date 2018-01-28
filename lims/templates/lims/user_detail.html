@@ -45,3 +45,9 @@
     {% include 'lims/tables/location_table.html' with page_obj=location_page_obj page_kwarg=location_page_kwarg actions=location_actions %}
 
 {% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    {% load static %}
+    <script src="{% static 'lims/js/tables.js' %}"></script>
+{% endblock %}
