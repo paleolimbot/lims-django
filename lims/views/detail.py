@@ -32,7 +32,8 @@ class LocationDetailView(LimsLoginMixin, generic.DeleteView):
 
         # add some actions for the child samples
         context['sample_actions'] = [
-            {'value': 'delete-samples', 'label': 'Delete selected samples'}
+            {'value': 'delete-samples', 'label': 'Delete samples'},
+            {'value': 'print-barcodes', 'label': 'Print barcodes'}
         ]
 
         # setup the child locations list
@@ -72,7 +73,8 @@ class UserDetailView(LimsLoginMixin, generic.DeleteView):
 
         # add some actions for the child samples
         context['sample_actions'] = [
-            {'value': 'delete-samples', 'label': 'Delete selected samples'}
+            {'value': 'delete-samples', 'label': 'Delete samples'},
+            {'value': 'print-barcodes', 'label': 'Print barcodes'}
         ]
 
         # setup the child locations list

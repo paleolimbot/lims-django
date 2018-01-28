@@ -71,10 +71,10 @@
 
     <h2><a id="locations">Sub-locations</a></h2>
 
-    {% include 'lims/location_table.html' with page_obj=location_page_obj page_kwarg=location_page_kwarg actions=location_actions %}
+    {% include 'lims/tables/location_table.html' with page_obj=location_page_obj page_kwarg=location_page_kwarg actions=location_actions %}
 
     <h2><a id="samples">Recent Samples</a></h2>
 
-    {% include 'lims/sample_table.html' with page_obj=sample_page_obj page_kwarg=sample_page_kwarg actions=sample_actions %}
+    {% include 'lims/tables/sample_table.html' with page_obj=sample_page_obj page_kwarg=sample_page_kwarg actions=sample_actions %}
 
 {% endblock %}

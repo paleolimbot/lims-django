@@ -6,8 +6,10 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.urls import reverse_lazy
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
-from .geometry import validate_wkt, wkt_bounds
+from .utils.geometry import validate_wkt, wkt_bounds
+from .utils.barcode import qrcode_html
 
 
 class ObjectPermissionError(PermissionError):
@@ -40,6 +42,9 @@ class BaseObjectModel(models.Model):
     def get_checkbox(self):
         return format_html('<input title="Select {}" type="checkbox" name="object-{}-selected"/>',
                            self, self.pk)
+
+    def get_qrcode_html(self):
+        return mark_safe(qrcode_html(self))
 
     def user_can(self, user, action):
         # non-existent users can't do anything

@@ -18,6 +18,7 @@ urlpatterns = [
     url(r'^sample/add$', views.SampleAddView.as_view(), name="sample_add"),
     url(r'^sample/action$', views.sample_action, name="sample_action"),
     url(r'^sample/delete$', views.SampleDeleteView.as_view(), name='sample_delete'),
+    url(r'^sample/print_barcode', views.SamplePrintBarcodeView.as_view(), name='sample_print_barcode'),
 
     # sample object views
     url(r'^sample/(?P<pk>[0-9]+)$', views.SampleDetailView.as_view(), name="sample_detail"),

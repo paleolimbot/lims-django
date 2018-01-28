@@ -148,7 +148,7 @@ class GeometryTestCase(TestCase):
 
     def test_wkt_bounds(self):
         """Test the wkt_bounds function"""
-        from .geometry import wkt_bounds
+        from .utils.geometry import wkt_bounds
         self.assertEqual(
             wkt_bounds("(1 1)"),
             {'minx': 1.0, 'maxx': 1.0, 'miny': 1.0, 'maxy': 1.0}
@@ -173,7 +173,7 @@ class GeometryTestCase(TestCase):
         )
 
     def test_wkt_regex(self):
-        from .geometry import POINT, POLYGON, LINESTRING, MULTIPOINT, MULTIPOLYGON, MULTILINESTRING
+        from .utils.geometry import POINT, POLYGON, LINESTRING, MULTIPOINT, MULTIPOLYGON, MULTILINESTRING
 
         # general tests
         self.assertRegex('POINT (30 10)', POINT)
@@ -223,7 +223,7 @@ class GeometryTestCase(TestCase):
 
     def test_geometry_id(self):
 
-        from .geometry import identify_geometry
+        from .utils.geometry import identify_geometry
 
         self.assertEqual(identify_geometry('POINT (30 10)'), 'POINT')
         self.assertEqual(identify_geometry('LINESTRING (30 10, 10 30, 40 40)'), 'LINESTRING')
@@ -241,7 +241,7 @@ class GeometryTestCase(TestCase):
 
     def test_geometry_validator(self):
 
-        from .geometry import validate_wkt
+        from .utils.geometry import validate_wkt
 
         self.assertIsNone(validate_wkt('POINT (30 10)'))
         self.assertIsNone(validate_wkt(''))

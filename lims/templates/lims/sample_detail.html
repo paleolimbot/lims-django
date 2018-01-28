@@ -11,6 +11,7 @@
         {% endif %}
         <li><a href="{% url 'lims:sample_change' sample.pk %}">Update Sample</a></li>
         <li><a href="{% url 'lims:sample_item_action' sample.pk 'delete-samples' %}">Delete Sample</a></li>
+        <li><a href="{% url 'lims:sample_item_action' sample.pk 'print-barcodes' %}">Print Barcode</a></li>
         <li><a class="addlink" href="{% url 'lims:sample_add' %}">Add Sample</a></li>
     </ul>
 {% endblock %}

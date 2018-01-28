@@ -3,7 +3,7 @@
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
-import lims.geometry
+import lims.utils.geometry
 
 
 class Migration(migrations.Migration):
@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
                 ('created', models.DateTimeField(auto_now_add=True, verbose_name='created')),
                 ('modified', models.DateTimeField(auto_now=True, verbose_name='modified')),
                 ('recursive_depth', models.IntegerField(default=0, editable=False)),
-                ('geometry', models.TextField(blank=True, validators=[lims.geometry.validate_wkt])),
+                ('geometry', models.TextField(blank=True, validators=[lims.utils.geometry.validate_wkt])),
                 ('minx', models.FloatField(blank=True, default=None, editable=False, null=True)),
                 ('maxx', models.FloatField(blank=True, default=None, editable=False, null=True)),
                 ('miny', models.FloatField(blank=True, default=None, editable=False, null=True)),

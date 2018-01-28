@@ -1,7 +1,7 @@
 
 from .accounts import *
 from .actions import *
-from .delete import *
+from .action_views import *
 from .edit import *
 from .list import *
 from .detail import *

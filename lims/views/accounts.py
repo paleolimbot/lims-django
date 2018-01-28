@@ -25,7 +25,7 @@ class LoginForm(forms.Form):
 
 class LoginView(generic.FormView):
     form_class = LoginForm
-    template_name = 'lims/account_login.html'
+    template_name = 'lims/accounts/account_login.html'
 
     def form_valid(self, form):
 
@@ -43,7 +43,7 @@ class LoginView(generic.FormView):
 
 
 class LogoutView(generic.TemplateView):
-    template_name = 'lims/account_logout.html'
+    template_name = 'lims/accounts/account_logout.html'
 
     def dispatch(self, request, *args, **kwargs):
         # not using LimsLoginMixin because that would redirect the user (confusingly)
@@ -56,4 +56,4 @@ class LogoutView(generic.TemplateView):
 
 
 class AccountView(LimsLoginMixin, generic.TemplateView):
-    template_name = 'lims/account.html'
+    template_name = 'lims/accounts/account.html'

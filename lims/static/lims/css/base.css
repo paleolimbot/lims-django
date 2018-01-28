@@ -194,3 +194,12 @@
 #login-form-table th {
     vertical-align: middle;
 }
+
+/* qrcode styles */
+#qrcode-table img.qrcode {
+    width:100px;
+}
+
+#qrcode-table td {
+    vertical-align: middle;
+}

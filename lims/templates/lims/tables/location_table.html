@@ -1,5 +1,5 @@
 
-{% extends 'lims/object_table.html' %}
+{% extends 'lims/tables/object_table.html' %}
 
 {% block page_list_top %}{{ block.super }} {{ page_obj.paginator.count }} locations{% endblock %}
 
@@ -11,7 +11,7 @@
 
         {% csrf_token %}
 
-        {% include 'lims/object_table_actions.html' %}
+        {% include 'lims/tables/object_table_actions.html' %}
 
         <table class="object-list">
             <thead>

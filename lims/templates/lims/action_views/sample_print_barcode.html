@@ -1,0 +1,42 @@
+
+{% extends 'lims/base.html' %}
+
+{% block title %}Print Barcodes{% endblock %}
+
+{% block content_title %}Print Barcodes{% endblock %}
+
+{% block content_main %}
+
+    <form action="" method="post">
+
+        {% csrf_token %}
+
+            {% if errors %}
+
+                <ul class="errorlist">
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+
+            {% endif %}
+
+            <p>Are you sure you want to print barcodes for the following samples?</p>
+
+            <table id="qrcode-table">
+                <tr>
+                    <th>Sample</th>
+                    <th>QR Code</th>
+                </tr>
+                {% for sample in object_list %}
+                <tr>
+                    <td>{{ sample.get_link }}</td>
+                    <td>{{ sample.get_qrcode_html }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+
+            <input type="submit" value="Print Barcodes" />
+        </form>
+
+{% endblock %}

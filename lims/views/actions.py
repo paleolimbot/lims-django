@@ -10,7 +10,8 @@ LOCATION_ACTIONS = {
 }
 
 SAMPLE_ACTIONS = {
-    'delete-samples': reverse_lazy('lims:sample_delete')
+    'delete-samples': reverse_lazy('lims:sample_delete'),
+    'print-barcodes': reverse_lazy('lims:sample_print_barcode')
 }
 
 
