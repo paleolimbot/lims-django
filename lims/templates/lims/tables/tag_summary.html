@@ -1,0 +1,4 @@
+
+{% for tag in tags %}
+    <a href="{% url 'lims:term_detail' tag.key.pk %}">{{ tag.key }}</a>: {{ tag.value }}<br/>
+{% endfor %}

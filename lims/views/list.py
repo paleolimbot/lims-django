@@ -27,7 +27,7 @@ class SampleListView(LimsLoginMixin, generic.ListView):
             models.Sample.objects.all(),
             self.request.GET,
             use=(),
-            search=('name', 'slug'),
+            search=('name', 'slug', 'description'),
             prefix='sample_'
         ).order_by("-modified")
 
@@ -43,7 +43,7 @@ class LocationListView(LimsLoginMixin, generic.ListView):
             models.Location.objects.all(),
             self.request.GET,
             use=(),
-            search=('name', 'slug'),
+            search=('name', 'slug', 'description'),
             prefix='location_'
         ).order_by("-modified")
 

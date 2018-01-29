@@ -39,4 +39,7 @@ urlpatterns = [
 
     # user object views
     url(r'^user/(?P<pk>[0-9]+)$', views.UserDetailView.as_view(), name="user_detail"),
+
+    # term object views
+    url(r'^term/(?P<pk>[0-9]+)$', views.TermDetailView.as_view(), name="term_detail"),
 ]

@@ -1,5 +1,5 @@
 
-{% extends "lims/base.html" %}
+{% extends "lims/object_detail_tables.html" %}
 
 {% block title %}{{ user.username }}{% endblock %}
 
@@ -36,18 +36,6 @@
         </tr>
     </table>
 
-    <h2><a id="samples">Recent Samples</a></h2>
-
-    {% include 'lims/tables/sample_table.html' with page_obj=sample_page_obj page_kwarg=sample_page_kwarg actions=sample_actions %}
-
-    <h2><a id="locations">User Locations</a></h2>
-
-    {% include 'lims/tables/location_table.html' with page_obj=location_page_obj page_kwarg=location_page_kwarg actions=location_actions %}
-
-{% endblock %}
-
-{% block scripts %}
     {{ block.super }}
-    {% load static %}
-    <script src="{% static 'lims/js/tables.js' %}"></script>
+
 {% endblock %}

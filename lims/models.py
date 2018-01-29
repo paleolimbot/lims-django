@@ -15,7 +15,7 @@ from .utils.barcode import qrcode_html
 
 class ObjectPermissionError(PermissionError):
 
-    def __init(self, obj, *args):
+    def __init(self, *args):
         super().__init__(*args)
 
     def get_object(self):
@@ -112,7 +112,10 @@ class Term(models.Model):
     slug = models.SlugField(max_length=55, unique=True)
 
     def get_absolute_url(self):
-        return '#'
+        return reverse_lazy('lims:term_detail', self.pk)
+
+    def get_link(self):
+        return format_html('<a href="{}">{}</a>', self.get_absolute_url(), self)
 
     def get_validation_errors(self, value):
         errors = []

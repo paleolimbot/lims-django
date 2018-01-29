@@ -43,11 +43,7 @@
                             {{ sample.location.get_link }}
                         {% endif %}
                     </td>
-                    <td>
-                        {% for tag in sample.tags.all %}
-                          {{ tag }} <br/>
-                        {% endfor %}
-                    </td>
+                    <td>{% include 'lims/tables/tag_summary.html' with tags=sample.tags.all %}</td>
                     <td>{{ sample.modified }}</td>
                 </tr>
 

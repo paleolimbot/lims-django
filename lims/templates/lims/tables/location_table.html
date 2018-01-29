@@ -44,11 +44,7 @@
                         {% endif %}
                     </td>
                     <td>{{ location.geometry|truncatechars:55 }}</td>
-                    <td>
-                        {% for tag in location.tags.all %}
-                             {{ tag }} <br/>
-                        {% endfor %}
-                    </td>
+                    <td>{% include 'lims/tables/tag_summary.html' with tags=location.tags.all %}</td>
                     <td>{{ location.modified }}</td>
                 </tr>
 

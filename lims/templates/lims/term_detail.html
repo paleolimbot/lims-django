@@ -1,0 +1,14 @@
+
+{% extends "lims/object_detail_tables.html" %}
+
+{% block title %}Term: {{ term.name }}{% endblock %}
+
+{% block content_title %}Term: {{ term.name }}{% endblock %}
+
+{% block object_tools %}
+    <ul class="object-tools">
+        {% if view.request.user.is_staff %}
+            <li><a href="{% url 'admin:lims_term_change' user.pk %}">Admin View</a></li>
+        {% endif %}
+    </ul>
+{% endblock %}
