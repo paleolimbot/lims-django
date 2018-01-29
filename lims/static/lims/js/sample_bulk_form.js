@@ -125,5 +125,6 @@ $(function() {
     $('#add-formset-list').on('paste', 'input', function(e) {
         e.preventDefault();
         pasteTable($(this), e);
-    })
+    });
+
 });

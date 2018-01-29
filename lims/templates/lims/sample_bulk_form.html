@@ -21,13 +21,15 @@
             {% csrf_token %}
             {{ form.management_form }}
             <ul id="add-formset-list">
-            <ul class="add-formset-fieldlist" id="add-formset-header">
-                {% for field in form.0 %}
-                    {% if not field.is_hidden %}
-                        <li>{{ field.label_tag }}</li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
+            <li class="add-formset-item">
+                <ul class="add-formset-fieldlist" id="add-formset-header">
+                    {% for field in form.0 %}
+                        {% if not field.is_hidden %}
+                            <li>{{ field.label_tag }}</li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </li>
             <li class="add-formset-item">
                 <ul class="add-formset-fieldlist" id="add-formset-tools">
                     <li>
