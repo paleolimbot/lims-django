@@ -18,7 +18,7 @@ function addForms(n) {
     var n_forms = $formLi.length;
 
     for(var i=0; i<n; i++) {
-        var nth_form = n_forms + i + 1;
+        var nth_form = n_forms + i;
         var $newLi = $template.clone();
 
         // update id and name on input elements
@@ -77,6 +77,40 @@ function fillDown(linkId) {
     }
 }
 
+function pasteTable(input, e) {
+    var $active = $(input);
+    var activeId = $active.attr('id');
+    var text = e.originalEvent.clipboardData.getData('text');
+    var textLines = text.split('\n');
+
+    // get the row and column info, so newlines and tabs can be processed accordingly
+    var fields = ['collected', 'name', 'description', 'location_slug', 'tag_json'];
+    var idInfo = activeId.match(/id_form-([0-9]+)-(.*)$/);
+    var row = parseInt(idInfo[1]);
+    var col = fields.indexOf(idInfo[2]);
+
+    // function to get ID for rando row/col combo
+    function getFieldId(newrow, newcol) {
+        if(newcol >= fields.length) {
+            return null;
+        }
+
+        return 'id_form-' + newrow + '-' + fields[newcol];
+    }
+
+    // loop through lines of pasted text (will quietly ignore too many rows/cols of pasted text
+    for(var i=0; i < textLines.length; i++) {
+        var textCells = textLines[i].split('\t');
+        // loop through tab-separated cells of pasted text
+        for(var j=0; j < textCells.length; j++) {
+            var fieldId = getFieldId(row + i, col + j);
+            if(fieldId !== null) {
+                $('#' + fieldId).val(textCells[j].trim());
+            }
+        }
+    }
+}
+
 $(function() {
     $('#add-formset-more-go').on('click', function(e) {
         e.preventDefault();
@@ -86,5 +120,10 @@ $(function() {
     $('#add-formset-tools').on('click', 'a', function(e) {
         e.preventDefault();
         fillDown(this);
+    });
+
+    $('#add-formset-list').on('paste', 'input', function(e) {
+        e.preventDefault();
+        pasteTable($(this), e);
     })
 });
