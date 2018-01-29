@@ -56,6 +56,28 @@ class BaseObjectModelForm(ModelForm):
         # clean the form
         super().clean()
 
+        # check values of tags
+        # tags need the instance to exist in the DB before creating them...
+        if self.cleaned_data['tag_json']:
+            tags_dict = json.loads(self.cleaned_data['tag_json'])
+        else:
+            tags_dict = {}
+
+        tag_value_errors = []
+        for key, value in tags_dict.items():
+            try:
+                term = models.Term.get_or_create(key)
+                errors_for_key = term.get_validation_errors(value)
+                for error in errors_for_key:
+                    tag_value_errors.append('Error for key "%s": %s' % (key, error))
+
+            except models.Term.DoesNotExist:
+                # if there is no term, there is no invalid value
+                pass
+
+        if tag_value_errors:
+            raise ValidationError({'tag_json': tag_value_errors})
+
         # set location object
         if not self.has_error('location_slug'):
             try:
@@ -70,14 +92,11 @@ class BaseObjectModelForm(ModelForm):
 
         # tags need the instance to exist in the DB before creating them...
         if self.cleaned_data['tag_json']:
-            for key, value in json.loads(self.cleaned_data['tag_json']).items():
-                object_tags_with_key = self.instance.tags.filter(key=key)
-                if object_tags_with_key:
-                    tag = object_tags_with_key[0]
-                else:
-                    tag = self.TagClass(object=self.instance, key=key)
-                tag.value = value if isinstance(value, str) else json.dumps(value)
-                tag.save()
+            tags_dict = json.loads(self.cleaned_data['tag_json'])
+        else:
+            tags_dict = {}
+
+        self.instance.set_tags(**tags_dict)
 
         return return_val
 
@@ -127,7 +146,7 @@ class BaseObjectChangeView(generic.UpdateView):
         if loc:
             form.initial['location_slug'] = loc.slug
 
-        tag_dict = {tag.key: tag.value for tag in self.object.tags.all()}
+        tag_dict = self.object.get_tags()
         if tag_dict:
             form.initial['tag_json'] = json.dumps(tag_dict)
 

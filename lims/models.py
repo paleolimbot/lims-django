@@ -7,6 +7,7 @@ from django.utils.text import slugify
 from django.urls import reverse_lazy
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
+from django.core.exceptions import ValidationError
 
 from .utils.geometry import validate_wkt, wkt_bounds
 from .utils.barcode import qrcode_html
@@ -71,13 +72,82 @@ class BaseObjectModel(models.Model):
         else:
             return False
 
+    def set_tags(self, **kwargs):
+        self.tags.all().delete()
+        return self.add_tags(**kwargs)
+
+    def add_tags(self, **kwargs):
+        # make sure all names are defined terms
+        for key, value in kwargs.items():
+            term = Term.get_or_create(key)
+            self.tags.create(key=term, value=value)
+
+        return self.tags.all()
+
+    def get_tags(self):
+        return {tag.key.slug: tag.value for tag in self.tags.all()}
+
     def __str__(self):
         return self.name
 
 
+def validate_is_a_regex(value):
+    try:
+        re.compile(value)
+    except Exception as e:
+        raise ValidationError('Value is not a valid Python regex: %s' % e)
+
+
+class BaseValidator(models.Model):
+    name = models.CharField(max_length=55)
+    regex = models.TextField(validators=[validate_is_a_regex, ])
+    error_message = models.TextField()
+
+    def __str__(self):
+        return self.name
+
+
+class Term(models.Model):
+    name = models.CharField(max_length=55)
+    slug = models.SlugField(max_length=55, unique=True)
+
+    def get_absolute_url(self):
+        return '#'
+
+    def get_validation_errors(self, value):
+        errors = []
+        # run value through term validators
+        for validator in self.validators.all():
+            if not re.match(validator.validator.regex, value):
+                errors.append(validator.validator.error_message)
+        return errors
+
+    @staticmethod
+    def get_or_create(string_key):
+        # if key doesn't exist, create it
+        try:
+            return Term.objects.get(slug=slugify(string_key))
+        except Term.DoesNotExist:
+            try:
+                return Term.objects.get(name=string_key)
+            except Term.DoesNotExist:
+                return Term.objects.create(name=string_key, slug=slugify(string_key))
+
+    def __str__(self):
+        return self.name
+
+
+class TermValidator(models.Model):
+    term = models.ForeignKey(Term, on_delete=models.CASCADE, related_name='validators')
+    validator = models.ForeignKey(BaseValidator, on_delete=models.PROTECT)
+
+    def __str__(self):
+        return '"%s" validator for term "%s"' % (self.term, self.validator)
+
+
 class Tag(models.Model):
     object = models.ForeignKey(BaseObjectModel, on_delete=models.CASCADE, related_name='tags')
-    key = models.CharField(max_length=55)
+    key = models.ForeignKey(Term, on_delete=models.PROTECT)
     value = models.TextField(blank=True)
 
     created = models.DateTimeField("created", auto_now_add=True)
@@ -85,6 +155,14 @@ class Tag(models.Model):
 
     class Meta:
         abstract = True
+
+    def clean_fields(self, exclude=None):
+        super().clean_fields(exclude=exclude)
+
+        if 'value' not in exclude:
+            value_errors = self.key.get_validation_errors(self.value)
+            if value_errors:
+                raise ValidationError({'value': value_errors})
 
     def save(self, *args, **kwargs):
         # update parent object modified tag

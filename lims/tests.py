@@ -8,7 +8,7 @@ from django.db import transaction
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
-from .models import Sample, Location, SampleTag, LocationTag
+from .models import Sample, Location, SampleTag, BaseValidator, Term
 
 
 def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_tags=3, test_user=None,
@@ -51,11 +51,9 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
 
             n_tags = randint(0, max_tags)
             for tag_num in range(n_tags):
-                LocationTag.objects.create(
-                    object=loc,
-                    key="key%d" % (tag_num + 1),
-                    value="value%d" % (tag_num + 1)
-                )
+                loc.add_tags(**{
+                    "key%d" % (tag_num + 1): "value%d" % (tag_num + 1)
+                })
         if not quiet:
             print("\nGenerating sub-locations...")
         for loc_num in range(n_sub_locations):
@@ -74,12 +72,9 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
 
             n_tags = randint(0, max_tags)
             for tag_num in range(n_tags):
-                tag = LocationTag(
-                    object=loc,
-                    key="key%d" % (tag_num + 1),
-                    value="value%d" % (tag_num + 1)
-                )
-                tag.save()
+                loc.add_tags(**{
+                    "key%d" % (tag_num + 1): "value%d" % (tag_num + 1)
+                })
 
         if not quiet:
             print("\nGenerating samples...")
@@ -103,17 +98,16 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
 
             n_tags = randint(0, max_tags)
             for tag_num in range(n_tags):
-                tag = SampleTag.objects.create(
-                    object=sample,
-                    key="key%d" % (tag_num + 1),
-                    value="value%d" % (tag_num + 1)
-                )
+                sample.add_tags(**{
+                    "key%d" % (tag_num + 1): "value%d" % (tag_num + 1)
+                })
 
         if not quiet:
             print("\nComplete!")
 
 
-def clear_models(models=(Sample, Location), queryset=lambda model: model.objects.all(), quiet=False):
+def clear_models(models=(Sample, Location, Term, BaseValidator),
+                 queryset=lambda model: model.objects.all(), quiet=False):
     if not quiet:
         print("Clearing models...")
     for recursive_depth in range(10):
@@ -300,6 +294,32 @@ class LocationGeometryTestCase(TestCase):
         self.assertEqual(location_polygon.maxy, 40)
 
 
+class TagsTestCase(TestCase):
+
+    def setUp(self):
+        self.sample = Sample.objects.create(collected=timezone.now(), name='a sample')
+
+        self.number_validator = BaseValidator.objects.create(
+            name='Number', regex='^[0-9]+$', error_message='Value is not a number'
+        )
+
+        self.generic_term = Term.objects.create(name='A generic tag', slug='generic-tag')
+        self.number_term = Term.objects.create(name='A Number Tag', slug='number-tag')
+        self.number_term.validators.create(validator=self.number_validator)
+
+    def test_object_tags(self):
+        sample_tag_generic = SampleTag(object=self.sample, key=self.generic_term, value='literally anything')
+        sample_tag_generic.full_clean()
+        sample_tag_generic.save()
+        sample_tag_numeric = SampleTag(object=self.sample, key=self.number_term, value='123487')
+        sample_tag_numeric.full_clean()
+        sample_tag_numeric.save()
+
+        with self.assertRaisesRegex(ValidationError, 'Value is not a number'):
+            sample_tag_numeric_bad = SampleTag(object=self.sample, key=self.number_term, value='AAA')
+            sample_tag_numeric_bad.full_clean()
+
+
 class SampleTestCase(TestCase):
 
     def setUp(self):
@@ -370,13 +390,6 @@ class SampleTestCase(TestCase):
         sample = Sample.objects.create(collected=timezone.now(), user=self.test_user)
         self.assertEqual(sample.slug, str(sample))
 
-    def tearDown(self):
-        for sample in Sample.objects.filter(user=self.test_user):
-            sample.delete()
-        self.test_location1.delete()
-        self.test_location2.delete()
-        self.test_user.delete()
-
 
 class TestDataTestCase(TestCase):
 
@@ -397,7 +410,3 @@ class TestDataTestCase(TestCase):
                            quiet=True)
         self.assertEqual(Location.objects.filter(user=self.test_user).count(), 76)
         self.assertEqual(Sample.objects.filter(user=self.test_user).count(), 27)
-
-    def tearDown(self):
-        clear_models(queryset=lambda model: model.objects.filter(user=self.test_user), quiet=True)
-        self.test_user.delete()
