@@ -6,7 +6,12 @@
         {% for field in form %}
             <div class="form-row field-{{ field.name }}">
                 {{ field.errors }}
-                {{ field.label_tag }} {{ field }}
+                {% if field.field.required %}
+                    <span class="required">{{ field.label_tag }}</span>
+                {% else %}
+                    {{ field.label_tag }}
+                {% endif %}
+                {{ field }}
                 {% if field.help_text %}
                     <p class="help">{{ field.help_text|safe }}</p>
                 {% endif %}

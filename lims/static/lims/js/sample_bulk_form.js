@@ -7,7 +7,7 @@ function addForms(n) {
     }
 
     var $container = $('#add-formset-list');
-    var $header = $('#add-formset-header').parent();
+    var $header = $('#add-formset-tools').parent();
     var $formLi = $container.find('.add-formset-item').not($header);
 
     // setup the template (no errors, no values)
@@ -70,7 +70,7 @@ function fillDown(linkId) {
             }
         })
     } else if (action === 'today' && fieldName === 'collected') {
-        var dateString = new Date().toISOString().replace(/T/, ' ').replace(/:[0-9]{2}\.[0-9]*Z$/, '');
+        var dateString = getCurrentDateTimeString();
         $('#id_form-0-' + fieldName).val(dateString);
     } else {
         console.log('Unknown action: "' + action + '"');
@@ -83,7 +83,7 @@ $(function() {
         addForms($('#add-formset-more-number').val());
     });
 
-    $('#add-formset-header').on('click', 'a', function(e) {
+    $('#add-formset-tools').on('click', 'a', function(e) {
         e.preventDefault();
         fillDown(this);
     })

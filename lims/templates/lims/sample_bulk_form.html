@@ -10,6 +10,7 @@
         {% if view.request.user.is_staff %}
              <li><a href="{% url 'admin:lims_sample_add' %}">Admin View</a></li>
         {% endif %}
+        <li><a class="addlink" href="{% url 'lims:sample_add' %}">Add Sample</a></li>
     </ul>
 {% endblock %}
 
@@ -20,31 +21,33 @@
             {% csrf_token %}
             {{ form.management_form }}
             <ul id="add-formset-list">
+            <ul class="add-formset-fieldlist" id="add-formset-header">
+                {% for field in form.0 %}
+                    {% if not field.is_hidden %}
+                        <li>{{ field.label_tag }}</li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
             <li class="add-formset-item">
-                <ul class="add-formset-fieldlist" id="add-formset-header">
+                <ul class="add-formset-fieldlist" id="add-formset-tools">
                     <li>
-                        Collected Date <br/>
                         <a href="#" id="collected-today">Today</a> /
                         <a href="#" id="collected-fill">Fill down</a> /
                         <a href="#" id="collected-clear">Clear</a>
                     </li>
                     <li>
-                        Name <br/>
                         <a href="#" id="name-fill">Fill down</a> /
                         <a href="#" id="name-clear">Clear</a>
                     </li>
                     <li>
-                        Description <br/>
                         <a href="#" id="description-fill">Fill down</a> /
                         <a href="#" id="description-clear">Clear</a>
                     </li>
                     <li>
-                        Location ID <br/>
                         <a href="#" id="location_slug-fill">Fill down</a> /
                         <a href="#" id="location_slug-clear">Clear</a>
                     </li>
                     <li>
-                        Tags <br/>
                         <a href="#" id="tag_json-fill">Fill down</a> /
                         <a href="#" id="tag_json-clear">Clear</a>
                     </li>

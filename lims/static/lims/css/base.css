@@ -155,6 +155,10 @@
 
 /* Add form styles */
 
+#collected-today-link {
+	padding-left: 4px;
+}
+
 #add-formset-list, .add-formset-fieldlist {
     padding-left: 0;
 }
@@ -186,6 +190,10 @@
 
 #add-formset-list label {
     display:none;
+}
+
+#add-formset-header label {
+    display:inline;
 }
 
 
