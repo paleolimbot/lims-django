@@ -19,6 +19,18 @@
 
     <table class="object-info">
         <tr>
+            <th>Name</th>
+            <td>{{ location.name }}</td>
+        </tr>
+        <tr>
+            <th>User</th>
+            <td>
+                {% if location.user %}
+                    <a href="{% url 'lims:user_detail' location.user.pk %}">{{ location.user }}</a>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
             <th>Identifier</th>
             <td>{{ location.slug }}</td>
         </tr>
@@ -33,18 +45,6 @@
                     <a href="{% url 'lims:location_detail' location.parent.pk %}">{{ location.parent }}</a>
                 {% endif %}
             </td>
-        </tr>
-        <tr>
-            <th>User</th>
-            <td>
-                {% if location.user %}
-                    <a href="{% url 'lims:user_detail' location.user.pk %}">{{ location.user }}</a>
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <th>Date Modified (Created)</th>
-            <td>{{ location.modified }} ({{ location.created }})</td>
         </tr>
         <tr>
             <th>Geometry</th>
@@ -67,6 +67,10 @@
         {% else %}
             <tr><td>(none specified)</td><td></td></tr>
         {% endif %}
+        <tr>
+            <th>Date Modified (Created)</th>
+            <td>{{ location.modified }} ({{ location.created }})</td>
+        </tr>
     </table>
 
     <h2><a id="locations">Sub-locations</a></h2>

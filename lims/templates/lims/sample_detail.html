@@ -24,14 +24,6 @@
             <td>{{ sample.slug }}</td>
         </tr>
         <tr>
-            <th>Sample Name</th>
-            <td>{{ sample.name }}</td>
-        </tr>
-        <tr>
-            <th>Description</th>
-            <td>{{ sample.description|linebreaksbr|default:'(none provided)' }}</td>
-        </tr>
-        <tr>
             <th>User</th>
             <td>
                 {% if sample.user %}
@@ -40,20 +32,24 @@
             </td>
         </tr>
         <tr>
+            <th>Collected Date</th>
+            <td>{{ sample.collected }}</td>
+        </tr>
+        <tr>
+            <th>Sample Name</th>
+            <td>{{ sample.name }}</td>
+        </tr>
+        <tr>
+            <th>Description</th>
+            <td>{{ sample.description|linebreaksbr|default:'(none provided)' }}</td>
+        </tr>
+        <tr>
             <th>Location</th>
             <td>
                 {% if sample.location %}
                     <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
                 {% endif %}
             </td>
-        </tr>
-        <tr>
-            <th>Collected Date</th>
-            <td>{{ sample.collected }}</td>
-        </tr>
-        <tr>
-            <th>Date Modified (Created)</th>
-            <td>{{ sample.modified }} ({{ sample.created }})</td>
         </tr>
         <tr>
             <th>Tags</th>
@@ -66,6 +62,10 @@
         {% else %}
             <tr><td>(none specified)</td><td></td></tr>
         {% endif %}
+        <tr>
+            <th>Date Modified (Created)</th>
+            <td>{{ sample.modified }} ({{ sample.created }})</td>
+        </tr>
     </table>
 
 {% endblock %}

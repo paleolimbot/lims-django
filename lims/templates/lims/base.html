@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>CWRS LIMS | {% block title %}{% endblock %}</title>
+    <title>LIMS | {% block title %}{% endblock %}</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'admin/css/base.css' %}">
     {% block head %}{% endblock %}
@@ -14,7 +14,7 @@
     <div id="container">
         <div id="header">
             <div id="branding">
-                <h1 id="site-name"><a href="{% url 'lims:index' %}">CWRS LIMS</a></h1>
+                <h1 id="site-name"><a href="{% url 'lims:index' %}">LIMS</a></h1>
             </div>
 
             {% if view.request.user.pk %}
@@ -35,12 +35,12 @@
                 <div id="user-tools">
                     Welcome,
                     {% if view.request.user.first_name %}
-                        {{ view.request.user.first_name }}.
+                        <strong>{{ view.request.user.first_name }}</strong>.
                     {% else %}
-                        {{ view.request.user.username }}.
+                        <strong>{{ view.request.user.username }}</strong>.
                     {% endif %}
                     {% if view.request.user.is_staff %}
-                        <a href="{% url 'admin:index' %}">Admin Site</a> /
+                        <a href="{% url 'admin:index' %}">Admin</a> /
                     {% endif %}
                     <a href="{% url 'lims:account' %}">Account</a> /
                     <a href="{% url 'lims:logout' %}">Logout</a>

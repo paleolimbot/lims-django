@@ -26,7 +26,7 @@ class LocationDetailView(LimsLoginMixin, generic.DeleteView):
             self.request.GET,
             prefix='sample_'
         )
-        sample_paginator = Paginator(samples, per_page=100)
+        sample_paginator = Paginator(samples, per_page=50)
         context['sample_page_obj'] = sample_paginator.page(self.request.GET.get('sample_page', 1))
         context['sample_page_kwarg'] = 'sample_page'
 
@@ -67,7 +67,7 @@ class UserDetailView(LimsLoginMixin, generic.DeleteView):
             self.request.GET,
             prefix='sample_'
         )
-        sample_paginator = Paginator(samples, per_page=100)
+        sample_paginator = Paginator(samples, per_page=50)
         context['sample_page_obj'] = sample_paginator.page(self.request.GET.get('sample_page', 1))
         context['sample_page_kwarg'] = 'sample_page'
 

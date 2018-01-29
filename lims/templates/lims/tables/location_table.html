@@ -21,9 +21,12 @@
                     </th>
                     <th>Name</th>
                     <th>User</th>
-                    <th>Modified</th>
+                    <th>Identifier</th>
+                    <th>Description</th>
                     <th>Parent Location</th>
+                    <th>Geometry</th>
                     <th>Tags</th>
+                    <th>Modified</th>
                 </tr>
             </thead>
 
@@ -33,17 +36,20 @@
                     <td>{{ location.get_checkbox }}</td>
                     <td>{{ location.get_link }}</td>
                     <td>{% if location.user %}<a href="{% url 'lims:user_detail' location.user.pk %}">{{ location.user }}</a>{% endif %}</td>
-                    <td>{{ location.modified }}</td>
+                    <td>{{ location.slug }}</td>
+                    <td>{{ location.description|truncatechars:55 }}</td>
                     <td>
                         {% if location.parent %}
                             {{ location.parent.get_link }}
                         {% endif %}
                     </td>
+                    <td>{{ location.geometry|truncatechars:55 }}</td>
                     <td>
                         {% for tag in location.tags.all %}
                              {{ tag }} <br/>
                         {% endfor %}
                     </td>
+                    <td>{{ location.modified }}</td>
                 </tr>
 
             {% endfor %}

@@ -21,10 +21,12 @@
                     </th>
                     <th>Sample ID</th>
                     <th>User</th>
-                    <th>Modified</th>
-                    <th>Location</th>
                     <th>Collected</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Location</th>
                     <th>Tags</th>
+                    <th>Modified</th>
                 </tr>
             </thead>
 
@@ -33,18 +35,20 @@
                     <td>{{ sample.get_checkbox }}</td>
                     <td>{{ sample.get_link }}</td>
                     <td>{% if sample.user %}<a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>{% endif %}</td>
-                    <td>{{ sample.modified }}</td>
+                    <td>{{ sample.collected }}</td>
+                    <td>{{ sample.name }}</td>
+                    <td>{{ sample.description|truncatechars:55 }}</td>
                     <td>
                         {% if sample.location %}
                             {{ sample.location.get_link }}
                         {% endif %}
                     </td>
-                    <td>{{ sample.collected }}</td>
                     <td>
                         {% for tag in sample.tags.all %}
                           {{ tag }} <br/>
                         {% endfor %}
                     </td>
+                    <td>{{ sample.modified }}</td>
                 </tr>
 
             {% endfor %}
