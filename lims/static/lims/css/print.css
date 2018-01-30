@@ -1,0 +1,14 @@
+
+/* general printing style */
+
+@media print {
+
+    #header, #footer {
+        display: none;
+    }
+
+    body {
+        width: 100%;
+    }
+
+}

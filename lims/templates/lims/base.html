@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>LIMS | {% block title %}{% endblock %}</title>
+    <title>{% block title %}{% endblock %} | LIMS</title>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'admin/css/base.css' %}">
     {% block head %}{% endblock %}
     <link rel="stylesheet" type="text/css" href="{% static 'lims/css/base.css' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'admin/css/responsive.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'lims/css/print.css' %}">
     <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1.0, maximum-scale=1.0">
 </head>
 <body{% block body_attrs %}{% endblock %}>

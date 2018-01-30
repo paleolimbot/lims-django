@@ -204,10 +204,16 @@
 }
 
 /* qrcode styles */
+#qrcode-table {
+	width: 100%;
+}
+
 #qrcode-table img.qrcode {
     width:100px;
 }
 
-#qrcode-table td {
-    vertical-align: middle;
+#qrcode-table .qrcode-item {
+	display: inline-block;
+	text-align: center;
+	padding: 10px;
 }

@@ -23,18 +23,16 @@
 
             <p>Are you sure you want to print barcodes for the following samples?</p>
 
-            <table id="qrcode-table">
-                <tr>
-                    <th>Sample</th>
-                    <th>QR Code</th>
-                </tr>
+            <div id="qrcode-table">
                 {% for sample in object_list %}
-                <tr>
-                    <td>{{ sample.get_link }}</td>
-                    <td>{{ sample.get_qrcode_html }}</td>
-                </tr>
+                <div class="qrcode-item">
+                    <a href="{% url 'lims:sample_detail' sample.pk %}">
+                        {{ sample.get_qrcode_html }} <br/>
+                        {{ sample.slug }}
+                    </a>
+                </div>
                 {% endfor %}
-            </table>
+            </div>
 
             <input type="submit" value="Print Barcodes" />
         </form>

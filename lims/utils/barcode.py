@@ -5,8 +5,7 @@ import base64
 
 
 def qrcode_png(obj):
-    class_name = type(obj).__name__
-    img = qrcode.make('%s:%s' % (class_name, obj.slug))
+    img = qrcode.make(obj.slug)
 
     with io.BytesIO() as out:
         img.save(out, format='png')
