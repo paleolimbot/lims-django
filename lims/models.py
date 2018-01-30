@@ -189,8 +189,8 @@ class TermValidator(models.Model):
 
 
 class Tag(models.Model):
-    object = models.ForeignKey(BaseObjectModel, on_delete=models.CASCADE, related_name='tags')
-    key = models.ForeignKey(Term, on_delete=models.PROTECT)
+    object = models.ForeignKey(BaseObjectModel, on_delete=models.CASCADE, related_name='tags', db_index=True)
+    key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True)
     value = models.TextField(blank=True)
 
     created = models.DateTimeField("created", auto_now_add=True)
