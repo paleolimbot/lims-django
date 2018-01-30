@@ -25,14 +25,15 @@ class DetailViewWithTablesBase(generic.DetailView):
             self.request.GET,
             prefix='sample_'
         )
-        sample_paginator = Paginator(samples, per_page=50)
+        sample_paginator = Paginator(samples, per_page=100)
         context['sample_page_obj'] = sample_paginator.page(self.request.GET.get('sample_page', 1))
         context['sample_page_kwarg'] = 'sample_page'
 
         # add some actions for the child samples
         context['sample_actions'] = [
             {'value': 'delete-samples', 'label': 'Delete samples'},
-            {'value': 'print-barcodes', 'label': 'Print barcodes'}
+            {'value': 'print-barcodes', 'label': 'Print barcodes'},
+            {'value': 'export-samples', 'label': 'Export selected samples'}
         ]
 
         # setup the child locations list
@@ -41,13 +42,14 @@ class DetailViewWithTablesBase(generic.DetailView):
             self.request.GET,
             prefix='location_'
         )
-        location_paginator = Paginator(locations, per_page=10)
+        location_paginator = Paginator(locations, per_page=100)
         context['location_page_obj'] = location_paginator.page(self.request.GET.get('location_page', 1))
         context['location_page_kwarg'] = 'location_page'
 
         # add some actions for the child locations
         context['location_actions'] = [
-            {'value': 'delete-locations', 'label': 'Delete selected locations'}
+            {'value': 'delete-locations', 'label': 'Delete selected locations'},
+            {'value': 'export-locations', 'label': 'Export selected locations'}
         ]
 
         return context

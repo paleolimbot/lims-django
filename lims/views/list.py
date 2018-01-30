@@ -11,14 +11,15 @@ from .accounts import LimsLoginMixin
 
 class SampleListView(LimsLoginMixin, generic.ListView):
     template_name = 'lims/lists/sample_list.html'
-    paginate_by = 50
+    paginate_by = 100
     page_kwarg = 'sample_page'
 
     def get_context_data(self, *args, **kwargs):
         context = super(SampleListView, self).get_context_data(*args, **kwargs)
         context['actions'] = [
             {'value': 'delete-samples', 'label': 'Delete samples'},
-            {'value': 'print-barcodes', 'label': 'Print barcodes'}
+            {'value': 'print-barcodes', 'label': 'Print barcodes'},
+            {'value': 'export-samples', 'label': 'Export selected samples'}
         ]
         return context
 
@@ -35,7 +36,7 @@ class SampleListView(LimsLoginMixin, generic.ListView):
 class LocationListView(LimsLoginMixin, generic.ListView):
     template_name = 'lims/lists/location_list.html'
     context_object_name = 'location_list'
-    paginate_by = 50
+    paginate_by = 100
     page_kwarg = 'location_page'
 
     def get_queryset(self):
@@ -50,7 +51,8 @@ class LocationListView(LimsLoginMixin, generic.ListView):
     def get_context_data(self, *args, **kwargs):
         context = super(LocationListView, self).get_context_data(*args, **kwargs)
         context['actions'] = [
-            {'value': 'delete-locations', 'label': 'Delete selected locations'}
+            {'value': 'delete-locations', 'label': 'Delete selected locations'},
+            {'value': 'export-locations', 'label': 'Export selected locations'}
         ]
         return context
 

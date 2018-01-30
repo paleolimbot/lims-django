@@ -1,7 +1,11 @@
+
+import io
+import csv
+
 from django.shortcuts import redirect
 from django.views import generic
 from django.urls import reverse_lazy
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.db import IntegrityError
 from django.utils.safestring import mark_safe
 from django.utils.html import format_html
@@ -40,9 +44,11 @@ class ActionListView(generic.ListView):
 
     def post(self, request):
         try:
-            self.do_action(request, self.get_queryset())
+            result = self.do_action(request, self.get_queryset())
             if self.errors:
                 return self.get(request)
+            elif result is not None:
+                return result
             else:
                 return redirect(self.get_success_url())
         except Http404:
@@ -105,3 +111,58 @@ class SamplePrintBarcodeView(LimsLoginMixin, ActionListView):
 
     def do_action(self, request, queryset):
         self.add_error("Barcode printing isn't implemented yet...")
+
+
+def export_response(queryset, fields, terms):
+
+    def header_iter():
+        for field in fields:
+            yield field
+        for term in terms:
+            yield term.slug
+
+    def field_iter(instance):
+        for field in fields:
+            item = getattr(instance, field)
+            if hasattr(item, 'strftime'):
+                yield item.strftime('%Y-%m-%dT%H:%M%z')
+            else:
+                yield str(item)
+        for term in terms:
+            item = instance.get_tag(term)
+            if item is None:
+                yield 'NA'
+            else:
+                yield str(item)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename = "LIMS_export.csv"'
+    writer = csv.writer(response)
+    writer.writerow(header_iter())
+    for obj in queryset:
+        writer.writerow(field_iter(obj))
+    return response
+
+
+class SampleExportView(LimsLoginMixin, ActionListView):
+    model = models.Sample
+    template_name = 'lims/action_views/sample_export.html'
+
+    def do_action(self, request, queryset):
+        return export_response(
+            queryset,
+            fields=['id', 'slug', 'user', 'name', 'description', 'collected', 'location'],
+            terms=self.model.get_all_terms(queryset)
+        )
+
+
+class LocationExportView(LimsLoginMixin, ActionListView):
+    model = models.Location
+    template_name = 'lims/action_views/location_export.html'
+
+    def do_action(self, request, queryset):
+        return export_response(
+            queryset,
+            fields=['id', 'slug', 'user', 'name', 'description', 'parent', 'geometry'],
+            terms=self.model.get_all_terms(queryset)
+        )

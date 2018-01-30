@@ -6,12 +6,14 @@ from django.urls import reverse_lazy
 from django.http import QueryDict, HttpResponseBadRequest
 
 LOCATION_ACTIONS = {
-    'delete-locations': reverse_lazy('lims:location_delete')
+    'delete-locations': reverse_lazy('lims:location_delete'),
+    'export-locations': reverse_lazy('lims:location_export')
 }
 
 SAMPLE_ACTIONS = {
     'delete-samples': reverse_lazy('lims:sample_delete'),
-    'print-barcodes': reverse_lazy('lims:sample_print_barcode')
+    'print-barcodes': reverse_lazy('lims:sample_print_barcode'),
+    'export-samples': reverse_lazy('lims:sample_export')
 }
 
 
@@ -24,6 +26,8 @@ def sample_action(request, pk=None, action=None):
 
 
 def do_action(request, pk, action, action_dict):
+    if not request.user.pk:
+        return HttpResponseBadRequest('Permission denied')
 
     if action and pk:
         ids_query = QueryDict('id__in=' + pk)
