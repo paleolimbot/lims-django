@@ -34,13 +34,59 @@ class BaseObjectModel(models.Model):
     class Meta:
         abstract = True
 
+    def clean_fields(self, exclude=None):
+        super().clean_fields(exclude=exclude)
+        if exclude is None or 'slug' not in exclude:
+            if not self.slug and self.pk:
+                raise ValidationError({'slug': ['slug cannot be changed to ""']})
+
     def save(self, *args, **kwargs):
         if not self.pk and not self.slug:
             self.slug = self.calculate_slug()
         super().save(*args, **kwargs)
 
+    def auto_slug_use(self):
+        return [slugify(self.name), ]
+
     def calculate_slug(self):
-        return slugify(self.name)
+        slug_parts = self.auto_slug_use()
+        ObjectType = type(self)
+
+        # this is constructed such that it should always finish in 2 iterations
+        suffix_index = 0
+        for iterations in range(20):
+
+            suffix = '_%d' % suffix_index if suffix_index else ''
+
+            # construct the sample slug
+            id_str_prefix = "_".join(item for item in slug_parts if item)
+            id_str_prefix = id_str_prefix[:(55 - len(suffix))]
+            id_str = id_str_prefix + suffix
+
+            # make sure the id_str is unique
+            other_object_with_slug = ObjectType.objects.filter(slug=id_str)
+
+            if other_object_with_slug.count() == 0:
+                # no object with this slug, use it!
+                return id_str
+            else:
+                # an object exists with this slug, find objects that could
+                # possibly collide with the slug
+
+                possible_collisions = ObjectType.objects.filter(
+                    slug__startswith=id_str_prefix
+                ).values_list('slug', flat=True)
+
+                # find the maximum _suffix number for the slug
+                suffix_re = re.compile('_([0-9]+)$')
+                possible_collision_suffixes = [
+                    int(suffix_re.search(slug).group(1)) for slug in possible_collisions if suffix_re.search(slug)
+                ]
+                suffix_index = max(possible_collision_suffixes) + 1 if possible_collision_suffixes else suffix_index + 1
+
+        # this could theoretically happen but would probably be very difficult
+        # because the previous code should resolve a valid sample ID in 2 iterations
+        raise ValueError("Cannot create unique slug for object")
 
     def get_absolute_url(self):
         raise NotImplementedError()
@@ -259,52 +305,17 @@ class Sample(BaseObjectModel):
     collected = models.DateTimeField("collected")
     location = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True)
 
-    def get_absolute_url(self):
-        return reverse_lazy('lims:sample_detail', kwargs={'pk': self.pk})
-
-    def calculate_slug(self):
-
+    def auto_slug_use(self):
         # get parts of the calculated sample slug
         dt_str = str(self.collected.date())
         location_slug = slugify(self.location.slug[:10]) if self.location else ""
         user = self.user.username[:15] if self.user else ""
         hint = slugify(self.name)
 
-        # this is constructed such that it should always finish in 2 iterations
-        suffix_index = 0
-        for iterations in range(20):
+        return [user, dt_str, location_slug, hint]
 
-            suffix = '_%d' % suffix_index if suffix_index else ''
-
-            # construct the sample slug
-            id_str_prefix = "_".join(item for item in [user, dt_str, location_slug, hint] if item)
-            id_str_prefix = id_str_prefix[:(55 - len(suffix))]
-            id_str = id_str_prefix + suffix
-
-            # make sure the id_str is unique
-            other_object_with_slug = Sample.objects.filter(slug=id_str)
-
-            if other_object_with_slug.count() == 0:
-                # no object with this slug, use it!
-                return id_str
-            else:
-                # an object exists with this slug, find objects that could
-                # possibly collide with the slug
-
-                possible_collisions = Sample.objects.filter(
-                    slug__startswith=id_str_prefix
-                ).values_list('slug', flat=True)
-
-                # find the maximum _suffix number for the slug
-                suffix_re = re.compile('_([0-9]+)$')
-                possible_collision_suffixes = [
-                    int(suffix_re.search(slug).group(1)) for slug in possible_collisions if suffix_re.search(slug)
-                ]
-                suffix_index = max(possible_collision_suffixes) + 1 if possible_collision_suffixes else suffix_index + 1
-
-        # this could theoretically happen but would probably be very difficult
-        # because the previous code should resolve a valid sample ID in 2 iterations
-        raise ValueError("Cannot create unique sample ID for sample")
+    def get_absolute_url(self):
+        return reverse_lazy('lims:sample_detail', kwargs={'pk': self.pk})
 
     def __str__(self):
         return self.slug
