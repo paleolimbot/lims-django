@@ -39,6 +39,9 @@ function addForms(n) {
 
         $container.append($newLi);
     }
+
+    //update the management form
+    $('#id_form-TOTAL_FORMS').val(n_forms + n);
 }
 
 function getFieldNames() {
@@ -135,6 +138,14 @@ $(function() {
         e.preventDefault();
         addForms($('#add-formset-more-number').val());
     });
+
+    $('#add-formset-more-number').on('keypress', function(e) {
+        if(e.keyCode === 13) {
+            e.preventDefault();
+            addForms($('#add-formset-more-number').val());
+        }
+    });
+
 
     $('#add-formset-tools').on('click', 'a', function(e) {
         e.preventDefault();

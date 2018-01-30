@@ -45,11 +45,10 @@ class BaseObjectModelForm(ModelForm):
         for key in current_tag_keys:
             tag_field_names.append(key)
 
-        # add additional tag names that come from the form data
-        if 'data' in kwargs:
-            for key, value in kwargs['data'].items():
-                if re.fullmatch(r'^tag_form_field_', key):
-                    tag_field_names.append(re.sub(r'^tag_form_field_', '', key))
+        # add additional terms that exist in the form data
+        for key in self.data:
+            if re.match('^tag_form_field_(.*)$', key):
+                tag_field_names.append(re.search('^tag_form_field_(.*)$', key).group(1))
 
         # set the tag names from tag_field_names
         self.tag_field_names = {}
@@ -190,15 +189,28 @@ class LocationForm(BaseObjectModelForm):
         fields = ['name', 'slug', 'description', 'location_slug', 'geometry']
 
 
-class BaseObjectAddView(generic.CreateView):
+class ObjectFormView(generic.FormView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
-        kwargs['tag_field_names'] = self.request.GET.getlist('_use_tag_field', default=[])
+
+        # get tag fields from the add tag column item
+        tag_field_names = list(self.request.POST.get('add-form-tag-column', default='').split(','))
+        for name in self.request.GET.getlist('_use_tag_field', default=[]):
+            tag_field_names.append(name)
+
+        # don't pass on '' items
+        kwargs['tag_field_names'] = [name for name in tag_field_names if name]
+
         return kwargs
 
     def form_valid(self, form):
+        # if the user requested additional tag columns but all the models were valid,
+        # the user should probably stay on this page
+        if self.request.POST.get('add-form-tag-column', None):
+            return self.form_invalid(form)
+
         # wrap the saving of the object in a revision block
         with reversion.create_revision():
             # do the saving
@@ -206,57 +218,35 @@ class BaseObjectAddView(generic.CreateView):
 
             # add information about from whence it came
             reversion.set_user(self.request.user)
-            reversion.set_comment('object change from BaseObjectAddView')
+            reversion.set_comment('object change from ObjectFormView')
 
             # return the response
             return return_value
 
 
-class BaseObjectChangeView(generic.UpdateView):
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        kwargs['tag_field_names'] = self.request.GET.getlist('_use_tag_field', [])
-        return kwargs
-
-    def form_valid(self, form):
-        # wrap the saving of the object in a revision block
-        with reversion.create_revision():
-            # do the saving
-            return_value = super().form_valid(form)
-
-            # add information about from whence it came
-            reversion.set_user(self.request.user)
-            reversion.set_comment('object change from BaseObjectChangeView')
-
-            # return the response
-            return return_value
-
-
-class SampleAddView(LimsLoginMixin, BaseObjectAddView):
+class SampleAddView(LimsLoginMixin, ObjectFormView, generic.CreateView):
     template_name = 'lims/sample_form.html'
     form_class = SampleForm
 
 
-class SampleChangeView(LimsLoginMixin, BaseObjectChangeView):
+class SampleChangeView(LimsLoginMixin, ObjectFormView, generic.UpdateView):
     model = models.Sample
     template_name = 'lims/sample_change.html'
     form_class = SampleForm
 
 
-class LocationAddView(LimsLoginMixin, BaseObjectAddView):
+class LocationAddView(LimsLoginMixin, ObjectFormView, generic.CreateView):
     template_name = 'lims/location_form.html'
     form_class = LocationForm
 
 
-class LocationChangeView(LimsLoginMixin, BaseObjectChangeView):
+class LocationChangeView(LimsLoginMixin, ObjectFormView, generic.UpdateView):
     model = models.Location
     template_name = 'lims/location_change.html'
     form_class = LocationForm
 
 
-class SampleBulkAddView(LimsLoginMixin, generic.FormView):
+class SampleBulkAddView(LimsLoginMixin, ObjectFormView):
     success_url = reverse_lazy('lims:sample_list')
     template_name = 'lims/sample_bulk_form.html'
 
@@ -289,15 +279,6 @@ class SampleBulkAddView(LimsLoginMixin, generic.FormView):
     def get_form_kwargs(self):
         kwargs = super(SampleBulkAddView, self).get_form_kwargs()
         kwargs['queryset'] = self.get_queryset()
-        kwargs['user'] = self.request.user
-
-        # get tag fields from the add tag column item
-        tag_field_names = list(self.request.POST.get('add-formset-tag-column', default='').split(','))
-        for name in self.request.GET.getlist('_use_tag_field', default=[]):
-            tag_field_names.append(name)
-        # don't pass on '' items
-        kwargs['tag_field_names'] = [name for name in tag_field_names if name]
-
         return kwargs
 
     def form_valid(self, form):
@@ -307,14 +288,15 @@ class SampleBulkAddView(LimsLoginMixin, generic.FormView):
 
         # if the user requested additional tag columns but all the models were valid,
         # the user should probably stay on this page
-        if self.request.POST.get('add-formset-tag-column', None):
+        if self.request.POST.get('add-form-tag-column', None):
             return self.form_invalid(form)
 
         with reversion.create_revision():
             form.save()
+            return_value = super().form_valid(form)
 
             # add information about from whence it came
             reversion.set_user(self.request.user)
             reversion.set_comment('bulk object creation from SampleBulkAddView')
 
-        return super(SampleBulkAddView, self).form_valid(form)
+            return return_value

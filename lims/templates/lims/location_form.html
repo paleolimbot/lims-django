@@ -31,3 +31,8 @@
     </div>
 
 {% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script src="{% static 'lims/js/object_form.js' %}"></script>
+{% endblock %}

@@ -16,6 +16,7 @@
             <li><a href="{% url 'admin:lims_sample_add' %}">Admin View</a></li>
         {% endif %}
         <li><a class="addlink" href="{% url 'lims:sample_add_bulk' %}">Bulk Add</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add' %}">Add Sample</a></li>
     </ul>
 {% endblock %}
 
@@ -33,5 +34,5 @@
 
 {% block scripts %}
     {{ block.super }}
-    <script src="{% static 'lims/js/sample_form.js' %}"></script>
+    <script src="{% static 'lims/js/object_form.js' %}"></script>
 {% endblock %}

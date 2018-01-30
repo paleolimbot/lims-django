@@ -10,6 +10,7 @@
         {% if view.request.user.is_staff %}
              <li><a href="{% url 'admin:lims_sample_add' %}">Admin View</a></li>
         {% endif %}
+        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' %}">Bulk Add</a></li>
         <li><a class="addlink" href="{% url 'lims:sample_add' %}">Add Sample</a></li>
     </ul>
 {% endblock %}
@@ -54,13 +55,13 @@
                 {% endfor %}
             </ul>
             <p>
-                Add <input id="add-formset-more-number" type="text" size="2" title="Add" value="1"/> more forms
+                Add <input name="add-formset-more-number" id="add-formset-more-number" type="text" size="2" title="Add" value="1"/> more forms
                 <a href="#" id="add-formset-more-go">Go</a>
             </p>
             <p>
                 Add tag column for tags (separate with comma):
-                <input name="add-formset-tag-column" type="text" size="10" title="Add" value=""/>
-                <button id="add-formset-tag-column-go">Go</button>
+                <input name="add-form-tag-column" type="text" size="10" title="Add" value=""/>
+                <button id="add-form-tag-column-go">Go</button>
             </p>
         <input type="submit" value="Add samples" />
         </form>
