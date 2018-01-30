@@ -7,7 +7,7 @@
 
 {% block objects_table %}
 
-    <form id="location-viewlist-form" method="post" action="{% url 'lims:location_action' %}?from={{ view.request.get_full_path }}">
+    <form id="location-viewlist-form" method="post" action="{% url 'lims:location_action' %}?from={{ view.request.get_full_path|urlencode }}">
 
         {% csrf_token %}
 
@@ -19,6 +19,7 @@
                     <th>
                         <input title="Select all samples" type="checkbox" name="object-all-selected"/>
                     </th>
+                    <th></th>
                     <th>Name</th>
                     <th>User</th>
                     <th>Identifier</th>
@@ -34,10 +35,13 @@
 
                 <tr>
                     <td>{{ location.get_checkbox }}</td>
+                    <td>
+                        <a class="editlink" href="{% url 'lims:location_change' location.pk %}?from={{ view.request.get_full_path|urlencode }}">edit</a>
+                    </td>
                     <td>{{ location.get_link }}</td>
                     <td>{% if location.user %}<a href="{% url 'lims:user_detail' location.user.pk %}">{{ location.user }}</a>{% endif %}</td>
                     <td>{{ location.slug }}</td>
-                    <td>{{ location.description|truncatechars:55 }}</td>
+                    <td>{{ location.description|truncatechars:20 }}</td>
                     <td>
                         {% if location.parent %}
                             {{ location.parent.get_link }}

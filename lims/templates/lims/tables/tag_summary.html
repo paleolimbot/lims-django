@@ -2,8 +2,8 @@
 {% for tag in tags %}
     {% if forloop.counter0 < 4 %}
         <a href="{% url 'lims:term_detail' tag.key.pk %}" title="{{ tag.key }}">
-            {{ tag.key|truncatechars:10 }}
-        </a>: {{ tag.value|truncatechars:10 }}<br/>
+            {{ tag.key|truncatechars:20 }}
+        </a>: {{ tag.value|truncatechars:15 }}<br/>
     {% endif %}
 {% endfor %}
 

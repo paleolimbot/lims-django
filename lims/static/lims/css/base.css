@@ -114,6 +114,11 @@
 	color: #333;
 }
 
+.object-list-container .editlink {
+	text-decoration: underline;
+	font-size: smaller;
+}
+
 /* Set additional styles for the object list */
 
 #viewlist-form, .object-list {

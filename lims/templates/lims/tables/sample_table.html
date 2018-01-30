@@ -7,7 +7,7 @@
 
 {% block objects_table %}
 
-    <form id="sample-viewlist-form" method="post" action="{% url 'lims:sample_action' %}?from={{ view.request.get_full_path }}">
+    <form id="sample-viewlist-form" method="post" action="{% url 'lims:sample_action' %}?from={{ view.request.get_full_path|urlencode }}">
 
         {% csrf_token %}
 
@@ -19,6 +19,7 @@
                     <th>
                         <input title="Select all samples" type="checkbox" name="object-all-selected"/>
                     </th>
+                    <th></th>
                     <th>Sample ID</th>
                     <th>User</th>
                     <th>Collected</th>
@@ -33,6 +34,9 @@
             {% for sample in page_obj %}
                 <tr>
                     <td>{{ sample.get_checkbox }}</td>
+                    <td>
+                        <a class="editlink" href="{% url 'lims:sample_change' sample.pk %}?from={{ view.request.get_full_path|urlencode }}">edit</a>
+                    </td>
                     <td>{{ sample.get_link }}</td>
                     <td>{% if sample.user %}<a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>{% endif %}</td>
                     <td>{{ sample.collected }}</td>
