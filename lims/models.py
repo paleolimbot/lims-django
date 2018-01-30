@@ -72,20 +72,32 @@ class BaseObjectModel(models.Model):
         else:
             return False
 
-    def set_tags(self, **kwargs):
+    def set_tags(self, _values=None, **kwargs):
         self.tags.all().delete()
-        return self.add_tags(**kwargs)
+        return self.add_tags(_values, **kwargs)
 
-    def add_tags(self, **kwargs):
+    def add_tags(self, _values=None, **kwargs):
+        if _values is not None:
+            kwargs.update(_values)
+
         # make sure all names are defined terms
         for key, value in kwargs.items():
             term = Term.get_term(key, create=True)
             self.tags.create(key=term, value=value)
 
-        return self.tags.all()
+    def update_tags(self, _values=None, **kwargs):
+        if _values is not None:
+            kwargs.update(_values)
 
-    def update_tags(self, **kwargs):
-        pass
+        # make sure all names are defined terms
+        for key, value in kwargs.items():
+            term = Term.get_term(key, create=True)
+            try:
+                tag = self.tags.get(key=term)
+                tag.value = value
+                tag.save()
+            except ObjectDoesNotExist:
+                self.tags.create(key=term, value=value)
 
     def get_tag(self, key):
         term = Term.get_term(key, create=False)

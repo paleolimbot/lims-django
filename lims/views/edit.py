@@ -62,12 +62,12 @@ class BaseObjectModelForm(ModelForm):
                 continue
 
             # don't duplicate tag fields
-            if term.slug in self.tag_field_names:
+            if term in self.tag_field_names:
                 continue
 
             # add the field
             field_id = 'tag_form_field_' + term.slug
-            self.tag_field_names[term.slug] = field_id
+            self.tag_field_names[term] = field_id
             self.fields[field_id] = CharField(required=False, label='Tag: ' + term.name)
             initial_val = self.instance.get_tag(term)
             if initial_val:
@@ -97,13 +97,12 @@ class BaseObjectModelForm(ModelForm):
 
         # check values of tags
         tag_value_errors = {}
-        for term_name, field_name in self.tag_field_names.items():
+        for term, field_name in self.tag_field_names.items():
             value = self.cleaned_data[field_name]
             if not value:
                 continue
 
             # term will always exist, because it gets created before the value can be validated
-            term = models.Term.get_term(term_name, create=True)
             errors_for_key = term.get_validation_errors(value)
             if errors_for_key:
                 if field_name not in tag_value_errors:
@@ -136,7 +135,7 @@ class BaseObjectModelForm(ModelForm):
                 del tags_dict[key]
 
         # update the tag information
-        self.instance.set_tags(**tags_dict)
+        self.instance.update_tags(_values=tags_dict)
 
         # return whatever the super() returned
         return return_val
