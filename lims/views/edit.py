@@ -4,6 +4,7 @@ import json
 from django.views import generic
 from django.urls import reverse_lazy
 from django.forms import modelformset_factory, ModelForm, CharField, Textarea, ValidationError, TextInput
+import reversion
 
 from .. import models
 from .accounts import LimsLoginMixin
@@ -50,8 +51,9 @@ class BaseObjectModelForm(ModelForm):
         if self.instance.pk and not self.instance.user_can(self.user, 'edit'):
             raise ValidationError('User is not allowed to edit this sample')
 
-        # set the user
-        self.instance.user = self.user
+        # set the user, if there isn't one already
+        if not self.instance.user:
+            self.instance.user = self.user
 
         # clean the form
         super().clean()
@@ -88,6 +90,7 @@ class BaseObjectModelForm(ModelForm):
                 pass
 
     def save(self, *args, **kwargs):
+        # save the instance
         return_val = super().save(*args, **kwargs)
 
         # tags need the instance to exist in the DB before creating them...
@@ -95,8 +98,11 @@ class BaseObjectModelForm(ModelForm):
             tags_dict = json.loads(self.cleaned_data['tag_json'])
         else:
             tags_dict = {}
-
         self.instance.set_tags(**tags_dict)
+
+        # Store some meta-information.
+        reversion.set_user(self.user)
+        reversion.set_comment("Created revision 1")
 
         return return_val
 
@@ -134,6 +140,19 @@ class BaseObjectAddView(generic.CreateView):
         form.user = self.request.user
         return form
 
+    def form_valid(self, form):
+        # wrap the saving of the object in a revision block
+        with reversion.create_revision():
+            # do the saving
+            return_value = super().form_valid(form)
+
+            # add information about from whence it came
+            reversion.set_user(self.request.user)
+            reversion.set_comment('object change from BaseObjectAddView')
+
+            # return the response
+            return return_value
+
 
 class BaseObjectChangeView(generic.UpdateView):
 
@@ -151,6 +170,19 @@ class BaseObjectChangeView(generic.UpdateView):
             form.initial['tag_json'] = json.dumps(tag_dict)
 
         return form
+
+    def form_valid(self, form):
+        # wrap the saving of the object in a revision block
+        with reversion.create_revision():
+            # do the saving
+            return_value = super().form_valid(form)
+
+            # add information about from whence it came
+            reversion.set_user(self.request.user)
+            reversion.set_comment('object change from BaseObjectChangeView')
+
+            # return the response
+            return return_value
 
 
 class SampleAddView(LimsLoginMixin, BaseObjectAddView):
@@ -207,5 +239,11 @@ class SampleBulkAddView(LimsLoginMixin, generic.FormView):
         return kwargs
 
     def form_valid(self, form):
-        form.save()
+        with reversion.create_revision():
+            form.save()
+
+            # add information about from whence it came
+            reversion.set_user(self.request.user)
+            reversion.set_comment('bulk object creation from SampleBulkAddView')
+
         return super(SampleBulkAddView, self).form_valid(form)

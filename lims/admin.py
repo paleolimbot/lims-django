@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.db.models import TextField
 from django.forms import Textarea
+from reversion.admin import VersionAdmin
 
 from .models import Sample, SampleTag, Location, LocationTag, TermValidator, BaseValidator, Term
 
@@ -11,7 +12,7 @@ text_overrides = {
 
 
 # define base class that all models inherit
-class LimsAdmin(admin.ModelAdmin):
+class LimsAdmin(VersionAdmin):
     formfield_overrides = text_overrides
 
     def save_model(self, request, obj, form, change):
@@ -19,7 +20,7 @@ class LimsAdmin(admin.ModelAdmin):
             # save created user from admin login
             if obj.user is None and not obj.pk:
                 obj.user = request.user
-        obj.save()
+        return super().save_model(request, obj, form, change)
 
 
 class TermValidatorInline(admin.TabularInline):

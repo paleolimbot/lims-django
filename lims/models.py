@@ -100,6 +100,7 @@ def validate_is_a_regex(value):
 
 class BaseValidator(models.Model):
     name = models.CharField(max_length=55)
+    description = models.TextField(blank=True)
     regex = models.TextField(validators=[validate_is_a_regex, ])
     error_message = models.TextField()
 
@@ -110,6 +111,7 @@ class BaseValidator(models.Model):
 class Term(models.Model):
     name = models.CharField(max_length=55)
     slug = models.SlugField(max_length=55, unique=True)
+    description = models.TextField(blank=True)
 
     def get_absolute_url(self):
         return reverse_lazy('lims:term_detail', self.pk)

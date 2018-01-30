@@ -2,9 +2,10 @@ from django.shortcuts import redirect
 from django.views import generic
 from django.urls import reverse_lazy
 from django.http import Http404
-from django.db import transaction, IntegrityError
+from django.db import IntegrityError
 from django.utils.safestring import mark_safe
 from django.utils.html import format_html
+import reversion
 
 from .. import models
 from .accounts import LimsLoginMixin
@@ -58,12 +59,16 @@ class MultiDeleteView(ActionListView):
         current_user = request.user
 
         try:
-            with transaction.atomic():
+            with reversion.create_revision():
                 for obj in queryset:
                     if obj.user_can(current_user, 'delete'):
                         obj.delete()
                     else:
                         raise models.ObjectPermissionError(obj)
+
+                # set meta information
+                reversion.set_user(self.request.user)
+                reversion.set_comment('deleted from MultiDeleteView')
 
         except IntegrityError as e:
             if hasattr(e, 'protected_objects') and e.protected_objects:
@@ -71,7 +76,7 @@ class MultiDeleteView(ActionListView):
                 if len(e.protected_objects) > 10:
                     items_str += '...plus %d more objects' % (len(e.protected_objects) - 10)
                 self.add_error(mark_safe('Some items could not be deleted due to relationships with other objects. '
-                                        'These objects may include the following: ' + items_str))
+                                         'These objects may include the following: ' + items_str))
             else:
                 self.add_error('Some items could not be deleted: %s' % e)
 
