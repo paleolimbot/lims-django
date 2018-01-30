@@ -1,9 +1,10 @@
 
 import json
+import re
 
 from django.views import generic
 from django.urls import reverse_lazy
-from django.forms import modelformset_factory, ModelForm, CharField, ValidationError, TextInput
+from django.forms import modelformset_factory, ModelForm, CharField, ValidationError, TextInput, BaseModelFormSet
 import reversion
 
 from .. import models
@@ -47,16 +48,25 @@ class BaseObjectModelForm(ModelForm):
         # add additional tag names that come from the form data
         if 'data' in kwargs:
             for key, value in kwargs['data'].items():
-                if key.startswith('tag_form_field_'):
-                    tag_field_names.append(key.replace('tag_form_field_', ''))
+                if re.fullmatch(r'^tag_form_field_', key):
+                    tag_field_names.append(re.sub(r'^tag_form_field_', '', key))
 
         # set the tag names from tag_field_names
         self.tag_field_names = {}
         for field_name in tag_field_names:
-            term = models.Term.get_term(field_name)
+            # try to resolve term
+            term = models.Term.get_term(field_name, create=True)
+
+            # if term can't be resolved, don't add it to the form
+            # (most likely reason is that field_name is '')
+            if term is None:
+                continue
+
             # don't duplicate tag fields
             if term.slug in self.tag_field_names:
                 continue
+
+            # add the field
             field_id = 'tag_form_field_' + term.slug
             self.tag_field_names[term.slug] = field_id
             self.fields[field_id] = CharField(required=False, label='Tag: ' + term.name)
@@ -149,6 +159,29 @@ class SampleBulkAddForm(SampleForm):
             self.fields[field].widget = TextInput()
 
 
+class SampleBulkAddFormset(BaseModelFormSet):
+
+    def __init__(self, *args, user=None, tag_field_names=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        self.tag_field_names = list(tag_field_names)
+
+        # add additional terms that exist in the queryset
+        for term in models.Sample.get_all_terms(self.queryset):
+            self.tag_field_names.append(term.slug)
+
+        # add additional terms that exist in the form data
+        for key in self.data:
+            if re.match('^form-[0-9]+-tag_form_field_(.*)$', key):
+                self.tag_field_names.append(re.search('^form-[0-9]+-tag_form_field_(.*)$', key).group(1))
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['user'] = self.user
+        kwargs['tag_field_names'] = self.tag_field_names
+        return kwargs
+
+
 class LocationForm(BaseObjectModelForm):
     location_field = 'parent'
 
@@ -237,6 +270,7 @@ class SampleBulkAddView(LimsLoginMixin, generic.FormView):
         return modelformset_factory(
             models.Sample,
             form=SampleBulkAddForm,
+            formset=SampleBulkAddFormset,
             extra=n_samples
         )
 
@@ -249,12 +283,33 @@ class SampleBulkAddView(LimsLoginMixin, generic.FormView):
             form.user = self.request.user
         return formset
 
+    def get_queryset(self):
+        return models.Sample.objects.none()
+
     def get_form_kwargs(self):
         kwargs = super(SampleBulkAddView, self).get_form_kwargs()
-        kwargs["queryset"] = models.Sample.objects.none()
+        kwargs['queryset'] = self.get_queryset()
+        kwargs['user'] = self.request.user
+
+        # get tag fields from the add tag column item
+        tag_field_names = list(self.request.POST.get('add-formset-tag-column', default='').split(','))
+        for name in self.request.GET.getlist('_use_tag_field', default=[]):
+            tag_field_names.append(name)
+        # don't pass on '' items
+        kwargs['tag_field_names'] = [name for name in tag_field_names if name]
+
         return kwargs
 
     def form_valid(self, form):
+        # completely empty forms are valid, but the user should probably stay on this page
+        if not [sub_form for sub_form in form if sub_form.has_changed()]:
+            return self.form_invalid(form)
+
+        # if the user requested additional tag columns but all the models were valid,
+        # the user should probably stay on this page
+        if self.request.POST.get('add-formset-tag-column', None):
+            return self.form_invalid(form)
+
         with reversion.create_revision():
             form.save()
 

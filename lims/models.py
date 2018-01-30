@@ -145,6 +145,13 @@ class Term(models.Model):
         if isinstance(string_key, Term):
             return string_key
 
+        # if it is '' or None return None
+        if not string_key:
+            return None
+
+        # take whitespace off of string_key
+        string_key = string_key.strip()
+
         # try to get by name and slug
         try:
             return Term.objects.get(slug=slugify(string_key))
@@ -227,6 +234,10 @@ class Location(BaseObjectModel):
 
         super().save(*args, **kwargs)
 
+    @staticmethod
+    def get_all_terms(queryset):
+        return Term.objects.filter(locationtag__object__in=queryset).distinct()
+
 
 class LocationTag(Tag):
     object = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="tags")
@@ -285,6 +296,10 @@ class Sample(BaseObjectModel):
 
     def __str__(self):
         return self.slug
+
+    @staticmethod
+    def get_all_terms(queryset):
+        return Term.objects.filter(sampletag__object__in=queryset).distinct()
 
 
 class SampleTag(Tag):

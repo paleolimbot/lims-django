@@ -32,27 +32,17 @@
             </li>
             <li class="add-formset-item">
                 <ul class="add-formset-fieldlist" id="add-formset-tools">
-                    <li>
-                        <a href="#" id="collected-today">Today</a> /
-                        <a href="#" id="collected-fill">Fill down</a> /
-                        <a href="#" id="collected-clear">Clear</a>
-                    </li>
-                    <li>
-                        <a href="#" id="name-fill">Fill down</a> /
-                        <a href="#" id="name-clear">Clear</a>
-                    </li>
-                    <li>
-                        <a href="#" id="description-fill">Fill down</a> /
-                        <a href="#" id="description-clear">Clear</a>
-                    </li>
-                    <li>
-                        <a href="#" id="location_slug-fill">Fill down</a> /
-                        <a href="#" id="location_slug-clear">Clear</a>
-                    </li>
-                    <li>
-                        <a href="#" id="tag_json-fill">Fill down</a> /
-                        <a href="#" id="tag_json-clear">Clear</a>
-                    </li>
+                    {% for field in form.0 %}
+                        {% if not field.is_hidden %}
+                            <li>
+                                {% if field.name == 'collected' %}
+                                    <a href="#" id="{{ field.name }}-today">Today</a> /
+                                {% endif %}
+                                <a href="#" id="{{ field.name }}-fill">Fill down</a> /
+                                <a href="#" id="{{ field.name }}-clear">Clear</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
                 </ul>
             </li>
                 {% for sub_form in form %}
@@ -66,6 +56,11 @@
             <p>
                 Add <input id="add-formset-more-number" type="text" size="2" title="Add" value="1"/> more forms
                 <button id="add-formset-more-go">Go</button>
+            </p>
+            <p>
+                Add tag column for tag:
+                <input name="add-formset-tag-column" type="text" size="10" title="Add" value=""/>
+                <button id="add-formset-tag-column-go">Go</button>
             </p>
         <input type="submit" value="Add samples" />
         </form>

@@ -7,8 +7,9 @@ function addForms(n) {
     }
 
     var $container = $('#add-formset-list');
-    var $header = $('#add-formset-tools').parent();
-    var $formLi = $container.find('.add-formset-item').not($header);
+    var $header = $('#add-formset-header').parent();
+    var $tools = $('#add-formset-tools').parent();
+    var $formLi = $container.find('.add-formset-item').not($header).not($tools);
 
     // setup the template (no errors, no values)
     var $template = $formLi.first().clone();
@@ -40,13 +41,31 @@ function addForms(n) {
     }
 }
 
+function getFieldNames() {
+
+    var fields = [];
+    $('input[type="text"]').each(function() {
+        var name = this.name;
+        var match = name.match(/^form-[0-9]+-(.*)$/);
+        if(match) {
+            var fieldName = match[1];
+            if(!fields.includes(fieldName)) {
+                fields.push(fieldName)
+            }
+        }
+    });
+
+    return fields;
+}
+
 function fillDown(linkId) {
     var $link = $(linkId);
-    var fieldName = $link.attr('id').replace(/-(fill|clear|today)$/, '');
-    var action = $link.attr('id').replace(/^[a-z_]+-/, '');
+    var $fieldInfo = $link.attr('id').match(/^(.*?)-(fill|clear|today)$/);
+    var fieldName = $fieldInfo[1];
+    var action = $fieldInfo[2];
 
     if(action === 'fill') {
-        // get the value from the fist field
+        // get the value from the first field
         var value = $('#id_form-0-' + fieldName).val();
 
         // if there is no value, do nothing
@@ -84,7 +103,7 @@ function pasteTable(input, e) {
     var textLines = text.split('\n');
 
     // get the row and column info, so newlines and tabs can be processed accordingly
-    var fields = ['collected', 'name', 'description', 'location_slug', 'tag_json'];
+    var fields = getFieldNames();
     var idInfo = activeId.match(/id_form-([0-9]+)-(.*)$/);
     var row = parseInt(idInfo[1]);
     var col = fields.indexOf(idInfo[2]);
