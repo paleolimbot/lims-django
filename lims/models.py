@@ -7,7 +7,7 @@ from django.utils.text import slugify
 from django.urls import reverse_lazy
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 
 from .utils.geometry import validate_wkt, wkt_bounds
 from .utils.barcode import qrcode_html
@@ -79,10 +79,22 @@ class BaseObjectModel(models.Model):
     def add_tags(self, **kwargs):
         # make sure all names are defined terms
         for key, value in kwargs.items():
-            term = Term.get_or_create(key)
+            term = Term.get_term(key, create=True)
             self.tags.create(key=term, value=value)
 
         return self.tags.all()
+
+    def update_tags(self, **kwargs):
+        pass
+
+    def get_tag(self, key):
+        term = Term.get_term(key, create=False)
+        if term is None:
+            return None
+        try:
+            return self.tags.get(key=term).value
+        except ObjectDoesNotExist:
+            return None
 
     def get_tags(self):
         return {tag.key.slug: tag.value for tag in self.tags.all()}
@@ -128,15 +140,22 @@ class Term(models.Model):
         return errors
 
     @staticmethod
-    def get_or_create(string_key):
-        # if key doesn't exist, create it
+    def get_term(string_key, create=True):
+        # if it's already a term, return it
+        if isinstance(string_key, Term):
+            return string_key
+
+        # try to get by name and slug
         try:
             return Term.objects.get(slug=slugify(string_key))
         except Term.DoesNotExist:
             try:
                 return Term.objects.get(name=string_key)
             except Term.DoesNotExist:
-                return Term.objects.create(name=string_key, slug=slugify(string_key))
+                if create:
+                    return Term.objects.create(name=string_key, slug=slugify(string_key))
+                else:
+                    return None
 
     def __str__(self):
         return self.name

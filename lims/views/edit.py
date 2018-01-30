@@ -3,7 +3,7 @@ import json
 
 from django.views import generic
 from django.urls import reverse_lazy
-from django.forms import modelformset_factory, ModelForm, CharField, Textarea, ValidationError, TextInput
+from django.forms import modelformset_factory, ModelForm, CharField, ValidationError, TextInput
 import reversion
 
 from .. import models
@@ -31,15 +31,43 @@ def validate_json_tags_dict(value):
 
 
 class BaseObjectModelForm(ModelForm):
-    TagClass = None
     location_field = None
-
     location_slug = CharField(validators=[validate_location_slug, ], required=False)
-    tag_json = CharField(
-        validators=[validate_json_tags_dict, ],
-        required=False,
-        widget=Textarea(attrs={'rows': 2, 'cols': 40})
-    )
+
+    def __init__(self, *args, user=None, tag_field_names=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+        # add additional tag names that may exist from the current instance
+        current_tag_keys = self.instance.get_tags().keys()
+        tag_field_names = list(tag_field_names)
+        for key in current_tag_keys:
+            tag_field_names.append(key)
+
+        # add additional tag names that come from the form data
+        if 'data' in kwargs:
+            for key, value in kwargs['data'].items():
+                if key.startswith('tag_form_field_'):
+                    tag_field_names.append(key.replace('tag_form_field_', ''))
+
+        # set the tag names from tag_field_names
+        self.tag_field_names = {}
+        for field_name in tag_field_names:
+            term = models.Term.get_term(field_name)
+            # don't duplicate tag fields
+            if term.slug in self.tag_field_names:
+                continue
+            field_id = 'tag_form_field_' + term.slug
+            self.tag_field_names[term.slug] = field_id
+            self.fields[field_id] = CharField(required=False, label='Tag: ' + term.name)
+            initial_val = self.instance.get_tag(term)
+            if initial_val:
+                self.initial[field_id] = initial_val
+
+        # initial values must be set for location_slug
+        initial_loc = getattr(self.instance, self.location_field)
+        if initial_loc:
+            self.initial['location_slug'] = initial_loc.slug
 
     def clean(self):
         if not hasattr(self, 'user') or not self.user.pk:
@@ -59,26 +87,23 @@ class BaseObjectModelForm(ModelForm):
         super().clean()
 
         # check values of tags
-        # tags need the instance to exist in the DB before creating them...
-        if self.cleaned_data['tag_json']:
-            tags_dict = json.loads(self.cleaned_data['tag_json'])
-        else:
-            tags_dict = {}
+        tag_value_errors = {}
+        for term_name, field_name in self.tag_field_names.items():
+            value = self.cleaned_data[field_name]
+            if not value:
+                continue
 
-        tag_value_errors = []
-        for key, value in tags_dict.items():
-            try:
-                term = models.Term.get_or_create(key)
-                errors_for_key = term.get_validation_errors(value)
+            # term will always exist, because it gets created before the value can be validated
+            term = models.Term.get_term(term_name, create=True)
+            errors_for_key = term.get_validation_errors(value)
+            if errors_for_key:
+                if field_name not in tag_value_errors:
+                    tag_value_errors[field_name] = []
                 for error in errors_for_key:
-                    tag_value_errors.append('Error for key "%s": %s' % (key, error))
-
-            except models.Term.DoesNotExist:
-                # if there is no term, there is no invalid value
-                pass
+                    tag_value_errors[field_name].append(error)
 
         if tag_value_errors:
-            raise ValidationError({'tag_json': tag_value_errors})
+            raise ValidationError(tag_value_errors)
 
         # set location object
         if not self.has_error('location_slug'):
@@ -94,26 +119,26 @@ class BaseObjectModelForm(ModelForm):
         return_val = super().save(*args, **kwargs)
 
         # tags need the instance to exist in the DB before creating them...
-        if self.cleaned_data['tag_json']:
-            tags_dict = json.loads(self.cleaned_data['tag_json'])
-        else:
-            tags_dict = {}
+        tags_dict = {term: self.cleaned_data[field] for term, field in self.tag_field_names.items()}
+
+        # remove empty values from the dict (these keys get removed)
+        for key in list(tags_dict.keys()):
+            if tags_dict[key] == '':
+                del tags_dict[key]
+
+        # update the tag information
         self.instance.set_tags(**tags_dict)
 
-        # Store some meta-information.
-        reversion.set_user(self.user)
-        reversion.set_comment("Created revision 1")
-
+        # return whatever the super() returned
         return return_val
 
 
 class SampleForm(BaseObjectModelForm):
-    TagClass = models.SampleTag
     location_field = 'location'
 
     class Meta:
         model = models.Sample
-        fields = ['collected', 'name', 'description', 'location_slug', 'tag_json']
+        fields = ['collected', 'name', 'description', 'location_slug']
 
 
 class SampleBulkAddForm(SampleForm):
@@ -125,20 +150,20 @@ class SampleBulkAddForm(SampleForm):
 
 
 class LocationForm(BaseObjectModelForm):
-    TagClass = models.LocationTag
     location_field = 'parent'
 
     class Meta:
         model = models.Location
-        fields = ['name', 'slug', 'description', 'location_slug', 'geometry', 'tag_json']
+        fields = ['name', 'slug', 'description', 'location_slug', 'geometry']
 
 
 class BaseObjectAddView(generic.CreateView):
 
-    def get_form(self, *args, **kwargs):
-        form = super().get_form(*args, **kwargs)
-        form.user = self.request.user
-        return form
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        kwargs['tag_field_names'] = self.request.GET.getlist('_use_tag_field', default=[])
+        return kwargs
 
     def form_valid(self, form):
         # wrap the saving of the object in a revision block
@@ -156,20 +181,11 @@ class BaseObjectAddView(generic.CreateView):
 
 class BaseObjectChangeView(generic.UpdateView):
 
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class=form_class)
-        form.user = self.request.user
-
-        loc = getattr(self.object, form.location_field)
-
-        if loc:
-            form.initial['location_slug'] = loc.slug
-
-        tag_dict = self.object.get_tags()
-        if tag_dict:
-            form.initial['tag_json'] = json.dumps(tag_dict)
-
-        return form
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        kwargs['tag_field_names'] = self.request.GET.getlist('_use_tag_field', [])
+        return kwargs
 
     def form_valid(self, form):
         # wrap the saving of the object in a revision block
