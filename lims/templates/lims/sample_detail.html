@@ -57,7 +57,14 @@
         </tr>
         {% if sample.tags.all %}
             {% for tag in sample.tags.all %}
-                <tr><td>{{ tag.key }}</td><td>{{ tag.value }}</td></tr>
+                <tr>
+                    <td>
+                        <a href="{% url 'lims:term_detail' tag.key.pk %}" title="{{ tag.key }}">
+                            {{ tag.key|truncatechars:20 }}
+                        </a>
+                    </td>
+                    <td>{{ tag.value|linebreaksbr }}</td>
+                </tr>
             {% endfor %}
         {% else %}
             <tr><td>(none specified)</td><td></td></tr>
