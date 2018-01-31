@@ -1,0 +1,36 @@
+
+{% extends "lims/base.html" %}
+
+{% block title %}{{ action_name|title }} {{ item_text|title }}{{ object_list.count|pluralize }}{% endblock %}
+
+{% block content_title %}{{ action_name|title }} {{ item_text|title }}{{ object_list.count|pluralize }}{% endblock %}
+
+{% block content_main %}
+
+    <div id="confirm-delete-container">
+
+        <form action="" method="post">{% csrf_token %}
+
+            {% if errors %}
+
+                <ul class="errorlist">
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+
+            {% endif %}
+
+            <p>Are you sure you want to {{ action_name }} the following {{ item_text|lower }}{{ object_list.count|pluralize }}?</p>
+
+            <ul>
+                {% for object in object_list %}
+                    <li><a href="{{ object.get_absolute_url }}">{{ object }}</a></li>
+                {% endfor %}
+            </ul>
+            <input type="submit" value="Confirm {{ action_name|title }}" />
+        </form>
+
+    </div>
+
+{% endblock %}

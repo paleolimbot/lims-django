@@ -7,7 +7,7 @@
 
 {% block objects_table %}
 
-    <form id="location-viewlist-form" method="post" action="{% url 'lims:location_action' %}?from={{ view.request.get_full_path|urlencode }}">
+    <form id="location-viewlist-form" method="post" action="{% url 'lims:resolve_bulk_action' 'location' %}?from={{ view.request.get_full_path|urlencode }}">
 
         {% csrf_token %}
 

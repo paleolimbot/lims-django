@@ -7,6 +7,7 @@ from django.db.models import Q
 
 from .. import models
 from .accounts import LimsLoginMixin
+from .actions import SAMPLE_ACTIONS, LOCATION_ACTIONS
 
 
 class SampleListView(LimsLoginMixin, generic.ListView):
@@ -16,16 +17,12 @@ class SampleListView(LimsLoginMixin, generic.ListView):
 
     def get_context_data(self, *args, **kwargs):
         context = super(SampleListView, self).get_context_data(*args, **kwargs)
-        context['actions'] = [
-            {'value': 'delete-samples', 'label': 'Delete samples'},
-            {'value': 'print-barcodes', 'label': 'Print barcodes'},
-            {'value': 'export-samples', 'label': 'Export selected samples'}
-        ]
+        context['actions'] = SAMPLE_ACTIONS
         return context
 
     def get_queryset(self):
         return query_string_filter(
-            models.Sample.objects.all(),
+            default_published_filter(models.Sample.objects.all(), self.request.user),
             self.request.GET,
             use=(),
             search=('name', 'slug', 'description'),
@@ -50,11 +47,12 @@ class LocationListView(LimsLoginMixin, generic.ListView):
 
     def get_context_data(self, *args, **kwargs):
         context = super(LocationListView, self).get_context_data(*args, **kwargs)
-        context['actions'] = [
-            {'value': 'delete-locations', 'label': 'Delete selected locations'},
-            {'value': 'export-locations', 'label': 'Export selected locations'}
-        ]
+        context['actions'] = LOCATION_ACTIONS
         return context
+
+
+def default_published_filter(queryset, user):
+    return queryset.filter(Q(published=True) | Q(user=user))
 
 
 def query_string_filter(queryset, query_dict, use=(), search=(), search_func="icontains", prefix=''):

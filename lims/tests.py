@@ -93,7 +93,8 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
                 name="Test Sample %s" % (sample_num + 1),
                 location=parent_loc,
                 collected=timezone.now(),
-                user=test_user
+                user=test_user,
+                published=True
             )
 
             n_tags = randint(0, max_tags)

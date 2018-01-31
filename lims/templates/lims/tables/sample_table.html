@@ -7,7 +7,7 @@
 
 {% block objects_table %}
 
-    <form id="sample-viewlist-form" method="post" action="{% url 'lims:sample_action' %}?from={{ view.request.get_full_path|urlencode }}">
+    <form id="sample-viewlist-form" method="post" action="{% url 'lims:resolve_bulk_action' 'sample' %}?from={{ view.request.get_full_path|urlencode }}">
 
         {% csrf_token %}
 
@@ -27,12 +27,14 @@
                     <th>Description</th>
                     <th>Location</th>
                     <th>Tags</th>
+                    <th>Parent</th>
+                    <th>Published</th>
                     <th>Modified</th>
                 </tr>
             </thead>
 
             {% for sample in page_obj %}
-                <tr>
+                <tr{% if not sample.published %} class="object-row-draft"{% endif %}>
                     <td>{{ sample.get_checkbox }}</td>
                     <td>
                         <a class="editlink" href="{% url 'lims:sample_change' sample.pk %}?from={{ view.request.get_full_path|urlencode }}">edit</a>
@@ -48,6 +50,12 @@
                         {% endif %}
                     </td>
                     <td>{% include 'lims/tables/tag_summary.html' with tags=sample.tags.all %}</td>
+                    <td>
+                        {% if sample.parent %}
+                            <a href="{% url 'lims:sample_detail' sample.parent.pk %}">View Parent Sample</a>
+                        {% endif %}
+                    </td>
+                    <td>{{ sample.published }}</td>
                     <td>{{ sample.modified }}</td>
                 </tr>
 

@@ -1,5 +1,4 @@
 
-import json
 import re
 
 from django.views import generic
@@ -17,18 +16,6 @@ def validate_location_slug(value):
             models.Location.objects.get(slug=value)
         except models.Location.DoesNotExist:
             raise ValidationError("Location with this ID does not exist")
-
-
-def validate_json_tags_dict(value):
-    if not value:
-        return
-    try:
-        obj = json.loads(value)
-        if not isinstance(obj, dict):
-            raise ValidationError("Value is not a valid JSON object")
-
-    except ValueError:
-        raise ValidationError("Value is not valid JSON")
 
 
 class BaseObjectModelForm(ModelForm):
@@ -68,7 +55,7 @@ class BaseObjectModelForm(ModelForm):
             # add the field
             field_id = 'tag_form_field_' + term.slug
             self.tag_field_names[term] = field_id
-            self.fields[field_id] = CharField(required=False, label='Tag: ' + term.name)
+            self.fields[field_id] = term.form_field
             initial_val = self.instance.get_tag(term)
             if initial_val:
                 self.initial[field_id] = initial_val
@@ -94,24 +81,6 @@ class BaseObjectModelForm(ModelForm):
 
         # clean the form
         super().clean()
-
-        # check values of tags
-        tag_value_errors = {}
-        for term, field_name in self.tag_field_names.items():
-            value = self.cleaned_data[field_name]
-            if not value:
-                continue
-
-            # term will always exist, because it gets created before the value can be validated
-            errors_for_key = term.get_validation_errors(value)
-            if errors_for_key:
-                if field_name not in tag_value_errors:
-                    tag_value_errors[field_name] = []
-                for error in errors_for_key:
-                    tag_value_errors[field_name].append(error)
-
-        if tag_value_errors:
-            raise ValidationError(tag_value_errors)
 
         # set location object
         if not self.has_error('location_slug'):

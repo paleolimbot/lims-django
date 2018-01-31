@@ -1,4 +1,5 @@
 import re
+import json
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -8,6 +9,9 @@ from django.urls import reverse_lazy
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.forms import CharField
+from django.core.validators import RegexValidator
+from django.utils.functional import cached_property
 
 from .utils.geometry import validate_wkt, wkt_bounds
 from .utils.barcode import qrcode_html
@@ -31,6 +35,21 @@ class BaseObjectModel(models.Model):
     created = models.DateTimeField("created", auto_now_add=True)
     modified = models.DateTimeField("modified", auto_now=True)
 
+    parent = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True, related_name='children')
+    recursive_depth = models.IntegerField(default=0)
+
+    geometry = models.TextField(blank=True, validators=[validate_wkt, ])
+    minx = models.FloatField(editable=False, blank=True, null=True, default=None)
+    maxx = models.FloatField(editable=False, blank=True, null=True, default=None)
+    miny = models.FloatField(editable=False, blank=True, null=True, default=None)
+    maxy = models.FloatField(editable=False, blank=True, null=True, default=None)
+
+    def calculate_recursive_depth(self):
+        if self.parent:
+            return self.parent.calculate_recursive_depth() + 1
+        else:
+            return 0
+
     class Meta:
         abstract = True
 
@@ -41,8 +60,19 @@ class BaseObjectModel(models.Model):
                 raise ValidationError({'slug': ['slug cannot be changed to ""']})
 
     def save(self, *args, **kwargs):
+        # cache the recursive depth (for future tree view)
+        self.recursive_depth = self.calculate_recursive_depth()
+
+        # set the slug if it is a new object
         if not self.pk and not self.slug:
             self.slug = self.calculate_slug()
+
+        # cache location info
+        bounds = wkt_bounds(self.geometry)
+        self.minx = bounds['minx']
+        self.maxx = bounds['maxx']
+        self.miny = bounds['miny']
+        self.maxy = bounds['maxy']
         super().save(*args, **kwargs)
 
     def auto_slug_use(self):
@@ -178,10 +208,23 @@ class BaseValidator(models.Model):
         return self.name
 
 
+def validate_json_tags_dict(value):
+    if not value:
+        return
+    try:
+        obj = json.loads(value)
+        if not isinstance(obj, dict):
+            raise ValidationError("Value is not a valid JSON object")
+
+    except ValueError:
+        raise ValidationError("Value is not valid JSON")
+
+
 class Term(models.Model):
     name = models.CharField(max_length=55)
     slug = models.SlugField(max_length=55, unique=True)
     description = models.TextField(blank=True)
+    meta = models.TextField(blank=True, validators=[validate_json_tags_dict, ])
 
     def get_absolute_url(self):
         return reverse_lazy('lims:term_detail', self.pk)
@@ -189,13 +232,15 @@ class Term(models.Model):
     def get_link(self):
         return format_html('<a href="{}">{}</a>', self.get_absolute_url(), self)
 
-    def get_validation_errors(self, value):
-        errors = []
-        # run value through term validators
+    def get_validators(self):
+        validators = []
         for validator in self.validators.all():
-            if not re.match(validator.validator.regex, value):
-                errors.append(validator.validator.error_message)
-        return errors
+            validators.append(RegexValidator(validator.validator.regex, message=validator.validator.error_message))
+        return validators
+
+    @cached_property
+    def form_field(self):
+        return CharField(label='Tag %s' % self, validators=self.get_validators(), required=False)
 
     @staticmethod
     def get_term(string_key, create=True):
@@ -248,10 +293,12 @@ class Tag(models.Model):
     def clean_fields(self, exclude=None):
         super().clean_fields(exclude=exclude)
 
-        if 'value' not in exclude:
-            value_errors = self.key.get_validation_errors(self.value)
-            if value_errors:
-                raise ValidationError({'value': value_errors})
+        if exclude is None or 'value' not in exclude:
+            field = self.key.form_field
+            try:
+                field.clean(self.value)
+            except ValidationError as e:
+                raise ValidationError({'value': e.error_list})
 
     def save(self, *args, **kwargs):
         # update parent object modified tag
@@ -263,34 +310,9 @@ class Tag(models.Model):
 
 
 class Location(BaseObjectModel):
-    parent = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True, related_name='children')
-    recursive_depth = models.IntegerField(default=0, editable=False)
-
-    geometry = models.TextField(blank=True, validators=[validate_wkt, ])
-    minx = models.FloatField(editable=False, blank=True, null=True, default=None)
-    maxx = models.FloatField(editable=False, blank=True, null=True, default=None)
-    miny = models.FloatField(editable=False, blank=True, null=True, default=None)
-    maxy = models.FloatField(editable=False, blank=True, null=True, default=None)
 
     def get_absolute_url(self):
         return reverse_lazy('lims:location_detail', kwargs={'pk': self.pk})
-
-    def calculate_recursive_depth(self):
-        if self.parent:
-            return self.parent.calculate_recursive_depth() + 1
-        else:
-            return 0
-
-    def save(self, *args, **kwargs):
-        # cache the recursive depth and bounds
-        self.recursive_depth = self.calculate_recursive_depth()
-        bounds = wkt_bounds(self.geometry)
-        self.minx = bounds['minx']
-        self.maxx = bounds['maxx']
-        self.miny = bounds['miny']
-        self.maxy = bounds['maxy']
-
-        super().save(*args, **kwargs)
 
     @staticmethod
     def get_all_terms(queryset):
@@ -304,10 +326,11 @@ class LocationTag(Tag):
 class Sample(BaseObjectModel):
     collected = models.DateTimeField("collected")
     location = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True)
+    published = models.BooleanField(default=False)
 
     def auto_slug_use(self):
         # get parts of the calculated sample slug
-        dt_str = str(self.collected.date())
+        dt_str = str(self.collected.astimezone(timezone.get_default_timezone()).date())
         location_slug = slugify(self.location.slug[:10]) if self.location else ""
         user = self.user.username[:15] if self.user else ""
         hint = slugify(self.name)

@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 
 from .. import models
 from .accounts import LimsLoginMixin
-from .list import query_string_filter
+from .list import query_string_filter, default_published_filter
 
 
 class DetailViewWithTablesBase(generic.DetailView):
@@ -21,7 +21,7 @@ class DetailViewWithTablesBase(generic.DetailView):
 
         # setup the child samples list
         samples = query_string_filter(
-            self.get_sample_queryset().order_by('-modified'),
+            default_published_filter(self.get_sample_queryset().order_by('-modified'), self.request.user),
             self.request.GET,
             prefix='sample_'
         )
