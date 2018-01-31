@@ -1,5 +1,4 @@
 
-import io
 import csv
 
 from django.shortcuts import redirect
@@ -9,6 +8,7 @@ from django.http import Http404, HttpResponse
 from django.db import IntegrityError
 from django.utils.safestring import mark_safe
 from django.utils.html import format_html
+from django.utils import timezone
 import reversion
 
 from .. import models
@@ -115,6 +115,8 @@ class SamplePrintBarcodeView(LimsLoginMixin, ActionListView):
 
 def export_response(queryset, fields, terms):
 
+    target_tz = timezone.get_default_timezone()
+
     def header_iter():
         for field in fields:
             yield field
@@ -125,7 +127,7 @@ def export_response(queryset, fields, terms):
         for field in fields:
             item = getattr(instance, field)
             if hasattr(item, 'strftime'):
-                yield item.strftime('%Y-%m-%dT%H:%M%z')
+                yield item.astimezone(target_tz).strftime('%Y-%m-%dT%H:%M%z')
             else:
                 yield str(item)
         for term in terms:
