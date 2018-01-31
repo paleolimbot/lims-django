@@ -1,4 +1,4 @@
-{% extends "lims/base.html" %}
+{% extends "lims/object_detail_tables.html" %}
 
 {% block title %}View {{ sample.slug }}{% endblock %}
 
@@ -75,4 +75,8 @@
         </tr>
     </table>
 
+    {{ block.super }}
+
 {% endblock %}
+
+{% block sample_heading %}Subsamples{% endblock %}

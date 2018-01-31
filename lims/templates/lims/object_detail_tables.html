@@ -3,13 +3,18 @@
 
 {% block content_main %}
 
+    {% if sample_page_kwarg %}
     <h2><a id="samples">{% block sample_heading %}Recent Samples{% endblock %}</a></h2>
 
     {% include 'lims/tables/sample_table.html' with page_obj=sample_page_obj page_kwarg=sample_page_kwarg actions=sample_actions %}
 
+    {% endif %}
+
+    {% if location_page_kwarg %}
     <h2><a id="locations">{% block location_heading %}Recent Locations{% endblock %}</a></h2>
 
     {% include 'lims/tables/location_table.html' with page_obj=location_page_obj page_kwarg=location_page_kwarg actions=location_actions %}
+    {% endif %}
 
 {% endblock %}
 
