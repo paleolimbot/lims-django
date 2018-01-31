@@ -14,6 +14,7 @@ import reversion
 
 from .. import models
 from .accounts import LimsLoginMixin
+from .edit import SampleBulkAddView
 
 
 def find_action_view(model, action):
@@ -120,6 +121,9 @@ class ActionListView(generic.ListView):
             raise Http404('Could not find all requested objects')
         return queryset
 
+
+class BulkActionView(ActionListView):
+
     def post(self, request):
         try:
             result = self.do_action(request, self.get_queryset())
@@ -136,7 +140,7 @@ class ActionListView(generic.ListView):
         raise NotImplementedError()
 
 
-class MultiDeleteView(ActionListView):
+class MultiDeleteView(BulkActionView):
     action_name = 'delete'
 
     def do_action(self, request, queryset):
@@ -185,7 +189,7 @@ class LocationDeleteView(LimsLoginMixin, MultiDeleteView):
     success_url = reverse_lazy('lims:location_list')
 
 
-class SamplePrintBarcodeView(LimsLoginMixin, ActionListView):
+class SamplePrintBarcodeView(LimsLoginMixin, BulkActionView):
     model = models.Sample
     template_name = 'lims/action_views/sample_print_barcode.html'
     action_name = 'print barcodes'
@@ -227,7 +231,7 @@ def export_response(queryset, fields, terms):
     return response
 
 
-class SampleExportView(LimsLoginMixin, ActionListView):
+class SampleExportView(LimsLoginMixin, BulkActionView):
     model = models.Sample
     action_name = 'export'
 
@@ -239,7 +243,7 @@ class SampleExportView(LimsLoginMixin, ActionListView):
         )
 
 
-class LocationExportView(LimsLoginMixin, ActionListView):
+class LocationExportView(LimsLoginMixin, BulkActionView):
     model = models.Location
     action_name = 'export'
 
@@ -251,7 +255,7 @@ class LocationExportView(LimsLoginMixin, ActionListView):
         )
 
 
-class SamplePublishView(LimsLoginMixin, ActionListView):
+class SamplePublishView(LimsLoginMixin, BulkActionView):
     model = models.Sample
     action_name = 'publish'
 
@@ -286,12 +290,24 @@ class SampleUnPublishView(SamplePublishView):
         return False
 
 
+class SampleBulkEditView(SampleBulkAddView, ActionListView):
+    model = models.Sample
+    template_name = 'lims/sample_bulk_change.html'
+
+    def get_object_queryset(self):
+        return self.get_queryset()
+
+    def get_extra_forms(self):
+        return 0
+
+
 SAMPLE_ACTIONS = [
     {'value': 'delete', 'label': 'Delete samples', 'view': SampleDeleteView},
     {'value': 'print', 'label': 'Print barcodes', 'view': SamplePrintBarcodeView},
     {'value': 'export', 'label': 'Export selected samples', 'view': SampleExportView},
     {'value': 'publish', 'label': 'Publish selected samples', 'view': SamplePublishView},
-    {'value': 'unpublish', 'label': 'Unpublish selected samples', 'view': SampleUnPublishView}
+    {'value': 'unpublish', 'label': 'Unpublish selected samples', 'view': SampleUnPublishView},
+    {'value': 'bulkedit', 'label': 'Bulk Edit selected samples', 'view': SampleBulkEditView}
 ]
 
 LOCATION_ACTIONS = [

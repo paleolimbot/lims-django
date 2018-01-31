@@ -218,19 +218,24 @@ class SampleBulkAddView(LimsLoginMixin, ObjectFormView):
     success_url = reverse_lazy('lims:sample_list')
     template_name = 'lims/sample_bulk_form.html'
 
-    def get_form_class(self):
-        n_samples = self.request.GET.get('n_samples', 5)
-        try:
-            n_samples = int(n_samples)
-        except ValueError:
-            n_samples = 5
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.object_list = []
 
+    def get_form_class(self):
         return modelformset_factory(
             models.Sample,
             form=SampleBulkAddForm,
             formset=SampleBulkAddFormset,
-            extra=n_samples
+            extra=self.get_extra_forms()
         )
+
+    def get_extra_forms(self):
+        n_samples = self.request.GET.get('n_samples', 5)
+        try:
+            return int(n_samples)
+        except ValueError:
+            return 5
 
     def get_form(self, form_class=None):
         if form_class is None:
@@ -241,12 +246,12 @@ class SampleBulkAddView(LimsLoginMixin, ObjectFormView):
             form.user = self.request.user
         return formset
 
-    def get_queryset(self):
+    def get_object_queryset(self):
         return models.Sample.objects.none()
 
     def get_form_kwargs(self):
         kwargs = super(SampleBulkAddView, self).get_form_kwargs()
-        kwargs['queryset'] = self.get_queryset()
+        kwargs['queryset'] = self.get_object_queryset()
         return kwargs
 
     def form_valid(self, form):
