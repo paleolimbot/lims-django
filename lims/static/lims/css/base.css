@@ -245,12 +245,42 @@ table.template-list input[type="submit"] {
 	width: 100%;
 }
 
-#qrcode-table img.qrcode {
-    width:100px;
-}
-
-#qrcode-table .qrcode-item {
+#qrcode-table .qrcode-full-label {
 	display: inline-block;
 	text-align: center;
 	padding: 10px;
+	line-height: 1em;
+	color: #000;
+	border: 1.5pt #000;
+	border-style: solid;
+	margin: 0;
+}
+
+.qrcode-label {
+	padding-bottom: 0.15em;
+}
+
+.qrcode-full-label-large img.qrcode {
+	width: 1.5in;
+}
+
+.qrcode-full-label-large .qrcode-label {
+	font-size: 14pt;
+}
+
+.qrcode-full-label-medium img.qrcode {
+	width: 1in;
+	font-size: 12pt;
+}
+
+.qrcode-full-label-medium .qrcode-label {
+	font-size: 12pt;
+}
+
+.qrcode-full-label-small img.qrcode {
+	width: 0.5in;
+}
+
+.qrcode-full-label-small .qrcode-label {
+	font-size: 8pt;
 }

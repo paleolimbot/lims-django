@@ -23,18 +23,37 @@
 
             <p>Are you sure you want to print barcodes for the following samples?</p>
 
+            <p>
+                Label Size:
+                <span>
+                    <input type="radio" name="label_size" id="id_form_label_size_small" value="small"/>
+                        <label for="id_form_label_size">Small</label>
+                </span>
+                <span>
+                    <input type="radio" name="label_size" id="id_form_label_size_medium" value="medium" checked="checked"/>
+                        <label for="id_form_label_size">Medium</label>
+                </span>
+                <span>
+                    <input type="radio" name="label_size" id="id_form_label_size_large" value="large"/>
+                        <label for="id_form_label_size">Large</label>
+                </span>
+            </p>
+
             <div id="qrcode-table">
                 {% for sample in object_list %}
-                <div class="qrcode-item">
-                    <a href="{% url 'lims:sample_detail' sample.pk %}">
-                        {{ sample.get_qrcode_html }} <br/>
-                        {{ sample.slug }}
-                    </a>
-                </div>
+                <a href="{% url 'lims:sample_detail' sample.pk %}">
+                    {{ sample.get_qrcode_html }}
+                </a>
                 {% endfor %}
             </div>
 
-            <input type="submit" value="Print Barcodes" />
+            <input id="print-barcodes-submit" type="submit" value="Print Barcodes" />
         </form>
 
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    {% load static %}
+    <script src="{% static 'lims/js/sample_print_barcode.js' %}"></script>
 {% endblock %}
