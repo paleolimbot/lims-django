@@ -25,9 +25,9 @@
                     <th>Collected</th>
                     <th>Name</th>
                     <th>Description</th>
-                    <th>Location</th>
                     <th>Tags</th>
                     <th>Parent</th>
+                    <th>Location</th>
                     <th>Published</th>
                     <th>Modified</th>
                 </tr>
@@ -44,15 +44,15 @@
                     <td>{{ sample.collected }}</td>
                     <td>{{ sample.name }}</td>
                     <td>{{ sample.description|truncatechars:55 }}</td>
-                    <td>
-                        {% if sample.location %}
-                            {{ sample.location.get_link }}
-                        {% endif %}
-                    </td>
                     <td>{% include 'lims/tables/tag_summary.html' with tags=sample.tags.all %}</td>
                     <td>
                         {% if sample.parent %}
-                            <a href="{% url 'lims:sample_detail' sample.parent.pk %}">View Parent Sample</a>
+                            <a href="{% url 'lims:sample_detail' sample.parent.pk %}">{{ sample }}</a>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if sample.location %}
+                            {{ sample.location.get_link }}
                         {% endif %}
                     </td>
                     <td>{{ sample.published }}</td>

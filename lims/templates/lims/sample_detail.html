@@ -44,14 +44,6 @@
             <td>{{ sample.description|linebreaksbr|default:'(none provided)' }}</td>
         </tr>
         <tr>
-            <th>Location</th>
-            <td>
-                {% if sample.location %}
-                    <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
             <th>Tags</th>
             <td></td>
         </tr>
@@ -69,6 +61,32 @@
         {% else %}
             <tr><td>(none specified)</td><td></td></tr>
         {% endif %}
+        <tr>
+            <th>Geometry</th>
+            <td>
+                {% if sample.geometry %}
+                    {{ sample.geometry|truncatechars:100 }}
+                {% else %}
+                    (No geometry provided)
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Parent Sample</th>
+            <td>{{ sample.parent.get_link }}</td>
+        </tr>
+        <tr>
+            <th>Location</th>
+            <td>
+                {% if sample.location %}
+                    <a href="{% url 'lims:location_detail' sample.location.pk%}">{{ sample.location }}</a>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Published</th>
+            <td>{{ sample.published }}</td>
+        </tr>
         <tr>
             <th>Date Modified (Created)</th>
             <td>{{ sample.modified }} ({{ sample.created }})</td>

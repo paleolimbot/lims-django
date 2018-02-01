@@ -36,7 +36,7 @@ class BaseObjectModel(models.Model):
     modified = models.DateTimeField("modified", auto_now=True)
 
     parent = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True, related_name='children')
-    recursive_depth = models.IntegerField(default=0)
+    recursive_depth = models.IntegerField(default=0, editable=False)
 
     geometry = models.TextField(blank=True, validators=[validate_wkt, ])
     minx = models.FloatField(editable=False, blank=True, null=True, default=None)
@@ -170,10 +170,14 @@ class BaseObjectModel(models.Model):
             term = Term.get_term(key, create=True)
             try:
                 tag = self.tags.get(key=term)
-                tag.value = value
-                tag.save()
+                if value:
+                    tag.value = value
+                    tag.save()
+                else:
+                    tag.delete()
             except ObjectDoesNotExist:
-                self.tags.create(key=term, value=value)
+                if value:
+                    self.tags.create(key=term, value=value)
 
     def get_tag(self, key):
         term = Term.get_term(key, create=False)
@@ -283,6 +287,7 @@ class Tag(models.Model):
     object = models.ForeignKey(BaseObjectModel, on_delete=models.CASCADE, related_name='tags', db_index=True)
     key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True)
     value = models.TextField(blank=True)
+    meta = models.TextField(blank=True, validators=[validate_json_tags_dict, ])
 
     created = models.DateTimeField("created", auto_now_add=True)
     modified = models.DateTimeField("modified", auto_now=True)

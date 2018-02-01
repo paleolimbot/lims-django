@@ -60,7 +60,7 @@ class SampleAdmin(LimsAdmin):
     inlines = [SampleTagInline, ]
     list_display = ('slug', 'user', 'location', 'modified', 'collected')
     date_hierarchy = "collected"
-    autocomplete_fields = ['location', 'user']
+    autocomplete_fields = ['location', 'user', 'parent']
     search_fields = ['slug', ]
 
 

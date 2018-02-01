@@ -66,7 +66,6 @@ class SampleDetailView(LimsLoginMixin, DetailViewWithTablesBase):
         return None
 
 
-
 class LocationDetailView(LimsLoginMixin, DetailViewWithTablesBase):
     template_name = 'lims/location_detail.html'
     model = models.Location
