@@ -355,3 +355,35 @@ class Sample(BaseObjectModel):
 
 class SampleTag(Tag):
     object = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name="tags")
+
+
+class SampleEntryTemplate(models.Model):
+    user = models.ForeignKey(User, on_delete=models.PROTECT, blank=True, null=True)
+    name = models.CharField(max_length=55, unique=True)
+    last_used = models.DateTimeField('last_used', auto_now=True)
+
+    def get_absolute_url(self):
+        return reverse_lazy('lims:template_form', kwargs={'template_pk': self.pk})
+
+    def __str__(self):
+        return self.name
+
+
+class SampleEntryTemplateField(models.Model):
+    template = models.ForeignKey(SampleEntryTemplate, on_delete=models.CASCADE, related_name='fields')
+    target = models.CharField(max_length=55)
+    initial_value = models.TextField(blank=True)
+
+    def clean_fields(self, exclude=None):
+        if exclude is None or 'target' not in exclude:
+            # target should be a field of Sample or a Term
+            if self.target not in ['collected', 'name', 'description',
+                                   'location', 'parent', 'geometry', 'published'] \
+                    and not Term.objects.filter(slug=self.target):
+                raise ValidationError({'target': 'Target is not a field of Sample and is not a defined term slug'})
+
+    def __str__(self):
+        try:
+            return str(Term.objects.get(slug=self.target))
+        except Term.DoesNotExist:
+            return self.target.replace('_', ' ')

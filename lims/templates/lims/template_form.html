@@ -1,0 +1,14 @@
+
+{% extends 'lims/sample_form.html' %}
+
+{% block title %}{{ template }}{% endblock %}
+
+{% block content_title %}{{ template }}: {{ block.super }}{% endblock %}
+
+{% block object_tools %}
+    <ul class="object-tools">
+        {% if view.request.user.is_staff %}
+            <li><a href="{% url 'admin:lims_sampleentrytemplate_change' template.pk %}">Admin View</a></li>
+        {% endif %}
+    </ul>
+{% endblock %}

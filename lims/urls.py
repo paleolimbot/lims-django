@@ -31,6 +31,10 @@ urlpatterns = [
     url(r'^location/(?P<pk>[0-9]+)$', views.LocationDetailView.as_view(), name="location_detail"),
     url(r'^location/(?P<pk>[0-9]+)/change$', views.LocationChangeView.as_view(), name="location_change"),
 
+    # template views
+    url(r'^template/$', views.TemplateListView.as_view(), name='template_list'),
+    url(r'^template/(?P<template_pk>[0-9]+)$', views.TemplateFormView.as_view(), name='template_form'),
+
     # user object views
     url(r'^user/(?P<pk>[0-9]+)$', views.UserDetailView.as_view(), name="user_detail"),
 

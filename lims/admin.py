@@ -3,7 +3,8 @@ from django.db.models import TextField
 from django.forms import Textarea
 from reversion.admin import VersionAdmin
 
-from .models import Sample, SampleTag, Location, LocationTag, TermValidator, BaseValidator, Term
+from .models import Sample, SampleTag, Location, LocationTag, TermValidator, BaseValidator, Term, \
+    SampleEntryTemplate, SampleEntryTemplateField
 
 # This text override gets used in all models to keep the size down
 text_overrides = {
@@ -55,6 +56,12 @@ class SampleTagInline(admin.TabularInline):
     autocomplete_fields = ['key', ]
 
 
+class SampleEntryTemplateFieldInline(admin.TabularInline):
+    model = SampleEntryTemplateField
+    formfield_overrides = text_overrides
+    extra = 1
+
+
 @admin.register(Sample)
 class SampleAdmin(LimsAdmin):
     inlines = [SampleTagInline, ]
@@ -71,3 +78,8 @@ class LocationAdmin(LimsAdmin):
     list_display = ('name', 'slug', 'parent', 'user', 'modified')
     autocomplete_fields = ['parent', 'user']
     search_fields = ['name', 'slug']
+
+
+@admin.register(SampleEntryTemplate)
+class SampleEntryTemplateAdmin(LimsAdmin):
+    inlines = [SampleEntryTemplateFieldInline, ]
