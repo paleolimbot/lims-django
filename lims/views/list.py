@@ -51,6 +51,15 @@ class LocationListView(LimsLoginMixin, generic.ListView):
         return context
 
 
+class MySampleListView(SampleListView):
+    template_name = 'lims/lists/sample_list_my.html'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        queryset.filter(user=self.request.user)
+        return queryset
+
+
 def default_published_filter(queryset, user):
     return queryset.filter(Q(published=True) | Q(user=user))
 

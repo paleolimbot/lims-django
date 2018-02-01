@@ -15,6 +15,7 @@ urlpatterns = [
 
     # sample static views
     url(r'^sample/$', views.SampleListView.as_view(), name="sample_list"),
+    url(r'^sample/my$', views.MySampleListView.as_view(), name="my_sample_list"),
     url(r'^sample/add_bulk$', views.SampleBulkAddView.as_view(), name="sample_add_bulk"),
     url(r'^sample/add$', views.SampleAddView.as_view(), name="sample_add"),
 

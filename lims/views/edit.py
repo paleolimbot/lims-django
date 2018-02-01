@@ -45,8 +45,16 @@ class LocationChangeView(LimsLoginMixin, ObjectFormView, generic.UpdateView):
     form_class = LocationForm
 
 
+class SampleBulkAddForm(SampleForm):
+    location = ObjectSlugField(models.Location, required=False)
+    parent = ObjectSlugField(models.Sample, required=False)
+
+    class Meta:
+        fields = ['collected', 'name', 'description', 'location', 'parent']
+
+
 class SampleBulkAddView(LimsLoginMixin, BulkEditViewBase):
     model = models.Sample
 
     def get_model_form_class(self):
-        return SampleForm
+        return SampleBulkAddForm

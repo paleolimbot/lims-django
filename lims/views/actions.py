@@ -14,7 +14,7 @@ import reversion
 
 from .. import models
 from .accounts import LimsLoginMixin
-from .edit import SampleBulkAddView
+from .edit import SampleBulkAddView, SampleForm
 
 
 def find_action_view(model, action):
@@ -290,9 +290,18 @@ class SampleUnPublishView(SamplePublishView):
         return False
 
 
+class SampleBulkEditForm(SampleForm):
+
+    class Meta:
+        fields = ['collected', 'name', 'description', 'location', 'parent', 'geometry']
+
+
 class SampleBulkEditView(SampleBulkAddView, ActionListView):
     model = models.Sample
     template_name = 'lims/sample_bulk_change.html'
+
+    def get_model_form_class(self):
+        return SampleBulkEditForm
 
     def get_object_queryset(self):
         return self.get_queryset()
