@@ -8,10 +8,10 @@
 {% block object_tools %}
     <ul class="object-tools">
         {% if view.request.user.is_staff %}
-             <li><a href="{% url 'admin:lims_sample_add' %}">Admin View</a></li>
+             <li><a href="{% url 'admin:lims_sample_add' %}">Admin</a></li>
         {% endif %}
-        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' %}">Bulk Add</a></li>
-        <li><a class="addlink" href="{% url 'lims:sample_add' %}">Add Sample</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' %}">Bulk</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add' %}">New</a></li>
     </ul>
 {% endblock %}
 
@@ -21,12 +21,19 @@
         <form id="add-formset-form" action="" method="post">
             {% csrf_token %}
             {{ form.management_form }}
+            <div id="add-formset-table-container">
             <ul id="add-formset-list">
             <li class="add-formset-item">
                 <ul class="add-formset-fieldlist" id="add-formset-header">
                     {% for field in form.0 %}
                         {% if not field.is_hidden %}
-                            <li>{{ field.label_tag }}</li>
+                            <li>
+                            {% if field.field.required %}
+                                <label class="required" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {% else %}
+                                <label for="{{ field.name }}">{{ field.label }}</label>
+                            {% endif %}
+                            </li>
                         {% endif %}
                     {% endfor %}
                 </ul>
@@ -54,6 +61,7 @@
                     </li>
                 {% endfor %}
             </ul>
+            </div
             <p>
                 Add <input name="add-formset-more-number" id="add-formset-more-number" type="text" size="2" title="Add" value="1"/> more forms
                 <a href="#" id="add-formset-more-go">Go</a>

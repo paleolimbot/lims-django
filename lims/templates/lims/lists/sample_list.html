@@ -9,10 +9,10 @@
 {% block object_tools %}
     <ul class="object-tools">
         {% if view.request.user.is_staff %}
-             <li><a href="{% url 'admin:lims_sample_changelist' %}">Admin View</a></li>
+             <li><a href="{% url 'admin:lims_sample_changelist' %}">admin</a></li>
         {% endif %}
-        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' %}">Bulk Add</a></li>
-        <li><a class="addlink" href="{% url 'lims:sample_add' %}">Add Sample</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' %}">Bulk</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add' %}">New</a></li>
     </ul>
 {% endblock %}
 

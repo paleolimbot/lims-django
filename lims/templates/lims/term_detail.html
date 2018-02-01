@@ -8,7 +8,7 @@
 {% block object_tools %}
     <ul class="object-tools">
         {% if view.request.user.is_staff %}
-            <li><a href="{% url 'admin:lims_term_change' user.pk %}">Admin View</a></li>
+            <li><a href="{% url 'admin:lims_term_change' user.pk %}">admin</a></li>
         {% endif %}
     </ul>
 {% endblock %}

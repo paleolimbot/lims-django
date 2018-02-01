@@ -135,6 +135,10 @@ table.template-list td {
 	vertical-align: middle;
 }
 
+table.template-list td.template-list-fields {
+	max-width: 50%;
+}
+
 table.template-list input[type="submit"] {
 	padding: 4px;
 }
@@ -172,7 +176,8 @@ table.template-list input[type="submit"] {
 	color: #fff;
 }
 
-/* Add form styles */
+
+/* Add formset styles */
 
 #collected-today-link {
 	padding-left: 4px;
@@ -182,28 +187,38 @@ table.template-list input[type="submit"] {
     padding-left: 0;
 }
 
+#add-formset-table-container {
+	overflow-x: scroll;
+}
+
 #add-formset-list {
     display:table;
 }
 
 .add-formset-item {
     display: table-row-group;
+	width: 100%;
 }
 
 .add-formset-fieldlist {
     display: table-row;
+	width: 100%;
 }
 
 .add-formset-fieldlist li {
     display: table-cell;
-    padding-left: 2px;
-    padding-right: 2px;
+    padding-left: 0;
+    padding-right: 4px;
     vertical-align: bottom;
+	width: auto;
+}
+
+.add-formset-fieldlist li input[type="text"] {
+    width: 150px;
 }
 
 #add-formset-header li {
     text-align: left;
-    font-weight: bold;
     padding-bottom: 2px;
 }
 
@@ -215,6 +230,9 @@ table.template-list input[type="submit"] {
     display:inline;
 }
 
+#add-formset-header label.required {
+    font-weight: bold;
+}
 
 /* additional login styles */
 

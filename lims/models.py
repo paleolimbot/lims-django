@@ -379,11 +379,21 @@ class SampleEntryTemplateField(models.Model):
             # target should be a field of Sample or a Term
             if self.target not in ['collected', 'name', 'description',
                                    'location', 'parent', 'geometry', 'published'] \
-                    and not Term.objects.filter(slug=self.target):
+                    and self.term is None:
                 raise ValidationError({'target': 'Target is not a field of Sample and is not a defined term slug'})
 
-    def __str__(self):
+    @cached_property
+    def term(self):
+        if self.target in ['collected', 'name', 'description', 'location', 'parent', 'geometry', 'published']:
+            return None
         try:
-            return str(Term.objects.get(slug=self.target))
+            return Term.objects.get(slug=self.target)
         except Term.DoesNotExist:
-            return self.target.replace('_', ' ')
+            return None
+
+    def __str__(self):
+        term = self.term
+        if term is None:
+            return self.target.replace('_', ' ').title()
+        else:
+            return str(term)

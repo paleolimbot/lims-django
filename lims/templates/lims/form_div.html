@@ -5,25 +5,29 @@
     <fieldset class="module aligned">
         {% for field in form %}
             <div class="form-row field-{{ field.name }}">
-                {{ field.errors }}
-                {% if field.field.required %}
-                    <span class="required">{{ field.label_tag }}</span>
-                {% else %}
-                    {{ field.label_tag }}
-                {% endif %}
-                {{ field }}
-                {% if field.help_text %}
-                    <p class="help">{{ field.help_text|safe }}</p>
-                {% endif %}
+                <div>
+                    {{ field.errors }}
+                    {% if field.field.required %}
+                        <label class="required" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {% else %}
+                        <label for="{{ field.name }}">{{ field.label }}</label>
+                    {% endif %}
+                    {{ field }}
+                    {% if field.help_text %}
+                        <p class="help">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                </div>
             </div>
         {% endfor %}
 
         <div class="form-row"><br/></div>
 
         <div class="form-row field-add-form-tag-column">
-            <label for="id_form-add-form-tag-column">Add tag column for tags</label>
-            <input type="text" name="add-form-tag-column" id="id_form-add-form-tag-column"/>
-            <p class="help">Use commas to separate multiple values</p>
+            <div>
+                <label for="id_form-add-form-tag-column">Add tag column for tags</label>
+                <input type="text" name="add-form-tag-column" id="id_form-add-form-tag-column"/>
+                <p class="help">Use commas to separate multiple values</p>
+            </div>
         </div>
     </fieldset>
 </div>

@@ -12,3 +12,18 @@
     }
 
 }
+
+/* add form styles */
+
+@media (max-width: 767px) {
+
+    form .aligned input + p.help, form .aligned textarea + p.help,
+    form .aligned select + p.help, form .aligned input + div.help,
+    form .aligned textarea + div.help, form .aligned select + div.help {
+        margin-left: 0;
+    }
+
+    .add-formset-fieldlist li input[type="text"] {
+        width: 100px;
+    }
+}

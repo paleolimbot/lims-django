@@ -7,11 +7,11 @@
 {% block object_tools %}
     <ul class="object-tools">
         {% if view.request.user.is_staff %}
-            <li><a href="{% url 'admin:lims_location_change' location.pk %}">Admin View</a></li>
+            <li><a href="{% url 'admin:lims_location_change' location.pk %}">Admin</a></li>
         {% endif %}
-        <li><a href="{% url 'lims:location_change' location.pk %}">Update Location</a></li>
-        <li><a href="{% url 'lims:item_action' 'location' location.pk 'delete' %}">Delete Location</a></li>
-        <li><a class="addlink" href="{% url 'lims:location_add' %}">Add Location</a></li>
+        <li><a href="{% url 'lims:location_change' location.pk %}">Update</a></li>
+        <li><a href="{% url 'lims:item_action' 'location' location.pk 'delete' %}">Delete</a></li>
+        <li><a class="addlink" href="{% url 'lims:location_add' %}">New</a></li>
     </ul>
 {% endblock %}
 

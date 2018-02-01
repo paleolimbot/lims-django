@@ -8,7 +8,7 @@
 {% block object_tools %}
     <ul class="object-tools">
         {% if view.request.user.is_staff %}
-            <li><a href="{% url 'admin:lims_sampleentrytemplate_change' template.pk %}">Admin View</a></li>
+            <li><a href="{% url 'admin:lims_sampleentrytemplate_change' template.pk %}">admin</a></li>
         {% endif %}
         <li><a class="addlink" href="{% url 'lims:template_form' template.pk %}">Single View</a></li>
     </ul>
