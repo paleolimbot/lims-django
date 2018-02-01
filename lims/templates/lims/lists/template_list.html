@@ -5,7 +5,19 @@
 
 {% block content_title %}Templates{% endblock %}
 
+{% block object_tools %}
+    <ul class="object-tools">
+        {% if view.request.user.is_staff %}
+             <li><a href="{% url 'admin:lims_sampleentrytemplate_changelist' %}">Admin</a></li>
+        {% endif %}
+        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' %}">Bulk</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add' %}">New</a></li>
+    </ul>
+{% endblock %}
+
 {% block content_main %}
+
+    {% if object_list %}
 
     <table class="template-list">
         <tr>
@@ -16,7 +28,7 @@
         <tr>
             <td><a href="{% url 'lims:template_form' template.pk %}">{{ template }}</a></td>
             <td class="template-list-fields">
-                {% for field in template.fields.all %}
+                {% for field in template.get_fields_queryset %}
                     {% if forloop.counter0 > 0 %}, {% endif %}
                     {% if field.term %}
                         <a href="{% url 'lims:term_detail' field.term.pk %}">{{ field }}</a>
@@ -37,5 +49,12 @@
         </tr>
     {% endfor %}
     </table>
+
+    {% else %}
+
+        <p>There are no templates currently available.</p>
+
+    {% endif %}
+
 
 {% endblock %}

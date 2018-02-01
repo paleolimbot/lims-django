@@ -114,7 +114,7 @@ class ActionListView(generic.ListView):
 
     def get_queryset(self):
         id_in = self.request.GET.getlist('id__in')
-        queryset = self.model.objects.all().filter(id__in=id_in)
+        queryset = self.model.objects.all().filter(id__in=id_in).order_by('-modified')
         if not queryset:
             raise Http404('Could not find any objects')
         if len(id_in) != queryset.count():

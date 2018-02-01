@@ -19,7 +19,7 @@ def template_form_class_factory(template):
     model_fields = ['collected', 'name']
     tag_fields = []
     initial_values = {}
-    for field in template.fields.all():
+    for field in template.fields.all().order_by('order'):
         if field.target in ['collected', 'name']:
             initial_values[field.target] = field.initial_value
         elif field.target in ['description', 'location', 'parent', 'geometry', 'published']:

@@ -96,8 +96,7 @@
 	border-radius: 4px;
 	font-size: 14px;
 	padding: 0 0 0 4px;
-	margin: 0;
-	margin-left: 10px;
+	margin: 0 0 0 10px;
 }
 
 .object-list-container .actions .button {
@@ -251,9 +250,8 @@ table.template-list input[type="submit"] {
 	padding: 10px;
 	line-height: 1em;
 	color: #000;
-	border: 1.5pt #000;
-	border-style: solid;
-	margin: 0;
+	border: 1.5pt solid #000;
+	margin: 0 0 3pt;
 }
 
 .qrcode-label {

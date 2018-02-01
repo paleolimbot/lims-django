@@ -362,6 +362,9 @@ class SampleEntryTemplate(models.Model):
     name = models.CharField(max_length=55, unique=True)
     last_used = models.DateTimeField('last_used', auto_now=True)
 
+    def get_fields_queryset(self):
+        return self.fields.order_by('order')
+
     def get_absolute_url(self):
         return reverse_lazy('lims:template_form', kwargs={'template_pk': self.pk})
 
@@ -373,6 +376,7 @@ class SampleEntryTemplateField(models.Model):
     template = models.ForeignKey(SampleEntryTemplate, on_delete=models.CASCADE, related_name='fields')
     target = models.CharField(max_length=55)
     initial_value = models.TextField(blank=True)
+    order = models.IntegerField(default=1)
 
     def clean_fields(self, exclude=None):
         if exclude is None or 'target' not in exclude:
