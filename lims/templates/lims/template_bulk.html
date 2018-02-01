@@ -1,7 +1,7 @@
 
-{% extends 'lims/sample_form.html' %}
+{% extends 'lims/sample_bulk_form.html' %}
 
-{% block title %}{{ template }}{% endblock %}
+{% block title %}Bulk {{ template }}{% endblock %}
 
 {% block content_title %}{{ template }}: {{ block.super }}{% endblock %}
 
@@ -10,6 +10,6 @@
         {% if view.request.user.is_staff %}
             <li><a href="{% url 'admin:lims_sampleentrytemplate_change' template.pk %}">Admin View</a></li>
         {% endif %}
-        <li><a class="addlink" href="{% url 'lims:template_bulk' template.pk %}">Bulk View</a></li>
+        <li><a class="addlink" href="{% url 'lims:template_form' template.pk %}">Single View</a></li>
     </ul>
 {% endblock %}

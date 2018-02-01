@@ -34,6 +34,7 @@ urlpatterns = [
     # template views
     url(r'^template/$', views.TemplateListView.as_view(), name='template_list'),
     url(r'^template/(?P<template_pk>[0-9]+)$', views.TemplateFormView.as_view(), name='template_form'),
+    url(r'^template/(?P<template_pk>[0-9]+)/bulk/$', views.TemplateBulkView.as_view(), name='template_bulk'),
 
     # user object views
     url(r'^user/(?P<pk>[0-9]+)$', views.UserDetailView.as_view(), name="user_detail"),

@@ -1,10 +1,9 @@
 
 from django.views import generic
 from django.http import Http404
-from django.shortcuts import redirect
 
 from .. import models
-from .forms import BaseObjectModelForm, ObjectFormView, ObjectSlugField
+from .forms import BaseObjectModelForm, ObjectFormView, ObjectSlugField, BulkEditViewBase
 from .accounts import LimsLoginMixin
 
 
@@ -42,7 +41,7 @@ def template_form_class_factory(template):
             for form_field in self.fields:
                 if form_field == 'location':
                     self.fields[form_field] = ObjectSlugField(models.Location, required=False)
-                elif field == 'parent':
+                elif form_field == 'parent':
                     self.fields[form_field] = ObjectSlugField(models.Sample, required=False)
 
                 if form_field in initial_values:
@@ -75,3 +74,27 @@ class TemplateFormView(LimsLoginMixin, ObjectFormView, generic.CreateView):
 
     def get_success_url(self):
         return self.request.get_full_path()
+
+
+class TemplateBulkView(LimsLoginMixin, BulkEditViewBase):
+    model = models.Sample
+    template_name = 'lims/template_bulk.html'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.template = None
+
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            self.template = models.SampleEntryTemplate.objects.get(pk=kwargs['template_pk'])
+        except models.SampleEntryTemplate.DoesNotExist:
+            raise Http404('Sample Entry Template not found.')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        kwargs = super().get_context_data(**kwargs)
+        kwargs['template'] = self.template
+        return kwargs
+
+    def get_model_form_class(self):
+        return template_form_class_factory(self.template)

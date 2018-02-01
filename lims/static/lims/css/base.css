@@ -129,6 +129,16 @@ tr.object-row-draft {
 	background-color: #FFC;
 }
 
+/* set styles for the template list */
+
+table.template-list td {
+	vertical-align: middle;
+}
+
+table.template-list input[type="submit"] {
+	padding: 4px;
+}
+
 
 /* Pagination style */
 
