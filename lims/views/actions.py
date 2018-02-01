@@ -181,7 +181,7 @@ class MultiDeleteView(BulkActionView):
 
 class SampleDeleteView(LimsLoginMixin, MultiDeleteView):
     model = models.Sample
-    success_url = reverse_lazy('lims:sample_list')
+    success_url = reverse_lazy('lims:my_sample_list')
 
 
 class LocationDeleteView(LimsLoginMixin, MultiDeleteView):

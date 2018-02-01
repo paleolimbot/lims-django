@@ -168,7 +168,7 @@ class BulkAddFormset(BaseModelFormSet):
 
 
 class BulkEditViewBase(ObjectFormView):
-    success_url = reverse_lazy('lims:sample_list')
+    success_url = reverse_lazy('lims:my_sample_list')
     template_name = 'lims/sample_bulk_form.html'
     model = None
 

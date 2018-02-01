@@ -55,9 +55,13 @@ class MySampleListView(SampleListView):
     template_name = 'lims/lists/sample_list_my.html'
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        queryset.filter(user=self.request.user)
-        return queryset
+        return query_string_filter(
+            models.Sample.objects.filter(user=self.request.user),
+            self.request.GET,
+            use=(),
+            search=('name', 'slug', 'description'),
+            prefix='sample_',
+        ).order_by("-modified")
 
 
 def default_published_filter(queryset, user):
