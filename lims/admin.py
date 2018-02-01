@@ -60,6 +60,7 @@ class SampleEntryTemplateFieldInline(admin.TabularInline):
     model = SampleEntryTemplateField
     formfield_overrides = text_overrides
     extra = 1
+    ordering = ('order', )
 
 
 @admin.register(Sample)
