@@ -47,7 +47,7 @@
                     <td>{% include 'lims/tables/tag_summary.html' with tags=sample.tags.all %}</td>
                     <td>
                         {% if sample.parent %}
-                            <a href="{% url 'lims:sample_detail' sample.parent.pk %}">{{ sample }}</a>
+                            <a href="{% url 'lims:sample_detail' sample.parent.pk %}">{{ sample.parent }}</a>
                         {% endif %}
                     </td>
                     <td>
