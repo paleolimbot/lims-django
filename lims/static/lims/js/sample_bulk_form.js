@@ -105,6 +105,8 @@ function pasteTable(input, e) {
     var text = e.originalEvent.clipboardData.getData('text');
     var textLines = text.split('\n');
 
+    var activeCurrent = $active.val();
+
     // get the row and column info, so newlines and tabs can be processed accordingly
     var fields = getFieldNames();
     var idInfo = activeId.match(/id_form-([0-9]+)-(.*)$/);
@@ -125,9 +127,17 @@ function pasteTable(input, e) {
         var textCells = textLines[i].split('\t');
         // loop through tab-separated cells of pasted text
         for(var j=0; j < textCells.length; j++) {
+            // current field should be added to, not obliterated
+            var newText;
+            if(i === 0 && j === 0) {
+                newText = activeCurrent + textCells[j].trim()
+            } else {
+                newText = textCells[j].trim();
+            }
+
             var fieldId = getFieldId(row + i, col + j);
             if(fieldId !== null) {
-                $('#' + fieldId).val(textCells[j].trim());
+                $('#' + fieldId).val(newText);
             }
         }
     }
