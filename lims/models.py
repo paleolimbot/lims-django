@@ -44,6 +44,9 @@ class BaseObjectModel(models.Model):
     miny = models.FloatField(editable=False, blank=True, null=True, default=None)
     maxy = models.FloatField(editable=False, blank=True, null=True, default=None)
 
+    def _should_update_slug(self):
+        return not self.pk and not self.slug
+
     def calculate_recursive_depth(self):
         if self.parent:
             return self.parent.calculate_recursive_depth() + 1
@@ -64,7 +67,7 @@ class BaseObjectModel(models.Model):
         self.recursive_depth = self.calculate_recursive_depth()
 
         # set the slug if it is a new object
-        if not self.pk and not self.slug:
+        if self._should_update_slug():
             self.slug = self.calculate_slug()
 
         # cache location info
@@ -332,6 +335,9 @@ class Sample(BaseObjectModel):
     collected = models.DateTimeField("collected")
     location = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True)
     published = models.BooleanField(default=False)
+
+    def _should_update_slug(self):
+        return super()._should_update_slug() or not self.published
 
     def auto_slug_use(self):
         # get parts of the calculated sample slug
