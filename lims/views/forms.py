@@ -31,6 +31,10 @@ class SampleSelect2Widget(ModelSelect2Widget):
         return models.Sample.objects.order_by('-modified').filter(published=True)
 
 
+class DateTimePicker(TextInput):
+    pass
+
+
 class ObjectFormView(generic.FormView):
 
     def get_form_kwargs(self):

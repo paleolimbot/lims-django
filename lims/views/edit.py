@@ -3,7 +3,8 @@ from django.views import generic
 
 from .. import models
 from .accounts import LimsLoginMixin
-from .forms import BaseObjectModelForm, ObjectFormView, BulkEditViewBase, LocationSelect2Widget, SampleSelect2Widget
+from .forms import BaseObjectModelForm, ObjectFormView, BulkEditViewBase,\
+    LocationSelect2Widget, SampleSelect2Widget, DateTimePicker
 
 
 class SampleForm(BaseObjectModelForm):
@@ -12,6 +13,7 @@ class SampleForm(BaseObjectModelForm):
         model = models.Sample
         fields = ['collected', 'name', 'description', 'location', 'parent', 'geometry', 'published']
         widgets = {
+            'collected': DateTimePicker,
             'location': LocationSelect2Widget,
             'parent': SampleSelect2Widget
         }
@@ -54,6 +56,7 @@ class SampleBulkAddForm(SampleForm):
     class Meta:
         fields = ['collected', 'name', 'description', 'location', 'parent']
         widgets = {
+            'collected': DateTimePicker,
             'location': LocationSelect2Widget,
             'parent': SampleSelect2Widget
         }

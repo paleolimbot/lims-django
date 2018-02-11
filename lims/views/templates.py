@@ -3,7 +3,8 @@ from django.views import generic
 from django.http import Http404
 
 from .. import models
-from .forms import BaseObjectModelForm, ObjectFormView, BulkEditViewBase, LocationSelect2Widget, SampleSelect2Widget
+from .forms import BaseObjectModelForm, ObjectFormView, BulkEditViewBase, \
+    LocationSelect2Widget, SampleSelect2Widget, DateTimePicker
 from .accounts import LimsLoginMixin
 
 
@@ -35,6 +36,7 @@ def template_form_class_factory(template):
             fields = model_fields
 
             widgets = {
+                'collected': DateTimePicker,
                 'location': LocationSelect2Widget,
                 'parent': SampleSelect2Widget
             }
