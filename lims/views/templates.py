@@ -3,7 +3,7 @@ from django.views import generic
 from django.http import Http404
 
 from .. import models
-from .forms import BaseObjectModelForm, ObjectFormView, ObjectSlugField, BulkEditViewBase
+from .forms import BaseObjectModelForm, ObjectFormView, BulkEditViewBase, LocationSelect2Widget, SampleSelect2Widget
 from .accounts import LimsLoginMixin
 
 
@@ -34,16 +34,16 @@ def template_form_class_factory(template):
             model = models.Sample
             fields = model_fields
 
+            widgets = {
+                'location': LocationSelect2Widget,
+                'parent': SampleSelect2Widget
+            }
+
         def __init__(self, *args, **kwargs):
             kwargs['tag_field_names'] = tag_fields
             super().__init__(*args, **kwargs)
 
             for form_field in self.fields:
-                if form_field == 'location':
-                    self.fields[form_field] = ObjectSlugField(models.Location, required=False)
-                elif form_field == 'parent':
-                    self.fields[form_field] = ObjectSlugField(models.Sample, required=False)
-
                 if form_field in initial_values:
                     self.fields[form_field].initial = initial_values[form_field]
 

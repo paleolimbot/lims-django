@@ -61,7 +61,7 @@
                     </li>
                 {% endfor %}
             </ul>
-            </div
+            </div>
             <p>
                 Add <input name="add-formset-more-number" id="add-formset-more-number" type="text" size="2" title="Add" value="1"/> more forms
                 <a href="#" id="add-formset-more-go">Go</a>
@@ -75,10 +75,4 @@
         </form>
     </div>
 
-{% endblock %}
-
-{% block scripts %}
-    {{ block.super }}
-    {% load static %}
-    <script src="{% static 'lims/js/sample_bulk_form.js' %}"></script>
 {% endblock %}

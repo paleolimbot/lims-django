@@ -23,4 +23,6 @@ urlpatterns = [
     url(r'^$', views.index, name="index"),
     path('admin/', admin.site.urls),
     path('lims/', include('lims.urls')),
+    # select2 urls
+    url(r'^select2/', include('django_select2.urls')),
 ]

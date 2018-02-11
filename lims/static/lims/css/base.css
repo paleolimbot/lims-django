@@ -233,6 +233,15 @@ table.template-list input[type="submit"] {
     font-weight: bold;
 }
 
+/* select2 widget styles */
+select.django-select2 {
+	width: 200px;
+}
+
+.add-formset-fieldlist li select.django-select2 {
+    width: 150px;
+}
+
 /* additional login styles */
 
 #login-form-table th {

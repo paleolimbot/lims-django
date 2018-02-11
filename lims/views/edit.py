@@ -3,24 +3,28 @@ from django.views import generic
 
 from .. import models
 from .accounts import LimsLoginMixin
-from .forms import BaseObjectModelForm, ObjectSlugField, ObjectFormView, BulkEditViewBase
+from .forms import BaseObjectModelForm, ObjectFormView, BulkEditViewBase, LocationSelect2Widget, SampleSelect2Widget
 
 
 class SampleForm(BaseObjectModelForm):
-    location = ObjectSlugField(models.Location, required=False)
-    parent = ObjectSlugField(models.Sample, required=False)
 
     class Meta:
         model = models.Sample
         fields = ['collected', 'name', 'description', 'location', 'parent', 'geometry', 'published']
+        widgets = {
+            'location': LocationSelect2Widget,
+            'parent': SampleSelect2Widget
+        }
 
 
 class LocationForm(BaseObjectModelForm):
-    parent = ObjectSlugField(models.Location, required=False)
 
     class Meta:
         model = models.Location
         fields = ['name', 'slug', 'description', 'parent', 'geometry']
+        widgets = {
+            'parent': LocationSelect2Widget
+        }
 
 
 class SampleAddView(LimsLoginMixin, ObjectFormView, generic.CreateView):
@@ -46,11 +50,13 @@ class LocationChangeView(LimsLoginMixin, ObjectFormView, generic.UpdateView):
 
 
 class SampleBulkAddForm(SampleForm):
-    location = ObjectSlugField(models.Location, required=False)
-    parent = ObjectSlugField(models.Sample, required=False)
 
     class Meta:
         fields = ['collected', 'name', 'description', 'location', 'parent']
+        widgets = {
+            'location': LocationSelect2Widget,
+            'parent': SampleSelect2Widget
+        }
 
 
 class SampleBulkAddView(LimsLoginMixin, BulkEditViewBase):

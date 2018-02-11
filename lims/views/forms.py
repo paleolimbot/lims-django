@@ -3,39 +3,32 @@ import re
 
 from django.urls import reverse_lazy
 from django.forms import modelformset_factory,\
-    ModelForm, CharField, ValidationError, TextInput, BaseModelFormSet, HiddenInput, CheckboxInput
+    ModelForm, ValidationError, TextInput, BaseModelFormSet, Textarea
 from django.views import generic
 import reversion
+from django_select2.forms import ModelSelect2Widget
 
 from .. import models
 
 
-class ObjectSlugField(CharField):
+class LocationSelect2Widget(ModelSelect2Widget):
+    search_fields = [
+        'name__icontains',
+        'slug__icontains'
+    ]
 
-    def __init__(self, klass, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.klass = klass
+    def get_queryset(self):
+        return models.Location.objects.order_by('-modified')
 
-    def prepare_value(self, value):
-        # incoming value is the id (if valid), or the invalid slug otherwise
-        if value:
-            try:
-                return self.klass.objects.get(pk=value).slug
-            except self.klass.DoesNotExist:
-                raise ValidationError("Object with this slug does not exist.")
-            except ValueError:
-                # wasn't an integer
-                return value
-        else:
-            return ''
 
-    def clean(self, value):
-        super().clean(value)
-        if value:
-            try:
-                return self.klass.objects.get(slug=value)
-            except self.klass.DoesNotExist:
-                raise ValidationError("Object with this slug does not exist.")
+class SampleSelect2Widget(ModelSelect2Widget):
+    search_fields = [
+        'name__icontains',
+        'slug__icontains'
+    ]
+
+    def get_queryset(self):
+        return models.Sample.objects.order_by('-modified').filter(published=True)
 
 
 class ObjectFormView(generic.FormView):
@@ -160,6 +153,12 @@ class BulkAddFormset(BaseModelFormSet):
             if re.match('^form-[0-9]+-tag_form_field_(.*)$', key):
                 self.tag_field_names.append(re.search('^form-[0-9]+-tag_form_field_(.*)$', key).group(1))
 
+    @property
+    def media(self):
+        media = super().media
+        media._js.append('lims/js/bulk_form.js')
+        return media
+
     def get_form_kwargs(self, index):
         kwargs = super().get_form_kwargs(index)
         kwargs['user'] = self.user
@@ -206,7 +205,7 @@ class BulkEditViewBase(ObjectFormView):
             form.user = self.request.user
             for field in form.fields:
                 current_widget = form.fields[field].widget
-                if not isinstance(current_widget, HiddenInput) and not isinstance(current_widget, CheckboxInput):
+                if isinstance(current_widget, Textarea):
                     form.fields[field].widget = TextInput()
 
         return formset

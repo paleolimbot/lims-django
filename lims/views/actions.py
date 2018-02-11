@@ -15,6 +15,7 @@ import reversion
 from .. import models
 from .accounts import LimsLoginMixin
 from .edit import SampleBulkAddView, SampleForm
+from .forms import SampleSelect2Widget, LocationSelect2Widget
 
 
 def find_action_view(model, action):
@@ -294,6 +295,10 @@ class SampleBulkEditForm(SampleForm):
 
     class Meta:
         fields = ['collected', 'name', 'description', 'location', 'parent', 'geometry']
+        widgets = {
+            'location': LocationSelect2Widget,
+            'parent': SampleSelect2Widget
+        }
 
 
 class SampleBulkEditView(SampleBulkAddView, ActionListView):
