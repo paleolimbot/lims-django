@@ -39,6 +39,13 @@ class LocationForm(BaseObjectModelForm):
         widgets = {
             'parent': LocationSelect2Widget
         }
+        help_texts = {
+            'name': 'The display name for this location.',
+            'slug': 'A short, unique, concise identifier for this location.',
+            'description': 'Extra information that is not captured in other fields.',
+            'parent': 'The parent location for this location.',
+            'geometry': 'Well-known-text (e.g. POINT (lon lat) that describes this location.',
+        }
 
 
 class SampleAddView(LimsLoginMixin, ObjectFormView, generic.CreateView):
