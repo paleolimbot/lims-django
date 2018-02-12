@@ -54,7 +54,7 @@
                             {{ tag.key|truncatechars:20 }}
                         </a>
                     </td>
-                    <td>{{ tag.value|linebreaksbr }}</td>
+                    <td>{{ tag.value|truncatechars:250|linebreaksbr }}</td>
                 </tr>
             {% endfor %}
         {% else %}
