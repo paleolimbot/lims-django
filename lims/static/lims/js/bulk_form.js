@@ -49,6 +49,11 @@ function addForms(n) {
         // initialize the select2 widget
         $select2.djangoSelect2();
 
+        // initialize new datetimepicker widgets
+        $newLi.find('input.jquery-datetimepicker-widget').datetimepicker({
+            format:'Y-m-d H:i'
+        })
+
     }
 
     //update the management form

@@ -32,7 +32,23 @@ class SampleSelect2Widget(ModelSelect2Widget):
 
 
 class DateTimePicker(TextInput):
-    pass
+
+    class Media:
+        css = {
+            'all': ('lims/css/jquery.datetimepicker.min.css', )
+        }
+        js = ('lims/js/jquery.datetimepicker.full.min.js', 'lims/js/jquery.datetimepicker.widget.js')
+
+    def __init__(self, *args, **kwargs):
+        if 'attrs' not in kwargs:
+            kwargs['attrs'] = {}
+        if 'class' not in kwargs['attrs']:
+            kwargs['attrs']['class'] = 'jquery-datetimepicker-widget'
+        else:
+            kwargs['attrs']['class'] = kwargs['attrs']['class'] + ' jquery-datetimepicker-widget'
+
+        super().__init__(*args, **kwargs)
+
 
 
 class ObjectFormView(generic.FormView):
