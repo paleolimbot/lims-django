@@ -47,7 +47,7 @@
                             {{ location.parent.get_link }}
                         {% endif %}
                     </td>
-                    <td>{{ location.geometry|truncatechars:55 }}</td>
+                    <td>{{ location.geometry|truncatechars:25 }}</td>
                     <td>{% include 'lims/tables/tag_summary.html' with tags=location.tags.all %}</td>
                     <td>{{ location.modified }}</td>
                 </tr>

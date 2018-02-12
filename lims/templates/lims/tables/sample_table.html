@@ -28,6 +28,7 @@
                     <th>Tags</th>
                     <th>Parent</th>
                     <th>Location</th>
+                    <th>Geometry</th>
                     <th>Published</th>
                     <th>Modified</th>
                 </tr>
@@ -43,7 +44,7 @@
                     <td>{% if sample.user %}<a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>{% endif %}</td>
                     <td>{{ sample.collected }}</td>
                     <td>{{ sample.name }}</td>
-                    <td>{{ sample.description|truncatechars:55 }}</td>
+                    <td>{{ sample.description|truncatechars:25 }}</td>
                     <td>{% include 'lims/tables/tag_summary.html' with tags=sample.tags.all %}</td>
                     <td>
                         {% if sample.parent %}
@@ -55,6 +56,7 @@
                             {{ sample.location.get_link }}
                         {% endif %}
                     </td>
+                    <td>{{ sample.geometry|truncatechars:55 }}</td>
                     <td>{{ sample.published }}</td>
                     <td>{{ sample.modified }}</td>
                 </tr>
