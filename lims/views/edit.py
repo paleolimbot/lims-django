@@ -7,6 +7,17 @@ from .forms import BaseObjectModelForm, ObjectFormView, BulkEditViewBase,\
     LocationSelect2Widget, SampleSelect2Widget, DateTimePicker
 
 
+SAMPLE_HELP_TEXTS = {
+    'collected': 'The date at which the sample was collected or subsampled from the parent sample.',
+    'name': 'The user sample identifier, without duplicating the location identifier.',
+    'description': 'Extra information about the sample that is not expressed in other fields.',
+    'location': 'Choose a previously added location at which this sample was collected.',
+    'parent': 'Choose a parent sample from which this sample was subsampled.',
+    'geometry': 'Well-known-text (e.g. POINT (lon lat) that describes where this sample was collected.',
+    'published': 'Publish a sample to make it visible to others, unpublish it to fix a sample ID.'
+}
+
+
 class SampleForm(BaseObjectModelForm):
 
     class Meta:
@@ -17,6 +28,7 @@ class SampleForm(BaseObjectModelForm):
             'location': LocationSelect2Widget,
             'parent': SampleSelect2Widget
         }
+        help_texts = SAMPLE_HELP_TEXTS
 
 
 class LocationForm(BaseObjectModelForm):

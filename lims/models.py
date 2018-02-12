@@ -247,7 +247,12 @@ class Term(models.Model):
 
     @cached_property
     def form_field(self):
-        return CharField(label='Tag %s' % self, validators=self.get_validators(), required=False)
+        return CharField(
+            label='Tag %s' % self,
+            validators=self.get_validators(),
+            required=False,
+            help_text=self.description
+        )
 
     @staticmethod
     def get_term(string_key, create=True):

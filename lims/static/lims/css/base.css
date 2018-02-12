@@ -221,12 +221,12 @@ table.template-list input[type="submit"] {
     padding-bottom: 2px;
 }
 
-#add-formset-list label {
-    display:none;
+#add-formset-list label, #add-formset-list span.helptext {
+    display: none;
 }
 
 #add-formset-header label {
-    display:inline;
+    display: inline;
 }
 
 #add-formset-header label.required {

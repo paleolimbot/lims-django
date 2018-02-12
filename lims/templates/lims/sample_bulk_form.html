@@ -29,9 +29,9 @@
                         {% if not field.is_hidden %}
                             <li>
                             {% if field.field.required %}
-                                <label class="required" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                <label class="required" for="{{ field.id_for_label }}" title="{{ field.help_text }}">{{ field.label }}</label>
                             {% else %}
-                                <label for="{{ field.name }}">{{ field.label }}</label>
+                                <label for="{{ field.name }}" title="{{ field.help_text }}">{{ field.label }}</label>
                             {% endif %}
                             </li>
                         {% endif %}

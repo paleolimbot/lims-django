@@ -50,7 +50,6 @@ class DateTimePicker(TextInput):
         super().__init__(*args, **kwargs)
 
 
-
 class ObjectFormView(generic.FormView):
 
     def get_form_kwargs(self):

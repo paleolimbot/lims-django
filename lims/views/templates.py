@@ -5,6 +5,7 @@ from django.http import Http404
 from .. import models
 from .forms import BaseObjectModelForm, ObjectFormView, BulkEditViewBase, \
     LocationSelect2Widget, SampleSelect2Widget, DateTimePicker
+from .edit import SAMPLE_HELP_TEXTS
 from .accounts import LimsLoginMixin
 
 
@@ -40,6 +41,7 @@ def template_form_class_factory(template):
                 'location': LocationSelect2Widget,
                 'parent': SampleSelect2Widget
             }
+            help_texts = SAMPLE_HELP_TEXTS
 
         def __init__(self, *args, **kwargs):
             kwargs['tag_field_names'] = tag_fields
