@@ -305,6 +305,7 @@ class Tag(models.Model):
     object = models.ForeignKey(BaseObjectModel, on_delete=models.CASCADE, related_name='tags', db_index=True)
     key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True)
     value = models.TextField(blank=True)
+    comment = models.TextField(blank=True)
     meta = models.TextField(blank=True, validators=[validate_json_tags_dict, ])
 
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
