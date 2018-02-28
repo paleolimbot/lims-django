@@ -84,7 +84,7 @@ class TermDetailView(LimsLoginMixin, DetailViewWithTablesBase):
     model = models.Term
 
     def get_location_queryset(self):
-        return models.Location.objects.filter(tags__key=self.object)
+        return models.Location.objects.filter(tags__key=self.object).distinct()
 
     def get_sample_queryset(self):
-        return models.Sample.objects.filter(tags__key=self.object)
+        return models.Sample.objects.filter(tags__key=self.object).distinct()

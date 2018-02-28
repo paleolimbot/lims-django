@@ -31,6 +31,16 @@ class SampleSelect2Widget(ModelSelect2Widget):
         return models.Sample.objects.order_by('-modified').filter(published=True)
 
 
+class TermSelect2Widget(ModelSelect2Widget):
+    search_fields = [
+        'name__icontains',
+        'slug__icontains'
+    ]
+
+    def get_queryset(self):
+        return models.Term.objects.order_by('name')
+
+
 class DateTimePicker(TextInput):
 
     class Media:
@@ -129,6 +139,9 @@ class BaseObjectModelForm(ModelForm):
         if not hasattr(self, 'user') or not self.user.pk:
             raise ValidationError('Unknown user attempting to make changes')
 
+        # clean the form
+        super().clean()
+
         # check that user can add/edit this sample
         if not self.instance.pk and not self.instance.user_can(self.user, 'add'):
             raise ValidationError('User is not allowed to add this sample')
@@ -139,8 +152,6 @@ class BaseObjectModelForm(ModelForm):
         if not self.instance.user:
             self.instance.user = self.user
 
-        # clean the form
-        super().clean()
 
     def save(self, *args, **kwargs):
         # save the instance
@@ -164,7 +175,7 @@ class BulkAddFormset(BaseModelFormSet):
         self.tag_field_names = list(tag_field_names)
 
         # add additional terms that exist in the queryset
-        for term in models.Sample.get_all_terms(self.queryset):
+        for term in self.model.get_all_terms(self.queryset):
             self.tag_field_names.append(term.slug)
 
         # add additional terms that exist in the form data

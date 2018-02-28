@@ -3,9 +3,8 @@ from django.views import generic
 from django.http import Http404
 
 from .. import models
-from .forms import BaseObjectModelForm, ObjectFormView, BulkEditViewBase, \
-    LocationSelect2Widget, SampleSelect2Widget, DateTimePicker
-from .edit import SAMPLE_HELP_TEXTS
+from .forms import BaseObjectModelForm, ObjectFormView, BulkEditViewBase
+from .edit import HELP_TEXTS, WIDGETS
 from .accounts import LimsLoginMixin
 
 
@@ -18,13 +17,11 @@ class TemplateListView(generic.ListView):
 
 
 def template_form_class_factory(template):
-    model_fields = ['collected', 'name']
+    model_fields = []
     tag_fields = []
     initial_values = {}
-    for field in template.fields.all().order_by('order'):
-        if field.target in ['collected', 'name']:
-            initial_values[field.target] = field.initial_value
-        elif field.target in ['description', 'location', 'parent', 'geometry', 'published']:
+    for field in template.get_fields_queryset():
+        if field.target in template.get_model_fields():
             model_fields.append(field.target)
             initial_values[field.target] = field.initial_value
         else:
@@ -33,15 +30,11 @@ def template_form_class_factory(template):
 
     class SampleBaseForm(BaseObjectModelForm):
         class Meta:
-            model = models.Sample
+            model = template.get_model()
             fields = model_fields
 
-            widgets = {
-                'collected': DateTimePicker,
-                'location': LocationSelect2Widget,
-                'parent': SampleSelect2Widget
-            }
-            help_texts = SAMPLE_HELP_TEXTS
+            widgets = WIDGETS[template.model]
+            help_texts = HELP_TEXTS[template.model]
 
         def __init__(self, *args, **kwargs):
             kwargs['tag_field_names'] = tag_fields
@@ -81,7 +74,7 @@ class TemplateFormView(LimsLoginMixin, ObjectFormView, generic.CreateView):
 
 
 class TemplateBulkView(LimsLoginMixin, BulkEditViewBase):
-    model = models.Sample
+    model = None
     template_name = 'lims/template_bulk.html'
 
     def __init__(self, *args, **kwargs):
@@ -91,6 +84,7 @@ class TemplateBulkView(LimsLoginMixin, BulkEditViewBase):
     def dispatch(self, request, *args, **kwargs):
         try:
             self.template = models.SampleEntryTemplate.objects.get(pk=kwargs['template_pk'])
+            self.model = self.template.get_model()
         except models.SampleEntryTemplate.DoesNotExist:
             raise Http404('Sample Entry Template not found.')
         return super().dispatch(request, *args, **kwargs)

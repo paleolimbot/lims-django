@@ -182,12 +182,19 @@ class BaseObjectModel(models.Model):
                 if value:
                     self.tags.create(key=term, value=value)
 
-    def get_tag(self, key):
+    def get_tag(self, key, as_list=False):
         term = Term.get_term(key, create=False)
         if term is None:
             return None
         try:
-            return self.tags.get(key=term).value
+            tags = self.tags.all().filter(key=term)
+            if as_list:
+                return [tag.value for tag in tags]
+            elif tags:
+                # always return the *last* value
+                return tags[tags.count()-1].value
+            else:
+                return None
         except ObjectDoesNotExist:
             return None
 
@@ -231,6 +238,9 @@ class Term(models.Model):
     name = models.CharField(max_length=55)
     slug = models.SlugField(max_length=55, unique=True)
     description = models.TextField(blank=True)
+    parent = models.ForeignKey('self', on_delete=models.PROTECT, blank=True, null=True, related_name='children')
+
+    measured = models.BooleanField(default=False)
     meta = models.TextField(blank=True, validators=[validate_json_tags_dict, ])
 
     def get_absolute_url(self):
@@ -297,6 +307,7 @@ class Tag(models.Model):
     value = models.TextField(blank=True)
     meta = models.TextField(blank=True, validators=[validate_json_tags_dict, ])
 
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
     created = models.DateTimeField("created", auto_now_add=True)
     modified = models.DateTimeField("modified", auto_now=True)
 
@@ -317,6 +328,53 @@ class Tag(models.Model):
         # update parent object modified tag
         self.object.modified = timezone.now()
         super().save(*args, **kwargs)
+
+    def user_can(self, user, action):
+        return True
+
+    def set_tags(self, _values=None, _save=True, **kwargs):
+        if _values is not None:
+            kwargs.update(_values)
+
+        # make sure all names are defined terms
+        string_tags = {}
+        for key, value in kwargs.items():
+            if value:
+                term = Term.get_term(key, create=True)
+                string_tags[term.slug] = value
+
+        if kwargs:
+            self.meta = json.dumps(string_tags)
+        else:
+            self.meta = ''
+
+        if _save:
+            self.save()
+
+    def add_tags(self, _values=None, **kwargs):
+        self.update_tags(_value=_values, **kwargs)
+
+    def update_tags(self, _values=None, **kwargs):
+        if _values is not None:
+            kwargs.update(_values)
+        tags = self.get_tags()
+        tags.update(kwargs)
+        self.set_tags(_values=tags)
+
+    def get_tag(self, key):
+        tags = self.get_tags()
+        return tags[key] if key in tags else None
+
+    def get_tags(self):
+        tags = json.loads(self.meta) if self.meta else {}
+        return tags
+
+    @staticmethod
+    def get_all_terms(queryset):
+        all_terms = set()
+        for tag in queryset:
+            all_terms.update(tag.gettags().keys())
+        return list(all_terms)
 
     def __str__(self):
         return '%s="%s"' % (self.key, self.value)
@@ -371,7 +429,25 @@ class SampleTag(Tag):
 class SampleEntryTemplate(models.Model):
     user = models.ForeignKey(User, on_delete=models.PROTECT, blank=True, null=True)
     name = models.CharField(max_length=55, unique=True)
+    model = models.CharField(max_length=55, default='Sample',
+                             validators=[RegexValidator('(Sample|SampleTag)')])
     last_used = models.DateTimeField('last_used', auto_now=True)
+
+    def get_model(self):
+        if self.model == 'Sample':
+            return Sample
+        elif self.model == 'SampleTag':
+            return SampleTag
+        else:
+            raise ValueError('No such model: %s' % self.model)
+
+    def get_model_fields(self):
+        if self.model == 'Sample':
+            return ['collected', 'name', 'description', 'location', 'parent', 'geometry', 'published']
+        elif self.model == 'SampleTag':
+            return ['object', 'key', 'value', 'meta']
+        else:
+            raise ValueError('No such model: %s' % self.model)
 
     def get_fields_queryset(self):
         return self.fields.order_by('order')
@@ -391,15 +467,14 @@ class SampleEntryTemplateField(models.Model):
 
     def clean_fields(self, exclude=None):
         if exclude is None or 'target' not in exclude:
-            # target should be a field of Sample or a Term
-            if self.target not in ['collected', 'name', 'description',
-                                   'location', 'parent', 'geometry', 'published'] \
-                    and self.term is None:
-                raise ValidationError({'target': 'Target is not a field of Sample and is not a defined term slug'})
+            # target should be a field of self.template.model or a Term
+            if self.target not in self.template.get_model_fields() and self.term is None:
+                raise ValidationError({'target': 'Target is not a field of %s and is not a defined term slug' %
+                                       self.template.model})
 
     @cached_property
     def term(self):
-        if self.target in ['collected', 'name', 'description', 'location', 'parent', 'geometry', 'published']:
+        if self.target in self.template.get_model_fields():
             return None
         try:
             return Term.objects.get(slug=self.target)
