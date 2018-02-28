@@ -446,7 +446,7 @@ class SampleEntryTemplate(models.Model):
         if self.model == 'Sample':
             return ['collected', 'name', 'description', 'location', 'parent', 'geometry', 'published']
         elif self.model == 'SampleTag':
-            return ['object', 'key', 'value', 'meta']
+            return ['object', 'key', 'value', 'comment', 'meta']
         else:
             raise ValueError('No such model: %s' % self.model)
 
