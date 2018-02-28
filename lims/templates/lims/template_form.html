@@ -3,7 +3,7 @@
 
 {% block title %}{{ template }}{% endblock %}
 
-{% block content_title %}{{ template }}: {{ block.super }}{% endblock %}
+{% block content_title %}{{ template }}: New {{ template.model }}{% endblock %}
 
 {% block object_tools %}
     <ul class="object-tools">
@@ -13,3 +13,5 @@
         <li><a class="addlink" href="{% url 'lims:template_bulk' template.pk %}">Bulk View</a></li>
     </ul>
 {% endblock %}
+
+{% block submit_text %}Create {{ template.model }}{% endblock %}

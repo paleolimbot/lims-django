@@ -258,7 +258,7 @@ class Term(models.Model):
     @cached_property
     def form_field(self):
         return CharField(
-            label='Tag %s' % self,
+            label='%s' % self,
             validators=self.get_validators(),
             required=False,
             help_text=self.description
