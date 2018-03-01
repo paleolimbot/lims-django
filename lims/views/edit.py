@@ -18,7 +18,20 @@ HELP_TEXTS = {
         'published': 'Publish a sample to make it visible to others, unpublish it to fix a sample ID.'
     },
     'SampleTag': {
-        'object': 'The object ID to which this tag should be assigned',
+        'object': 'The sample to which this tag should be assigned',
+        'key': 'The term for which these values should be assigned',
+        'value': 'The primary value associated with this tag',
+        'meta': 'A JSON-encoded dictionary of key/value pairs, with keys as valid Term slugs'
+    },
+    'Location': {
+        'name': 'The display name for this location.',
+        'slug': 'A short, unique, concise identifier for this location.',
+        'description': 'Extra information that is not captured in other fields.',
+        'parent': 'The parent location for this location.',
+        'geometry': 'Well-known-text (e.g. POINT (lon lat) that describes this location.',
+    },
+    'LocationTag': {
+        'object': 'The location to which this tag should be assigned',
         'key': 'The term for which these values should be assigned',
         'value': 'The primary value associated with this tag',
         'meta': 'A JSON-encoded dictionary of key/value pairs, with keys as valid Term slugs'
@@ -33,6 +46,13 @@ WIDGETS = {
     },
     'SampleTag': {
         'object': SampleSelect2Widget,
+        'key': TermSelect2Widget
+    },
+    'Location': {
+        'parent': LocationSelect2Widget
+    },
+    'LocationTag': {
+        'object': LocationSelect2Widget,
         'key': TermSelect2Widget
     }
 }
@@ -52,16 +72,8 @@ class LocationForm(BaseObjectModelForm):
     class Meta:
         model = models.Location
         fields = ['name', 'slug', 'description', 'parent', 'geometry']
-        widgets = {
-            'parent': LocationSelect2Widget
-        }
-        help_texts = {
-            'name': 'The display name for this location.',
-            'slug': 'A short, unique, concise identifier for this location.',
-            'description': 'Extra information that is not captured in other fields.',
-            'parent': 'The parent location for this location.',
-            'geometry': 'Well-known-text (e.g. POINT (lon lat) that describes this location.',
-        }
+        widgets = WIDGETS['Location']
+        help_texts = HELP_TEXTS['Location']
 
 
 class SampleAddView(LimsLoginMixin, ObjectFormView, generic.CreateView):
@@ -90,11 +102,7 @@ class SampleBulkAddForm(SampleForm):
 
     class Meta:
         fields = ['collected', 'name', 'description', 'location', 'parent']
-        widgets = {
-            'collected': DateTimePicker,
-            'location': LocationSelect2Widget,
-            'parent': SampleSelect2Widget
-        }
+        widgets = WIDGETS['Sample']
 
 
 class SampleBulkAddView(LimsLoginMixin, BulkEditViewBase):

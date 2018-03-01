@@ -431,7 +431,7 @@ class SampleEntryTemplate(models.Model):
     user = models.ForeignKey(User, on_delete=models.PROTECT, blank=True, null=True)
     name = models.CharField(max_length=55, unique=True)
     model = models.CharField(max_length=55, default='Sample',
-                             validators=[RegexValidator('(Sample|SampleTag)')])
+                             validators=[RegexValidator('^(Sample|SampleTag|Location|LocationTag)$')])
     last_used = models.DateTimeField('last_used', auto_now=True)
 
     def get_model(self):
@@ -439,14 +439,20 @@ class SampleEntryTemplate(models.Model):
             return Sample
         elif self.model == 'SampleTag':
             return SampleTag
+        elif self.model == 'Location':
+            return Location
+        elif self.model == 'LocationTag':
+            return LocationTag
         else:
             raise ValueError('No such model: %s' % self.model)
 
     def get_model_fields(self):
         if self.model == 'Sample':
             return ['collected', 'name', 'description', 'location', 'parent', 'geometry', 'published']
-        elif self.model == 'SampleTag':
+        elif self.model == 'SampleTag' or self.model == 'LocationTag':
             return ['object', 'key', 'value', 'comment', 'meta']
+        elif self.model == 'Location':
+            return ['name', 'slug', 'description', 'parent', 'geometry']
         else:
             raise ValueError('No such model: %s' % self.model)
 

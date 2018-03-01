@@ -40,6 +40,7 @@ class TermAdmin(LimsAdmin):
     inlines = [TermValidatorInline, ]
     prepopulated_fields = {"slug": ("name",)}
     search_fields = ['name', 'slug']
+    autocomplete_fields = ['parent', ]
 
 
 class LocationTagInline(admin.TabularInline):
