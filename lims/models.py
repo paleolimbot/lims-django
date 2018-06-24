@@ -26,9 +26,25 @@ class ObjectPermissionError(PermissionError):
         return self.args[0]
 
 
+class SlugIdField(models.CharField):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            max_length=55,
+            unique=True,
+            blank=True,
+            validators=[RegexValidator("[A-Za-z0-9._-]*")]
+        )
+
+    @staticmethod
+    def idify(obj):
+        txt = re.sub(r"[^A-Za-z0-9._-]+", "_", str(obj).lower())
+        return re.sub(r"(^_)|(_$)", "", txt)
+
+
 class BaseObjectModel(models.Model):
     name = models.CharField(max_length=55)
-    slug = models.SlugField(max_length=55, unique=True, blank=True)
+    slug = SlugIdField()
     description = models.TextField(blank=True)
 
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
@@ -79,7 +95,7 @@ class BaseObjectModel(models.Model):
         super().save(*args, **kwargs)
 
     def auto_slug_use(self):
-        return [slugify(self.name), ]
+        return [SlugIdField.idify(self.name), ]
 
     def calculate_slug(self):
         slug_parts = self.auto_slug_use()
@@ -124,6 +140,9 @@ class BaseObjectModel(models.Model):
     def get_absolute_url(self):
         raise NotImplementedError()
 
+    def get_project(self):
+        raise NotImplementedError()
+
     def get_link(self):
         return format_html('<a href="{}">{}</a>', self.get_absolute_url(), self)
 
@@ -151,26 +170,26 @@ class BaseObjectModel(models.Model):
         else:
             return False
 
-    def set_tags(self, _values=None, **kwargs):
+    def set_tags(self, _values=None, taxonomy=None, **kwargs):
         self.tags.all().delete()
-        return self.add_tags(_values, **kwargs)
+        return self.add_tags(_values, taxonomy=taxonomy, **kwargs)
 
-    def add_tags(self, _values=None, **kwargs):
+    def add_tags(self, _values=None, taxonomy=None, **kwargs):
         if _values is not None:
             kwargs.update(_values)
 
         # make sure all names are defined terms
         for key, value in kwargs.items():
-            term = Term.get_term(key, create=True)
+            term = Term.get_term(key, self.get_project(), taxonomy=taxonomy, create=True)
             self.tags.create(key=term, value=value)
 
-    def update_tags(self, _values=None, **kwargs):
+    def update_tags(self, _values=None, taxonomy=None, **kwargs):
         if _values is not None:
             kwargs.update(_values)
 
         # make sure all names are defined terms
         for key, value in kwargs.items():
-            term = Term.get_term(key, create=True)
+            term = Term.get_term(key, self.get_project(), taxonomy=taxonomy, create=True)
             try:
                 tag = self.tags.get(key=term)
                 if value:
@@ -182,8 +201,8 @@ class BaseObjectModel(models.Model):
                 if value:
                     self.tags.create(key=term, value=value)
 
-    def get_tag(self, key, as_list=False):
-        term = Term.get_term(key, create=False)
+    def get_tag(self, key, taxonomy=None, as_list=False):
+        term = Term.get_term(key, self.get_project(), taxonomy=taxonomy, create=False)
         if term is None:
             return None
         try:
@@ -234,14 +253,25 @@ def validate_json_tags_dict(value):
         raise ValidationError("Value is not valid JSON")
 
 
-class Term(models.Model):
+class Taxonomy(models.Model):
     name = models.CharField(max_length=55)
-    slug = models.SlugField(max_length=55, unique=True)
+    slug = models.SlugField(max_length=55)
+    description = models.TextField(blank=True)
+
+
+class Term(models.Model):
+    project = models.ForeignKey("Project", on_delete=models.PROTECT)
+    taxonomy = models.ForeignKey(Taxonomy, on_delete=models.PROTECT, related_name="terms", null=True, blank=True)
+    name = models.CharField(max_length=55)
+    slug = models.SlugField(max_length=55)
     description = models.TextField(blank=True)
     parent = models.ForeignKey('self', on_delete=models.PROTECT, blank=True, null=True, related_name='children')
 
     measured = models.BooleanField(default=False)
     meta = models.TextField(blank=True, validators=[validate_json_tags_dict, ])
+
+    class Meta:
+        unique_together = ['project', 'taxonomy', 'slug']
 
     def get_absolute_url(self):
         return reverse_lazy('lims:term_detail', self.pk)
@@ -265,7 +295,8 @@ class Term(models.Model):
         )
 
     @staticmethod
-    def get_term(string_key, create=True):
+    def get_term(string_key, project, taxonomy=None, create=True):
+
         # if it's already a term, return it
         if isinstance(string_key, Term):
             return string_key
@@ -279,13 +310,13 @@ class Term(models.Model):
 
         # try to get by name and slug
         try:
-            return Term.objects.get(slug=slugify(string_key))
+            return Term.objects.get(project=project, taxonomy=taxonomy, slug=slugify(string_key))
         except Term.DoesNotExist:
             try:
-                return Term.objects.get(name=string_key)
+                return Term.objects.get(project=project, taxonomy=taxonomy, name=string_key)
             except Term.DoesNotExist:
                 if create:
-                    return Term.objects.create(name=string_key, slug=slugify(string_key))
+                    return Term.objects.create(project=project, taxonomy=taxonomy, slug=slugify(string_key))
                 else:
                     return None
 
@@ -341,7 +372,7 @@ class Tag(models.Model):
         string_tags = {}
         for key, value in kwargs.items():
             if value:
-                term = Term.get_term(key, create=True)
+                term = Term.get_term(key, self.object.get_project(), create=True)
                 string_tags[term.slug] = value
 
         if kwargs:
@@ -381,10 +412,31 @@ class Tag(models.Model):
         return '%s="%s"' % (self.key, self.value)
 
 
+class Project(BaseObjectModel):
+
+    def get_absolute_url(self):
+        return reverse_lazy('lims:project_detail', kwargs={'pk': self.pk})
+
+    def get_project(self):
+        return self
+
+    @staticmethod
+    def get_all_terms(queryset):
+        return Term.objects.filter(projecttag__object__in=queryset).distinct()
+
+
+class ProjectTag(Tag):
+    object = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="tags")
+
+
 class Location(BaseObjectModel):
+    project = models.ForeignKey(Project, on_delete=models.PROTECT)
 
     def get_absolute_url(self):
         return reverse_lazy('lims:location_detail', kwargs={'pk': self.pk})
+
+    def get_project(self):
+        return self.project
 
     @staticmethod
     def get_all_terms(queryset):
@@ -396,6 +448,7 @@ class LocationTag(Tag):
 
 
 class Sample(BaseObjectModel):
+    project = models.ForeignKey(Project, on_delete=models.PROTECT)
     collected = models.DateTimeField("collected")
     location = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True)
     published = models.BooleanField(default=False)
@@ -406,14 +459,17 @@ class Sample(BaseObjectModel):
     def auto_slug_use(self):
         # get parts of the calculated sample slug
         dt_str = str(self.collected.astimezone(timezone.get_default_timezone()).date())
-        location_slug = slugify(self.location.slug[:10]) if self.location else ""
+        location_slug = SlugIdField.idify(self.location.slug[:10]) if self.location else ""
         user = self.user.username[:15] if self.user else ""
-        hint = slugify(self.name)
+        hint = SlugIdField.idify(self.name)
 
         return [user, dt_str, location_slug, hint]
 
     def get_absolute_url(self):
         return reverse_lazy('lims:sample_detail', kwargs={'pk': self.pk})
+
+    def get_project(self):
+        return self.project
 
     def __str__(self):
         return self.slug
@@ -427,11 +483,14 @@ class SampleTag(Tag):
     object = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name="tags")
 
 
-class SampleEntryTemplate(models.Model):
+class EntryTemplate(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.PROTECT)
     user = models.ForeignKey(User, on_delete=models.PROTECT, blank=True, null=True)
     name = models.CharField(max_length=55, unique=True)
-    model = models.CharField(max_length=55, default='Sample',
-                             validators=[RegexValidator('^(Sample|SampleTag|Location|LocationTag)$')])
+    model = models.CharField(
+        max_length=55, default='Sample',
+        validators=[RegexValidator('^(Sample|SampleTag|Location|LocationTag)$')]
+    )
     last_used = models.DateTimeField('last_used', auto_now=True)
 
     def get_model(self):
@@ -462,12 +521,16 @@ class SampleEntryTemplate(models.Model):
     def get_absolute_url(self):
         return reverse_lazy('lims:template_form', kwargs={'template_pk': self.pk})
 
+    def get_project(self):
+        return self.project
+
     def __str__(self):
         return self.name
 
 
-class SampleEntryTemplateField(models.Model):
-    template = models.ForeignKey(SampleEntryTemplate, on_delete=models.CASCADE, related_name='fields')
+class EntryTemplateField(models.Model):
+    template = models.ForeignKey(EntryTemplate, on_delete=models.CASCADE, related_name='fields')
+    taxonomy = models.ForeignKey(Taxonomy, on_delete=models.PROTECT, blank=True, null=True)
     target = models.CharField(max_length=55)
     initial_value = models.TextField(blank=True)
     order = models.IntegerField(default=1)
@@ -479,12 +542,15 @@ class SampleEntryTemplateField(models.Model):
                 raise ValidationError({'target': 'Target is not a field of %s and is not a defined term slug' %
                                        self.template.model})
 
+    def get_project(self):
+        return self.template.get_project()
+
     @cached_property
     def term(self):
         if self.target in self.template.get_model_fields():
             return None
         try:
-            return Term.objects.get(slug=self.target)
+            return Term.objects.get(slug=self.target, project=self.get_project(), taxonomy=self.taxonomy)
         except Term.DoesNotExist:
             return None
 
@@ -494,3 +560,18 @@ class SampleEntryTemplateField(models.Model):
             return self.target.replace('_', ' ').title()
         else:
             return str(term)
+
+
+# make sure some default objects exist in the database
+from django.db.utils import OperationalError
+default_project = None
+try:
+    default_project = Project.objects.get(slug="default_project")
+except Project.DoesNotExist:
+    default_project = Project.objects.create(
+        name="Default Project",
+        slug="default_project"
+    )
+except OperationalError:
+    # probably no such table
+    pass

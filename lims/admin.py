@@ -3,8 +3,7 @@ from django.db.models import TextField
 from django.forms import Textarea
 from reversion.admin import VersionAdmin
 
-from .models import Sample, SampleTag, Location, LocationTag, TermValidator, BaseValidator, Term, \
-    SampleEntryTemplate, SampleEntryTemplateField
+from . import models
 
 # This text override gets used in all models to keep the size down
 text_overrides = {
@@ -25,63 +24,78 @@ class LimsAdmin(VersionAdmin):
 
 
 class TermValidatorInline(admin.TabularInline):
-    model = TermValidator
+    model = models.TermValidator
     formfield_overrides = text_overrides
     extra = 1
 
 
-@admin.register(BaseValidator)
+@admin.register(models.BaseValidator)
 class BaseValidatorAdmin(LimsAdmin):
     pass
 
 
-@admin.register(Term)
+@admin.register(models.Term)
 class TermAdmin(LimsAdmin):
     inlines = [TermValidatorInline, ]
     prepopulated_fields = {"slug": ("name",)}
     search_fields = ['name', 'slug']
-    autocomplete_fields = ['parent', ]
+    autocomplete_fields = ['parent', 'project']
 
 
 class LocationTagInline(admin.TabularInline):
-    model = LocationTag
+    model = models.LocationTag
     formfield_overrides = text_overrides
     extra = 1
     autocomplete_fields = ['key', ]
 
 
 class SampleTagInline(admin.TabularInline):
-    model = SampleTag
+    model = models.SampleTag
+    formfield_overrides = text_overrides
+    extra = 1
+    autocomplete_fields = ['key', ]
+
+
+class ProjectTagInline(admin.TabularInline):
+    model = models.ProjectTag
     formfield_overrides = text_overrides
     extra = 1
     autocomplete_fields = ['key', ]
 
 
 class SampleEntryTemplateFieldInline(admin.TabularInline):
-    model = SampleEntryTemplateField
+    model = models.EntryTemplateField
     formfield_overrides = text_overrides
     extra = 1
     ordering = ('order', )
 
 
-@admin.register(Sample)
-class SampleAdmin(LimsAdmin):
-    inlines = [SampleTagInline, ]
-    list_display = ('slug', 'user', 'location', 'modified', 'collected')
-    date_hierarchy = "collected"
-    autocomplete_fields = ['location', 'user', 'parent']
-    search_fields = ['slug', ]
-
-
-@admin.register(Location)
-class LocationAdmin(LimsAdmin):
-    inlines = [LocationTagInline, ]
-    prepopulated_fields = {"slug": ("name", )}
-    list_display = ('name', 'slug', 'parent', 'user', 'modified')
+@admin.register(models.Project)
+class ProjectAdmin(admin.ModelAdmin):
+    inlines = [ProjectTagInline, ]
+    list_display = ('name', 'slug', 'user', 'modified')
     autocomplete_fields = ['parent', 'user']
     search_fields = ['name', 'slug']
 
 
-@admin.register(SampleEntryTemplate)
+@admin.register(models.Sample)
+class SampleAdmin(LimsAdmin):
+    inlines = [SampleTagInline, ]
+    list_display = ('slug', 'user', 'location', 'modified', 'collected')
+    date_hierarchy = "collected"
+    autocomplete_fields = ['project', 'location', 'user', 'parent']
+    search_fields = ['slug', ]
+
+
+@admin.register(models.Location)
+class LocationAdmin(LimsAdmin):
+    inlines = [LocationTagInline, ]
+    prepopulated_fields = {"slug": ("name", )}
+    list_display = ('name', 'slug', 'parent', 'user', 'modified')
+    autocomplete_fields = ['project', 'parent', 'user']
+    search_fields = ['name', 'slug']
+
+
+@admin.register(models.EntryTemplate)
 class SampleEntryTemplateAdmin(LimsAdmin):
     inlines = [SampleEntryTemplateFieldInline, ]

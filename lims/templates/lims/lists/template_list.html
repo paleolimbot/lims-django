@@ -8,7 +8,7 @@
 {% block object_tools %}
     <ul class="object-tools">
         {% if view.request.user.is_staff %}
-             <li><a href="{% url 'admin:lims_sampleentrytemplate_changelist' %}">Admin</a></li>
+             <li><a href="{% url 'admin:lims_entrytemplate_changelist' %}">Admin</a></li>
         {% endif %}
         <li><a class="addlink" href="{% url 'lims:sample_add_bulk' %}">Bulk</a></li>
         <li><a class="addlink" href="{% url 'lims:sample_add' %}">New</a></li>

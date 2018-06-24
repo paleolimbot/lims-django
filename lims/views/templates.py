@@ -9,11 +9,11 @@ from .accounts import LimsLoginMixin
 
 
 class TemplateListView(generic.ListView):
-    model = models.SampleEntryTemplate
+    model = models.EntryTemplate
     template_name = 'lims/lists/template_list.html'
 
     def get_queryset(self):
-        return models.SampleEntryTemplate.objects.order_by('name')
+        return models.EntryTemplate.objects.order_by('name')
 
 
 def template_form_class_factory(template):
@@ -56,8 +56,8 @@ class TemplateFormView(LimsLoginMixin, ObjectFormView, generic.CreateView):
 
     def dispatch(self, request, *args, **kwargs):
         try:
-            self.template = models.SampleEntryTemplate.objects.get(pk=kwargs['template_pk'])
-        except models.SampleEntryTemplate.DoesNotExist:
+            self.template = models.EntryTemplate.objects.get(pk=kwargs['template_pk'])
+        except models.EntryTemplate.DoesNotExist:
             raise Http404('Sample Entry Template not found.')
         return super().dispatch(request, *args, **kwargs)
 
@@ -83,9 +83,9 @@ class TemplateBulkView(LimsLoginMixin, BulkEditViewBase):
 
     def dispatch(self, request, *args, **kwargs):
         try:
-            self.template = models.SampleEntryTemplate.objects.get(pk=kwargs['template_pk'])
+            self.template = models.EntryTemplate.objects.get(pk=kwargs['template_pk'])
             self.model = self.template.get_model()
-        except models.SampleEntryTemplate.DoesNotExist:
+        except models.EntryTemplate.DoesNotExist:
             raise Http404('Sample Entry Template not found.')
         return super().dispatch(request, *args, **kwargs)
 
