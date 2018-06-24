@@ -22,8 +22,8 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[0-9]+)/sample/$', views.SampleListView.as_view(), name="project_sample_list"),
     url(r'^sample/my$', views.MySampleListView.as_view(), name="my_sample_list"),
     url(r'^project/(?P<project_id>[0-9]+)/sample/my$', views.MySampleListView.as_view(), name="project_my_sample_list"),
-    url(r'^sample/add_bulk$', views.SampleBulkAddView.as_view(), name="sample_add_bulk"),
-    url(r'^sample/add$', views.SampleAddView.as_view(), name="sample_add"),
+    url(r'^project/(?P<project_id>[0-9]+)/sample/add_bulk$', views.SampleBulkAddView.as_view(), name="sample_add_bulk"),
+    url(r'^project/(?P<project_id>[0-9]+)/sample/add$', views.SampleAddView.as_view(), name="sample_add"),
 
     # sample object views
     url(r'^sample/(?P<pk>[0-9]+)$', views.SampleDetailView.as_view(), name="sample_detail"),
@@ -32,7 +32,7 @@ urlpatterns = [
     # location static views
     url(r'^location/$', views.LocationListView.as_view(), name="location_list"),
     url(r'^project/(?P<project_id>[0-9]+)/location/$', views.LocationListView.as_view(), name="project_location_list"),
-    url(r'^location/add$', views.LocationAddView.as_view(), name="location_add"),
+    url(r'^project/(?P<project_id>[0-9]+)/location/add$', views.LocationAddView.as_view(), name="location_add"),
 
     # location object views
     url(r'^location/(?P<pk>[0-9]+)$', views.LocationDetailView.as_view(), name="location_detail"),
