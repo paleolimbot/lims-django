@@ -12,4 +12,4 @@ from django.views import generic
 class IndexView(LimsLoginMixin, generic.RedirectView):
     permanent = False
     query_string = False
-    pattern_name = 'lims:template_list'
+    pattern_name = 'lims:project_list'

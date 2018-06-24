@@ -4,6 +4,14 @@
 
 {% block title %}Samples{% endblock %}
 
+{% block breadcrumbs %}
+    {% if project %}
+        &rsaquo; <a href="{% url 'lims:project_sample_list' project.pk %}">Samples</a>
+    {% else %}
+        &rsaquo; <a href="{% url 'lims:sample_list' %}">Samples</a>
+    {% endif %}
+{% endblock %}
+
 {% block content_title %}Recent Samples{% endblock %}
 
 {% block object_tools %}

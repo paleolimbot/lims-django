@@ -3,6 +3,15 @@
 
 {% block title %}{{ user.username }}{% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; Users
+    {% if project %}
+        &rsaquo; <a href="{% url 'lims:project_user_detail' project.pk user.pk %}">{{ user.username }}</a>
+    {% else %}
+        &rsaquo; <a href="{% url 'lims:user_detail' user.pk %}">{{ user.username }}</a>
+    {% endif %}
+{% endblock %}
+
 {% block content_title %}User: {{ user.username }}{% endblock %}
 
 {% block object_tools %}

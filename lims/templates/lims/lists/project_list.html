@@ -1,0 +1,40 @@
+
+{% extends 'lims/base.html' %}
+
+{% block title %}Projects{% endblock %}
+
+{% block content_title %}Projects{% endblock %}
+
+{% block object_tools %}
+    <ul class="object-tools">
+        {% if view.request.user.is_staff %}
+             <li><a href="{% url 'admin:lims_project_changelist' %}">Admin</a></li>
+        {% endif %}
+    </ul>
+{% endblock %}
+
+{% block content_main %}
+
+    {% if object_list %}
+
+    <table class="template-list">
+        <tr>
+            <th>Project</th>
+            <th>Info</th>
+        </tr>
+    {% for project in object_list %}
+        <tr>
+            <td><a href="{% url 'lims:project_detail' project.pk %}">{{ project }}</a></td>
+            <td>{{ project.description }}</td>
+        </tr>
+    {% endfor %}
+    </table>
+
+    {% else %}
+
+        <p>There are no projects currently available.</p>
+
+    {% endif %}
+
+
+{% endblock %}

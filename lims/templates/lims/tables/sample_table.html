@@ -20,6 +20,9 @@
                         <input title="Select all samples" type="checkbox" name="object-all-selected"/>
                     </th>
                     <th></th>
+                    {% if not project %}
+                    <th>Project</th>
+                    {% endif %}
                     <th>Sample ID</th>
                     <th>User</th>
                     <th>Collected</th>
@@ -40,8 +43,15 @@
                     <td>
                         <a class="editlink" href="{% url 'lims:sample_change' sample.pk %}?from={{ view.request.get_full_path|urlencode }}">edit</a>
                     </td>
+                    {% if not project %}
+                    <td>{{ sample.project.get_link }}</td>
+                    {% endif %}
                     <td>{{ sample.get_link }}</td>
+                    {% if project %}
+                    <td>{% if sample.user %}<a href="{% url 'lims:project_user_detail' project.pk sample.user.pk %}">{{ sample.user }}</a>{% endif %}</td>
+                    {% else %}
                     <td>{% if sample.user %}<a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>{% endif %}</td>
+                    {% endif %}
                     <td>{{ sample.collected }}</td>
                     <td>{{ sample.name }}</td>
                     <td>{{ sample.description|truncatechars:25 }}</td>

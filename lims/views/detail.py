@@ -1,5 +1,6 @@
 
 from django.views import generic
+from django.shortcuts import get_object_or_404
 from django.core.paginator import Paginator
 from django.contrib.auth.models import User
 
@@ -11,6 +12,12 @@ from .actions import SAMPLE_ACTIONS, LOCATION_ACTIONS
 
 class DetailViewWithTablesBase(generic.DetailView):
 
+    def get_project(self):
+        if 'project_id' in self.kwargs:
+            return get_object_or_404(models.Project, pk=self.kwargs['project_id'])
+        else:
+            return None
+
     def get_location_queryset(self):
         return self.object.location_set
 
@@ -20,12 +27,25 @@ class DetailViewWithTablesBase(generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        # add project
+        view_project = self.get_project()
+        if 'project' not in context and view_project is not None:
+            context['project'] = view_project
+        elif 'project' in context:
+            view_project = context['project']
+
         sample_queryset = self.get_sample_queryset()
 
         if sample_queryset is not None:
+            if view_project is not None:
+                sample_queryset = sample_queryset.filter(project=view_project)
+
             # setup the child samples list
             samples = query_string_filter(
-                default_published_filter(self.get_sample_queryset().order_by('-modified'), self.request.user),
+                default_published_filter(
+                    sample_queryset.order_by('-modified'),
+                    self.request.user
+                ),
                 self.request.GET,
                 prefix='sample_'
             )
@@ -39,9 +59,12 @@ class DetailViewWithTablesBase(generic.DetailView):
         location_queryset = self.get_location_queryset()
 
         if location_queryset is not None:
+            if view_project is not None:
+                location_queryset = location_queryset.filter(project=view_project)
+
             # setup the child locations list
             locations = query_string_filter(
-                self.get_location_queryset().order_by('-modified'),
+                location_queryset.order_by('-modified'),
                 self.request.GET,
                 prefix='location_'
             )
@@ -55,9 +78,20 @@ class DetailViewWithTablesBase(generic.DetailView):
         return context
 
 
+class ProjectDetailView(LimsLoginMixin, DetailViewWithTablesBase):
+    template_name = "lims/project_detail.html"
+    model = models.Project
+
+    def get_project(self):
+        return self.object
+
+
 class SampleDetailView(LimsLoginMixin, DetailViewWithTablesBase):
     template_name = 'lims/sample_detail.html'
     model = models.Sample
+
+    def get_project(self):
+        return self.object.project
 
     def get_sample_queryset(self):
         return self.object.children.all()
@@ -69,6 +103,9 @@ class SampleDetailView(LimsLoginMixin, DetailViewWithTablesBase):
 class LocationDetailView(LimsLoginMixin, DetailViewWithTablesBase):
     template_name = 'lims/location_detail.html'
     model = models.Location
+
+    def get_project(self):
+        return self.object.project
 
     def get_location_queryset(self):
         return self.object.children
@@ -82,6 +119,9 @@ class UserDetailView(LimsLoginMixin, DetailViewWithTablesBase):
 class TermDetailView(LimsLoginMixin, DetailViewWithTablesBase):
     template_name = 'lims/term_detail.html'
     model = models.Term
+
+    def get_project(self):
+        return self.object.project
 
     def get_location_queryset(self):
         return models.Location.objects.filter(tags__key=self.object).distinct()

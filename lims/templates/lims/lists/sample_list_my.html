@@ -3,4 +3,8 @@
 
 {% block title %}My Samples{% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; <a href="{% url 'lims:my_sample_list' %}">My Samples</a>
+{% endblock %}
+
 {% block content_title %}My Samples{% endblock %}

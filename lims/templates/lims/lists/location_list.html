@@ -4,6 +4,14 @@
 
 {% block title %}Locations{% endblock %}
 
+{% block breadcrumbs %}
+    {% if project %}
+        &rsaquo; <a href="{% url 'lims:project_location_list' project.pk %}">Locations</a>
+    {% else %}
+        &rsaquo; <a href="{% url 'lims:location_list' %}">Locations</a>
+    {% endif %}
+{% endblock %}
+
 {% block content_title %}Recent Locations{% endblock %}
 
 {% block object_tools %}

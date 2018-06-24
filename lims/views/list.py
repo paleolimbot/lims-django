@@ -3,6 +3,7 @@ import re
 
 from django.views import generic
 from django.http import QueryDict
+from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
 from .. import models
@@ -10,19 +11,49 @@ from .accounts import LimsLoginMixin
 from .actions import SAMPLE_ACTIONS, LOCATION_ACTIONS
 
 
-class SampleListView(LimsLoginMixin, generic.ListView):
+class LimsListView(generic.ListView):
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        project = self.get_project()
+        if project is not None:
+            context['project'] = project
+        return context
+
+    def get_project(self):
+        if 'project_id' in self.kwargs:
+            return get_object_or_404(models.Project, pk=self.kwargs['project_id'])
+        else:
+            return None
+
+
+class ProjectListView(LimsLoginMixin, LimsListView):
+    template_name = "lims/lists/project_list.html"
+    paginate_by = 100
+    page_kwarg = 'project_page'
+
+    def get_queryset(self):
+        return models.Project.objects.order_by('-modified')
+
+
+class SampleListView(LimsLoginMixin, LimsListView):
     template_name = 'lims/lists/sample_list.html'
     paginate_by = 100
     page_kwarg = 'sample_page'
 
     def get_context_data(self, *args, **kwargs):
-        context = super(SampleListView, self).get_context_data(*args, **kwargs)
+        context = super().get_context_data(*args, **kwargs)
         context['actions'] = SAMPLE_ACTIONS
         return context
 
     def get_queryset(self):
+        project = self.get_project()
+        queryset = models.Sample.objects.all()
+        if project is not None:
+            queryset = queryset.filter(project=project)
+
         return query_string_filter(
-            default_published_filter(models.Sample.objects.all(), self.request.user),
+            default_published_filter(queryset, self.request.user),
             self.request.GET,
             use=(),
             search=('name', 'slug', 'description'),
@@ -30,15 +61,20 @@ class SampleListView(LimsLoginMixin, generic.ListView):
         ).order_by("-modified")
 
 
-class LocationListView(LimsLoginMixin, generic.ListView):
+class LocationListView(LimsLoginMixin, LimsListView):
     template_name = 'lims/lists/location_list.html'
     context_object_name = 'location_list'
     paginate_by = 100
     page_kwarg = 'location_page'
 
     def get_queryset(self):
+        project = self.get_project()
+        queryset = models.Location.objects.all()
+        if project is not None:
+            queryset = queryset.filter(project=project)
+
         return query_string_filter(
-            models.Location.objects.all(),
+            queryset,
             self.request.GET,
             use=(),
             search=('name', 'slug', 'description'),
@@ -55,8 +91,13 @@ class MySampleListView(SampleListView):
     template_name = 'lims/lists/sample_list_my.html'
 
     def get_queryset(self):
+        project = self.get_project()
+        queryset = models.Sample.objects.filter(user=self.request.user)
+        if project is not None:
+            queryset = queryset.filter(project=project)
+
         return query_string_filter(
-            models.Sample.objects.filter(user=self.request.user),
+            queryset,
             self.request.GET,
             use=(),
             search=('name', 'slug', 'description'),

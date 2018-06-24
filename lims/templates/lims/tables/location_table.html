@@ -20,6 +20,9 @@
                         <input title="Select all samples" type="checkbox" name="object-all-selected"/>
                     </th>
                     <th></th>
+                    {% if not project %}
+                    <th>Project</th>
+                    {% endif %}
                     <th>Name</th>
                     <th>User</th>
                     <th>Identifier</th>
@@ -38,8 +41,15 @@
                     <td>
                         <a class="editlink" href="{% url 'lims:location_change' location.pk %}?from={{ view.request.get_full_path|urlencode }}">edit</a>
                     </td>
+                    {% if not project %}
+                    <td>{{ location.project.get_link }}</td>
+                    {% endif %}
                     <td>{{ location.get_link }}</td>
+                    {% if project %}
+                    <td>{% if location.user %}<a href="{% url 'lims:project_user_detail' project.pk location.user.pk %}">{{ location.user }}</a>{% endif %}</td>
+                    {% else %}
                     <td>{% if location.user %}<a href="{% url 'lims:user_detail' location.user.pk %}">{{ location.user }}</a>{% endif %}</td>
+                    {% endif %}
                     <td>{{ location.slug }}</td>
                     <td>{{ location.description|truncatechars:20 }}</td>
                     <td>

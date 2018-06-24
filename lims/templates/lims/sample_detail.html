@@ -4,6 +4,11 @@
 
 {% block content_title %}View Sample{% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; <a href="{% url 'lims:project_sample_list' project.pk %}">Samples</a>
+    &rsaquo; {{ sample.get_link }}
+{% endblock %}
+
 {% block object_tools %}
     <ul class="object-tools">
         {% if view.request.user.is_staff %}
@@ -19,6 +24,10 @@
 
     <table class="object-info">
         <tr>
+            <th>Project</th>
+            <td>{{ sample.project.get_link }}</td>
+        </tr>
+        <tr>
             <th>Sample ID</th>
             <td>{{ sample.slug }}</td>
         </tr>
@@ -26,7 +35,7 @@
             <th>User</th>
             <td>
                 {% if sample.user %}
-                    <a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>
+                    <a href="{% url 'lims:project_user_detail' sample.project.pk sample.user.pk %}">{{ sample.user }}</a>
                 {% endif %}
             </td>
         </tr>

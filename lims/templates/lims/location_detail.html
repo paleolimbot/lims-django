@@ -2,6 +2,11 @@
 
 {% block title %}{{ location.name }}{% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; <a href="{% url 'lims:project_location_list' project.pk %}">Locations</a>
+    &rsaquo; {{ location.get_link }}
+{% endblock %}
+
 {% block content_title %}Location: {{ location.name }}{% endblock %}
 
 {% block object_tools %}
@@ -19,6 +24,10 @@
 
     <table class="object-info">
         <tr>
+            <th>Project</th>
+            <td>{{ location.project.get_link }}</td>
+        </tr>
+        <tr>
             <th>Name</th>
             <td>{{ location.name }}</td>
         </tr>
@@ -26,7 +35,7 @@
             <th>User</th>
             <td>
                 {% if location.user %}
-                    <a href="{% url 'lims:user_detail' location.user.pk %}">{{ location.user }}</a>
+                    <a href="{% url 'lims:project_user_detail' location.project.pk location.user.pk %}">{{ location.user }}</a>
                 {% endif %}
             </td>
         </tr>

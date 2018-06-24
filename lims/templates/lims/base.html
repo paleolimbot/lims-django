@@ -53,6 +53,15 @@
 
             {% endif %}
         </div>
+
+        <div class="breadcrumbs">
+            <a href="{% url 'lims:project_list' %}">All Projects</a>
+        {% if project %}
+            &rsaquo; {{ project.get_link }}
+        {% endif %}
+        {% block breadcrumbs %}{% endblock %}
+        </div>
+
         {% block content_tag %}
         <div id="content" class="flex">
             {% block content_title_tag %}<h1>{% block content_title %}{% endblock %}</h1>{% endblock %}

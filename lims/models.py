@@ -274,7 +274,7 @@ class Term(models.Model):
         unique_together = ['project', 'taxonomy', 'slug']
 
     def get_absolute_url(self):
-        return reverse_lazy('lims:term_detail', self.pk)
+        return reverse_lazy('lims:term_detail', kwargs={'pk': self.pk})
 
     def get_link(self):
         return format_html('<a href="{}">{}</a>', self.get_absolute_url(), self)
@@ -359,6 +359,7 @@ class Tag(models.Model):
     def save(self, *args, **kwargs):
         # update parent object modified tag
         self.object.modified = timezone.now()
+        # TODO does the parent object need to be saved?
         super().save(*args, **kwargs)
 
     def user_can(self, user, action):
@@ -438,6 +439,11 @@ class Location(BaseObjectModel):
     def get_project(self):
         return self.project
 
+    def save(self, *args, **kwargs):
+        self.project.modified = timezone.now()
+        # TODO: does the project need to be saved?
+        super().save(*args, **kwargs)
+
     @staticmethod
     def get_all_terms(queryset):
         return Term.objects.filter(locationtag__object__in=queryset).distinct()
@@ -470,6 +476,11 @@ class Sample(BaseObjectModel):
 
     def get_project(self):
         return self.project
+
+    def save(self, *args, **kwargs):
+        self.project.modified = timezone.now()
+        # TODO: does the project need to be saved?
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.slug

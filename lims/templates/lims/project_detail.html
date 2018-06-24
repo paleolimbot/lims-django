@@ -1,0 +1,74 @@
+{% extends "lims/object_detail_tables.html" %}
+
+{% block title %}{{ project.name }}{% endblock %}
+
+{% block content_title %}Project: {{ project.name }}{% endblock %}
+
+{% block object_tools %}
+    <ul class="object-tools">
+        {% if view.request.user.is_staff %}
+            <li><a href="{% url 'admin:lims_project_change' project.pk %}">Admin</a></li>
+        {% endif %}
+    </ul>
+{% endblock %}
+
+{% block content_main %}
+
+    <table class="object-info">
+        <tr>
+            <th>Name</th>
+            <td>{{ project.name }}</td>
+        </tr>
+        <tr>
+            <th>User</th>
+            <td>
+                {% if project.user %}
+                    <a href="{% url 'lims:user_detail' project.user.pk %}">{{ project.user }}</a>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Identifier</th>
+            <td>{{ project.slug }}</td>
+        </tr>
+        <tr>
+            <th>Description</th>
+            <td>{{ project.description|linebreaksbr|default:'(none provided)' }}</td>
+        </tr>
+        <tr>
+            <th>Geometry</th>
+            <td>
+                {% if project.geometry %}
+                    {{ project.geometry|truncatechars:100 }}
+                {% else %}
+                    (No geometry provided)
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Tags</th>
+            <td></td>
+        </tr>
+        {% if project.tags.all %}
+            {% for tag in project.tags.all %}
+                <tr>
+                    <td>
+                        <a href="{% url 'lims:term_detail' tag.key.pk %}" title="{{ tag.key }}">
+                            {{ tag.key|truncatechars:20 }}
+                        </a>
+                    </td>
+                    <td>{{ tag.value|truncatechars:250|linebreaksbr }}</td>
+                </tr>
+            {% endfor %}
+        {% else %}
+            <tr><td>(none specified)</td><td></td></tr>
+        {% endif %}
+        <tr>
+            <th>Date Modified (Created)</th>
+            <td>{{ project.modified }} ({{ project.created }})</td>
+        </tr>
+    </table>
+
+    {{ block.super }}
+
+{% endblock %}
