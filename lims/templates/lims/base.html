@@ -23,16 +23,25 @@
                 <div id="header-nav-menu">
                     <ul>
                         <li>
-                            <a href="{% url 'lims:my_sample_list' %}">My Samples</a>
+                            {% if project %}
+                                <a href="{% url 'lims:project_my_sample_list' project.pk %}">My Samples</a>
+                            {% else %}
+                                <a href="{% url 'lims:my_sample_list' %}">My Samples</a>
+                            {% endif %}
                         </li>
                         <li>
-                            <a href="{% url 'lims:sample_list' %}">All Samples</a>
+                            {% if project %}
+                                <a href="{% url 'lims:project_sample_list' project.pk %}">Samples</a>
+                            {% else %}
+                                <a href="{% url 'lims:sample_list' %}">All Samples</a>
+                            {% endif %}
                         </li>
                         <li>
-                            <a href="{% url 'lims:location_list' %}">Locations</a>
-                        </li>
-                        <li>
-                            <a href="{% url 'lims:template_list' %}">Templates</a>
+                            {% if project %}
+                                <a href="{% url 'lims:project_location_list' project.pk %}">Locations</a>
+                            {% else %}
+                                <a href="{% url 'lims:location_list' %}">All Locations</a>
+                            {% endif %}
                         </li>
                     </ul>
                 </div>

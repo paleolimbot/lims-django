@@ -1,6 +1,6 @@
 
 from django.views import generic
-from django.http import Http404
+from django.shortcuts import get_object_or_404
 
 from .. import models
 from .forms import BaseObjectModelForm, ObjectFormView, BulkEditViewBase
@@ -11,6 +11,17 @@ from .accounts import LimsLoginMixin
 class TemplateListView(generic.ListView):
     model = models.EntryTemplate
     template_name = 'lims/lists/template_list.html'
+
+    def get_project(self):
+        if 'project_id' in self.kwargs:
+            return get_object_or_404(models.Project, pk=self.kwargs['project_id'])
+        else:
+            return None
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context['project'] = self.get_project()
+        return context
 
     def get_queryset(self):
         return models.EntryTemplate.objects.order_by('name')
@@ -28,7 +39,7 @@ def template_form_class_factory(template):
             tag_fields.append(field.target)
             initial_values['tag_form_field_' + field.target] = field.initial_value
 
-    class SampleBaseForm(BaseObjectModelForm):
+    class ObjectBaseForm(BaseObjectModelForm):
         class Meta:
             model = template.get_model()
             fields = model_fields
@@ -38,13 +49,14 @@ def template_form_class_factory(template):
 
         def __init__(self, *args, **kwargs):
             kwargs['tag_field_names'] = tag_fields
+            kwargs['project'] = template.project
             super().__init__(*args, **kwargs)
 
             for form_field in self.fields:
                 if form_field in initial_values:
                     self.fields[form_field].initial = initial_values[form_field]
 
-    return SampleBaseForm
+    return ObjectBaseForm
 
 
 class TemplateFormView(LimsLoginMixin, ObjectFormView, generic.CreateView):
@@ -54,11 +66,11 @@ class TemplateFormView(LimsLoginMixin, ObjectFormView, generic.CreateView):
         super().__init__(*args, **kwargs)
         self.template = None
 
+    def get_project(self):
+        return self.template.project
+
     def dispatch(self, request, *args, **kwargs):
-        try:
-            self.template = models.EntryTemplate.objects.get(pk=kwargs['template_pk'])
-        except models.EntryTemplate.DoesNotExist:
-            raise Http404('Sample Entry Template not found.')
+        self.template = get_object_or_404(models.EntryTemplate, pk=kwargs['template_pk'])
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -82,11 +94,8 @@ class TemplateBulkView(LimsLoginMixin, BulkEditViewBase):
         self.template = None
 
     def dispatch(self, request, *args, **kwargs):
-        try:
-            self.template = models.EntryTemplate.objects.get(pk=kwargs['template_pk'])
-            self.model = self.template.get_model()
-        except models.EntryTemplate.DoesNotExist:
-            raise Http404('Sample Entry Template not found.')
+        self.template = get_object_or_404(models.EntryTemplate, pk=kwargs['template_pk'])
+        self.model = self.template.get_model()
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):

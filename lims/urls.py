@@ -39,7 +39,6 @@ urlpatterns = [
     url(r'^location/(?P<pk>[0-9]+)/change$', views.LocationChangeView.as_view(), name="location_change"),
 
     # template views
-    url(r'^template/$', views.TemplateListView.as_view(), name='template_list'),
     url(r'^project/(?P<project_id>[0-9]+)/template/$', views.TemplateListView.as_view(), name='project_template_list'),
     url(r'^template/(?P<template_pk>[0-9]+)$', views.TemplateFormView.as_view(), name='template_form'),
     url(r'^template/(?P<template_pk>[0-9]+)/bulk/$', views.TemplateBulkView.as_view(), name='template_bulk'),

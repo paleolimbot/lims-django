@@ -18,8 +18,8 @@
         {% if view.request.user.is_staff %}
              <li><a href="{% url 'admin:lims_entrytemplate_changelist' %}">Admin</a></li>
         {% endif %}
-        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' %}">Bulk</a></li>
-        <li><a class="addlink" href="{% url 'lims:sample_add' %}">New</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' project.pk %}">Bulk</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add' project.pk %}">New</a></li>
     </ul>
 {% endblock %}
 

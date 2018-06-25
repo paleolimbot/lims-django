@@ -16,7 +16,7 @@
         {% endif %}
         <li><a href="{% url 'lims:sample_change' sample.pk %}">Update</a></li>
         <li><a href="{% url 'lims:item_action' 'sample' sample.pk 'delete' %}">Delete</a></li>
-        <li><a class="addlink" href="{% url 'lims:sample_add' %}">New</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add' project.pk %}">New</a></li>
     </ul>
 {% endblock %}
 

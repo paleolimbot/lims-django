@@ -3,6 +3,12 @@
 
 {% block title %}Update {{ sample.slug }}{% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; <a href="{% url 'lims:project_sample_list' project.pk %}">Samples</a>
+    &rsaquo; {{ sample.get_link }}
+    &rsaquo; <a href="{% url 'lims:sample_change' sample.pk %}">Edit</a>
+{% endblock %}
+
 {% block content_title %}Update Sample{% endblock %}
 
 {% block object_tools %}

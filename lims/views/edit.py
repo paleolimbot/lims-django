@@ -1,5 +1,6 @@
 
 from django.views import generic
+from django.urls import reverse_lazy
 
 from .. import models
 from .accounts import LimsLoginMixin
@@ -80,22 +81,48 @@ class SampleAddView(LimsLoginMixin, ObjectFormView, generic.CreateView):
     template_name = 'lims/sample_form.html'
     form_class = SampleForm
 
+    def get_success_url(self):
+        project = self.get_project()
+        if project:
+            return reverse_lazy('lims:project_my_sample_list', kwargs={"project_id": self.get_project().pk})
+        else:
+            return reverse_lazy('lims:my_sample_list')
+
 
 class SampleChangeView(LimsLoginMixin, ObjectFormView, generic.UpdateView):
     model = models.Sample
     template_name = 'lims/sample_change.html'
     form_class = SampleForm
 
+    def get_project(self):
+        return self.object.project
+
+    def get_success_url(self):
+        return reverse_lazy('lims:sample_detail', kwargs={'pk': self.kwargs['pk']})
+
 
 class LocationAddView(LimsLoginMixin, ObjectFormView, generic.CreateView):
     template_name = 'lims/location_form.html'
     form_class = LocationForm
+
+    def get_success_url(self):
+        project = self.get_project()
+        if project:
+            return reverse_lazy('lims:project_location_list', kwargs={"project_id": self.get_project().pk})
+        else:
+            return reverse_lazy('lims:location_list')
 
 
 class LocationChangeView(LimsLoginMixin, ObjectFormView, generic.UpdateView):
     model = models.Location
     template_name = 'lims/location_change.html'
     form_class = LocationForm
+
+    def get_project(self):
+        return self.object.project
+
+    def get_success_url(self):
+        return reverse_lazy('lims:location_detail', kwargs={'pk': self.kwargs['pk']})
 
 
 class SampleBulkAddForm(SampleForm):
@@ -110,3 +137,10 @@ class SampleBulkAddView(LimsLoginMixin, BulkEditViewBase):
 
     def get_model_form_class(self):
         return SampleBulkAddForm
+
+    def get_success_url(self):
+        project = self.get_project()
+        if project:
+            return reverse_lazy('lims:project_my_sample_list', kwargs={"project_id": self.get_project().pk})
+        else:
+            return reverse_lazy('lims:my_sample_list')

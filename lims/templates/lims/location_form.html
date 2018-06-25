@@ -8,6 +8,11 @@
     <link rel="stylesheet" type="text/css" href="{% static 'admin/css/forms.css' %}">
 {% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; <a href="{% url 'lims:project_location_list' project.pk %}">Locations</a>
+    &rsaquo; <a href="{% url 'lims:location_add' project.pk %}">Add</a>
+{% endblock %}
+
 {% block content_title %}New Location{% endblock %}
 
 {% block object_tools %}

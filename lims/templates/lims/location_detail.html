@@ -16,7 +16,7 @@
         {% endif %}
         <li><a href="{% url 'lims:location_change' location.pk %}">Update</a></li>
         <li><a href="{% url 'lims:item_action' 'location' location.pk 'delete' %}">Delete</a></li>
-        <li><a class="addlink" href="{% url 'lims:location_add' %}">New</a></li>
+        <li><a class="addlink" href="{% url 'lims:location_add' project.pk %}">New</a></li>
     </ul>
 {% endblock %}
 

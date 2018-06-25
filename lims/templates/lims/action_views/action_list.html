@@ -3,6 +3,12 @@
 
 {% block title %}{{ action_name|title }} {{ item_text|title }}{{ object_list.count|pluralize }}{% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; {{ item_text|title }}s
+    &rsaquo; {{ object_list.count }} Item{{ object_list.count|pluralize }}
+    &rsaquo; {{ action_name|title }}
+{% endblock %}
+
 {% block content_title %}{{ action_name|title }} {{ item_text|title }}{{ object_list.count|pluralize }}{% endblock %}
 
 {% block content_main %}

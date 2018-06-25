@@ -3,6 +3,11 @@
 
 {% block title %}Add New Sample{% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; <a href="{% url 'lims:project_sample_list' project.pk %}">Samples</a>
+    &rsaquo; <a href="{% url 'lims:sample_add' project.pk %}">Add</a>
+{% endblock %}
+
 {% block head %}
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'admin/css/forms.css' %}">
@@ -15,8 +20,8 @@
         {% if view.request.user.is_staff %}
             <li><a href="{% url 'admin:lims_sample_add' %}">admin</a></li>
         {% endif %}
-        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' %}">Bulk</a></li>
-        <li><a class="addlink" href="{% url 'lims:sample_add' %}">Add</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' project.pk %}">Bulk</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add' project.pk %}">Add</a></li>
     </ul>
 {% endblock %}
 

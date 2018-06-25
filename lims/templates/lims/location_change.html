@@ -3,6 +3,12 @@
 
 {% block title %}Update {{ location.name }}{% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; <a href="{% url 'lims:project_location_list' project.pk %}">Locations</a>
+    &rsaquo; {{ location.get_link }}
+    &rsaquo; <a href="{% url 'lims:location_change' location.pk %}">Edit</a>
+{% endblock %}
+
 {% block content_title %}Update {{ location.name }}{% endblock %}
 
 {% block submit_text %}Update Location{% endblock %}

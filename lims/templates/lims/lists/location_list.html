@@ -19,7 +19,9 @@
         {% if view.request.user.is_staff %}
             <li><a href="{% url 'admin:lims_location_changelist' %}">admin</a></li>
         {% endif %}
-        <li><a class="addlink" href="{% url 'lims:location_add' %}">Location</a></li>
+        {% if project %}
+            <li><a class="addlink" href="{% url 'lims:location_add' project.pk %}">Location</a></li>
+        {% endif %}
     </ul>
 {% endblock %}
 

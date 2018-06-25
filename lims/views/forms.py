@@ -2,6 +2,7 @@
 import re
 
 from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404
 from django.forms import modelformset_factory,\
     ModelForm, ValidationError, TextInput, BaseModelFormSet, Textarea
 from django.views import generic
@@ -62,9 +63,21 @@ class DateTimePicker(TextInput):
 
 class ObjectFormView(generic.FormView):
 
+    def get_project(self):
+        if 'project_id' in self.kwargs:
+            return get_object_or_404(models.Project, pk=self.kwargs['project_id'])
+        else:
+            return None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['project'] = self.get_project()
+        return context
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
+        kwargs['project'] = self.get_project()
 
         # get tag fields from the add tag column item
         tag_field_names = list(self.request.POST.get('add-form-tag-column', default='').split(','))
@@ -97,9 +110,10 @@ class ObjectFormView(generic.FormView):
 
 class BaseObjectModelForm(ModelForm):
 
-    def __init__(self, *args, user=None, tag_field_names=(), **kwargs):
+    def __init__(self, *args, user=None, project=None, tag_field_names=(), **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
+        self.project = project
 
         # add additional tag names that may exist from the current instance
         current_tag_keys = self.instance.get_tags().keys()
@@ -139,6 +153,17 @@ class BaseObjectModelForm(ModelForm):
         if not hasattr(self, 'user') or not self.user.pk:
             raise ValidationError('Unknown user attempting to make changes')
 
+        # set the project, user if there isn't one already
+        if not hasattr(self.instance, "project"):
+            self.instance.project = self.project
+        elif not self.instance.project:
+            self.instance.project = self.project
+
+        if not hasattr(self.instance, "user"):
+            self.instance.user = self.user
+        elif not self.instance.user:
+            self.instance.user = self.user
+
         # clean the form
         super().clean()
 
@@ -147,11 +172,6 @@ class BaseObjectModelForm(ModelForm):
             raise ValidationError('User is not allowed to add this sample')
         if self.instance.pk and not self.instance.user_can(self.user, 'edit'):
             raise ValidationError('User is not allowed to edit this sample')
-
-        # set the user, if there isn't one already
-        if not self.instance.user:
-            self.instance.user = self.user
-
 
     def save(self, *args, **kwargs):
         # save the instance
@@ -169,9 +189,10 @@ class BaseObjectModelForm(ModelForm):
 
 class BulkAddFormset(BaseModelFormSet):
 
-    def __init__(self, *args, user=None, tag_field_names=(), **kwargs):
+    def __init__(self, *args, user=None, project=None, tag_field_names=(), **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
+        self.project = project
         self.tag_field_names = list(tag_field_names)
 
         # add additional terms that exist in the queryset
@@ -192,12 +213,12 @@ class BulkAddFormset(BaseModelFormSet):
     def get_form_kwargs(self, index):
         kwargs = super().get_form_kwargs(index)
         kwargs['user'] = self.user
+        kwargs['project'] = self.project
         kwargs['tag_field_names'] = self.tag_field_names
         return kwargs
 
 
 class BulkEditViewBase(ObjectFormView):
-    success_url = reverse_lazy('lims:my_sample_list')
     template_name = 'lims/sample_bulk_form.html'
     model = None
 

@@ -3,6 +3,12 @@
 
 {% block title %}{{ template }}{% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; <a href="{% url 'lims:project_template_list' project.pk %}">Templates</a>
+    &rsaquo; {{ template.get_link }}
+    &rsaquo; Add
+{% endblock %}
+
 {% block content_title %}{{ template }}: New {{ template.model }}{% endblock %}
 
 {% block object_tools %}

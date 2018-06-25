@@ -3,6 +3,11 @@
 
 {% block title %}Bulk Add New Samples{% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; <a href="{% url 'lims:project_sample_list' project.pk %}">Samples</a>
+    &rsaquo; <a href="{% url 'lims:sample_add_bulk' project.pk %}">Bulk Add</a>
+{% endblock %}
+
 {% block content_title %}Bulk Add New Samples{% endblock %}
 
 {% block object_tools %}
@@ -10,8 +15,8 @@
         {% if view.request.user.is_staff %}
              <li><a href="{% url 'admin:lims_sample_add' %}">Admin</a></li>
         {% endif %}
-        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' %}">Bulk</a></li>
-        <li><a class="addlink" href="{% url 'lims:sample_add' %}">New</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add_bulk' project.pk %}">Bulk</a></li>
+        <li><a class="addlink" href="{% url 'lims:sample_add' project.pk %}">New</a></li>
     </ul>
 {% endblock %}
 

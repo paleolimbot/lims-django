@@ -3,12 +3,18 @@
 
 {% block title %}Bulk {{ template }}{% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; <a href="{% url 'lims:project_template_list' project.pk %}">Templates</a>
+    &rsaquo; {{ template.get_link }}
+    &rsaquo; Bulk Add
+{% endblock %}
+
 {% block content_title %}{{ template }}: Bulk New {{ template.model }}{% endblock %}
 
 {% block object_tools %}
     <ul class="object-tools">
         {% if view.request.user.is_staff %}
-            <li><a href="{% url 'admin:lims_sampleentrytemplate_change' template.pk %}">admin</a></li>
+            <li><a href="{% url 'admin:lims_entrytemplate_change' template.pk %}">admin</a></li>
         {% endif %}
         <li><a class="addlink" href="{% url 'lims:template_form' template.pk %}">Single View</a></li>
     </ul>
