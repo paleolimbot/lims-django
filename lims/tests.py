@@ -8,11 +8,11 @@ from django.db import transaction
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
-from .models import Sample, Location, SampleTag, BaseValidator, Term
+from .models import Sample, Location, SampleTag, BaseValidator, Term, Project
 
 
 def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_tags=3, test_user=None,
-                       clear=True, quiet=False):
+                       test_proj=None, clear=True, quiet=False):
 
     with transaction.atomic():
 
@@ -21,6 +21,14 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
                 test_user = User.objects.get(username='tuser31848')
             except User.DoesNotExist:
                 test_user = User.objects.create(username='tuser31848')
+
+        if test_proj is None:
+            try:
+                proj = Project.objects.get(slug='test-project-1')
+            except Project.DoesNotExist:
+                proj = Project.objects.create(name="Test Project 1", slug='test-project-1', user=test_user)
+        else:
+            proj = test_proj
 
         if clear:
             if not quiet:
@@ -35,6 +43,11 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
                 queryset=lambda model: model.objects.filter(slug__startswith="test-", user=test_user),
                 quiet=quiet
             )
+            clear_models(
+                models=(Term,),
+                queryset=lambda model: model.objects.filter(slug__startswith="key", project=test_proj),
+                quiet=quiet
+            )
 
         if not quiet:
             print("Generating locations...")
@@ -43,6 +56,7 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
                 print("\r%d/%d" % (loc_num + 1, n_locations), end='')
 
             loc = Location.objects.create(
+                project=proj,
                 name="Test Location %d" % (loc_num + 1),
                 slug="test-location-%d" % (loc_num + 1),
                 geometry="POINT (%d %d)" % (randint(-179, 180), randint(-85, 86)),
@@ -63,6 +77,7 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
             n_locs = Location.objects.all().count()
             parent_loc = Location.objects.all()[randint(0, n_locs - 1)]
             loc = Location.objects.create(
+                project=proj,
                 name="Test Sub Location %d" % (loc_num + 1),
                 slug="test-sub-location-%d" % (loc_num + 1),
                 geometry="POINT (%d %d)" % (randint(-179, 180), randint(-85, 86)),
@@ -90,6 +105,7 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
                 parent_loc = None
 
             sample = Sample.objects.create(
+                project=proj,
                 name="Test Sample %s" % (sample_num + 1),
                 location=parent_loc,
                 collected=timezone.now(),
@@ -111,6 +127,8 @@ def clear_models(models=(Sample, Location, Term, BaseValidator),
                  queryset=lambda model: model.objects.all(), quiet=False):
     if not quiet:
         print("Clearing models...")
+    last_exception = "Unknown error"
+
     for recursive_depth in range(10):
         if not quiet:
             print("Recursive depth: %d" % recursive_depth)
@@ -126,8 +144,8 @@ def clear_models(models=(Sample, Location, Term, BaseValidator),
                     deleted += 1
                     if not quiet:
                         print("\r%d/%d" % (deleted, qs_len), end='')
-                except Exception:
-                    pass
+                except Exception as e:
+                    last_exception = str(e)
             if not quiet:
                 print("")
         model_counts = [queryset(model).count() for model in models]
@@ -136,7 +154,7 @@ def clear_models(models=(Sample, Location, Term, BaseValidator),
                 print("Clearing complete.")
             return
 
-    raise Exception("Could not delete all models")
+    raise Exception("Could not delete all models: %s" % last_exception)
 
 
 class GeometryTestCase(TestCase):
@@ -248,11 +266,14 @@ class GeometryTestCase(TestCase):
 class LocationRecursionTestCase(TestCase):
 
     def test_recursive_locations(self):
-
-        parent_loc = Location.objects.create(name="Location1", slug="location-1")
-        child_loc = Location.objects.create(name="Sub Location 1", slug="sub-location-1", parent=parent_loc)
-        child_loc_2 = Location.objects.create(name="Sub Location 2", slug="sub-location-2", parent=parent_loc)
-        child_child_loc = Location.objects.create(name="Sub Sub Location", slug="sub-sub-location", parent=child_loc)
+        proj = Project.objects.create(name="Test Project", slug="test-proj")
+        parent_loc = Location.objects.create(project=proj, name="Location1", slug="location-1")
+        child_loc = Location.objects.create(project=proj, name="Sub Location 1", slug="sub-location-1",
+                                            parent=parent_loc)
+        child_loc_2 = Location.objects.create(project=proj, name="Sub Location 2", slug="sub-location-2",
+                                              parent=parent_loc)
+        child_child_loc = Location.objects.create(project=proj,
+                                                  name="Sub Sub Location", slug="sub-sub-location", parent=child_loc)
 
         self.assertEqual(parent_loc.recursive_depth, 0)
         self.assertEqual(child_loc.recursive_depth, 1)
@@ -268,8 +289,8 @@ class LocationRecursionTestCase(TestCase):
 class LocationGeometryTestCase(TestCase):
 
     def test_location_geometry(self):
-
-        location_no_geom = Location.objects.create(name="location1", slug="location1")
+        proj = Project.objects.create(name="Test Project", slug="test-proj")
+        location_no_geom = Location.objects.create(project=proj, name="location1", slug="location1")
         self.assertEqual(location_no_geom.geometry, '')
         self.assertIsNone(location_no_geom.minx)
         self.assertIsNone(location_no_geom.maxx)
@@ -277,7 +298,7 @@ class LocationGeometryTestCase(TestCase):
         self.assertIsNone(location_no_geom.maxy)
 
         location_point = Location.objects.create(
-            name='location2', slug='location2', geometry='POINT (30 10)'
+            project=proj, name='location2', slug='location2', geometry='POINT (30 10)'
         )
         self.assertEqual(location_point.geometry, 'POINT (30 10)')
         self.assertEqual(location_point.minx, 30)
@@ -286,6 +307,7 @@ class LocationGeometryTestCase(TestCase):
         self.assertEqual(location_point.maxy, 10)
 
         location_polygon = Location.objects.create(
+            project=proj,
             name='location3', slug='location3',
             geometry='MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)), ((15 5, 40 10, 10 20, 5 10, 15 5)))'
         )
@@ -298,14 +320,15 @@ class LocationGeometryTestCase(TestCase):
 class TagsTestCase(TestCase):
 
     def setUp(self):
-        self.sample = Sample.objects.create(collected=timezone.now(), name='a sample')
+        proj = Project.objects.create(name="Test Project", slug="test-proj")
+        self.sample = Sample.objects.create(project=proj, collected=timezone.now(), name='a sample')
 
         self.number_validator = BaseValidator.objects.create(
             name='Number', regex='^[0-9]+$', error_message='Value is not a number'
         )
 
-        self.generic_term = Term.objects.create(name='A generic tag', slug='generic-tag')
-        self.number_term = Term.objects.create(name='A Number Tag', slug='number-tag')
+        self.generic_term = Term.objects.create(project=proj, name='A generic tag', slug='generic-tag')
+        self.number_term = Term.objects.create(project=proj, name='A Number Tag', slug='number-tag')
         self.number_term.validators.create(validator=self.number_validator)
 
     def test_object_tags(self):
@@ -324,13 +347,16 @@ class TagsTestCase(TestCase):
 class SampleTestCase(TestCase):
 
     def setUp(self):
+        self.proj = Project.objects.create(name="Test Project", slug="test-proj")
         self.test_user = User.objects.create(username="test_user_with_a_long_name")
         self.test_location1 = Location.objects.create(
+            project=self.proj,
             name='test location 1 with a long name',
             slug='test_location_1_with_a_long_name',
             user=self.test_user
         )
         self.test_location2 = Location.objects.create(
+            project=self.proj,
             name='test location 2 with a long name',
             slug='test_location_2_with_a_long_name',
             user=self.test_user
@@ -338,9 +364,9 @@ class SampleTestCase(TestCase):
 
     def test_slug_calculation(self):
         """Test that unique slugs get generated for samples"""
-
         now = timezone.now()
         sample1 = Sample.objects.create(
+            project=self.proj,
             collected=now,
             name='a quite long name',
             location=self.test_location1,
@@ -349,6 +375,7 @@ class SampleTestCase(TestCase):
         self.assertTrue(len(sample1.slug), 55)
 
         sample2 = Sample.objects.create(
+            project=self.proj,
             collected=now,
             name='a quite long name',
             location=self.test_location1,
@@ -365,7 +392,7 @@ class SampleTestCase(TestCase):
         now = timezone.now()
         with transaction.atomic():
             for i in range(500):
-                Sample.objects.create(collected=now, user=self.test_user, name='sample_repeat')
+                Sample.objects.create(project=self.proj, collected=now, user=self.test_user, name='sample_repeat')
 
         # test that the slugs go from 1 to 499
         sample_slugs = Sample.objects.filter(user=self.test_user, name='sample_repeat').values_list('slug', flat=True)
@@ -388,7 +415,7 @@ class SampleTestCase(TestCase):
 
     def test_str_output(self):
         """Tests that the string output should be the sample slug"""
-        sample = Sample.objects.create(collected=timezone.now(), user=self.test_user)
+        sample = Sample.objects.create(project=self.proj, collected=timezone.now(), user=self.test_user)
         self.assertEqual(sample.slug, str(sample))
 
 
@@ -401,8 +428,7 @@ class TestDataTestCase(TestCase):
         """Test that the populate sample data method populates and re-populates properly"""
 
         # starting with an empty db, the app should populate the correct number of samples
-        populate_test_data(n_locations=28, n_sub_locations=31, n_samples=109, test_user=self.test_user,
-                           quiet=True)
+        populate_test_data(n_locations=28, n_sub_locations=31, n_samples=109, test_user=self.test_user, quiet=True)
         self.assertEqual(Location.objects.filter(user=self.test_user).count(), 59)
         self.assertEqual(Sample.objects.filter(user=self.test_user).count(), 109)
 
@@ -411,3 +437,64 @@ class TestDataTestCase(TestCase):
                            quiet=True)
         self.assertEqual(Location.objects.filter(user=self.test_user).count(), 76)
         self.assertEqual(Sample.objects.filter(user=self.test_user).count(), 27)
+
+
+class ProjectLayerTestCase(TestCase):
+
+    def setUp(self):
+        self.test_user = User.objects.create(username='tuser')
+        self.proj1 = Project.objects.create(name="Project 1", slug="project-1")
+        self.proj2 = Project.objects.create(name="Project 2", slug="project-2")
+
+    def test_project_tags(self):
+        """Project tags can only have terms with no project attribute"""
+        t1 = Term.objects.create(name="t1", slug="t1", project=None)
+        t2 = Term.objects.create(name="t2", slug="t2", project=self.proj1)
+
+        self.proj1.set_tags(_values={t1: "fishval"})
+        self.assertEqual(self.proj1.get_tag(t1), "fishval")
+        with self.assertRaisesRegex(ValidationError, "terms must not have projects"):
+            self.proj1.set_tags(_values={t2: "fishval"})
+        self.assertIsNone(self.proj1.get_tag(t2))
+
+        with self.assertRaisesRegex(ValidationError, "terms must not have projects"):
+            self.proj1.update_tags(_values={t2: "fishval"})
+        self.assertIsNone(self.proj1.get_tag(t2))
+
+    def test_object_projects(self):
+        t1 = Term.objects.create(name="t1", slug="t1", project=None)
+        t2 = Term.objects.create(name="t2", slug="t2", project=self.proj1)
+        t3 = Term.objects.create(name="t3", slug="t3", project=self.proj2)
+
+        s2 = Sample(project=self.proj1, name="sample", user=self.test_user, collected=timezone.now())
+        s2.save()
+
+        l2 = Location.objects.create(project=self.proj1, name="loc", slug="loc")
+        l3 = Location.objects.create(project=self.proj2, name="loc", slug="loc2")
+
+        # no project should not work
+        with self.assertRaisesRegex(ValidationError, "Object project must match term project"):
+            s2.set_tags(_values={t1: "stringval"})
+        with self.assertRaisesRegex(ValidationError, "Object project must match term project"):
+            l2.set_tags(_values={t1: "stringval"})
+
+        # proj2 should not work
+        with self.assertRaisesRegex(ValidationError, "Object project must match term project"):
+            s2.set_tags(_values={t3: "stringval"})
+        with self.assertRaisesRegex(ValidationError, "Object project must match term project"):
+            l2.set_tags(_values={t3: "stringval"})
+
+        # location with other proj should not work
+        with self.assertRaisesRegex(ValidationError, "Location project must match sample project"):
+            news = Sample(project=self.proj1, name="loc", location=l3, collected=timezone.now())
+            news.full_clean()
+
+        # parent sample with other proj should not work
+        with self.assertRaisesRegex(ValidationError, "Parent must belong to same project as child"):
+            news = Sample(project=self.proj2, name="loc", parent=s2, collected=timezone.now())
+            news.full_clean()
+
+        # parent location with other proj should not work
+        with self.assertRaisesRegex(ValidationError, "Parent must belong to same project as child"):
+            newl = Location(project=self.proj2, name="loc", parent=l2)
+            newl.full_clean()

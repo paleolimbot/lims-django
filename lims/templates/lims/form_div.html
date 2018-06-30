@@ -3,7 +3,10 @@
 
 <div>
     <fieldset class="module aligned">
-        {% for field in form %}
+        {% for hidden in form.hidden_fields %}
+            {{ hidden }}
+        {% endfor %}
+        {% for field in form.visible_fields %}
             <div class="form-row field-{{ field.name }}">
                 <div>
                     {{ field.errors }}

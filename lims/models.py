@@ -1,6 +1,7 @@
 import re
 import json
 
+from django.db.utils import OperationalError
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -38,8 +39,8 @@ class SlugIdField(models.CharField):
 
     @staticmethod
     def idify(obj):
-        txt = re.sub(r"[^A-Za-z0-9._-]+", "_", str(obj).lower())
-        return re.sub(r"(^_)|(_$)", "", txt)
+        txt = re.sub(r"[^A-Za-z0-9._-]+", "-", str(obj).lower())
+        return re.sub(r"(^-)|(-$)", "", txt)
 
 
 class BaseObjectModel(models.Model):
@@ -77,6 +78,11 @@ class BaseObjectModel(models.Model):
         if exclude is None or 'slug' not in exclude:
             if not self.slug and self.pk:
                 raise ValidationError({'slug': ['slug cannot be changed to ""']})
+
+        if exclude is None or 'parent' not in exclude:
+            if hasattr(self, 'project') and self.parent:
+                if self.parent.project != self.project:
+                    raise ValidationError({'parent': ['Parent must belong to same project as child']})
 
     def save(self, *args, **kwargs):
         # cache the recursive depth (for future tree view)
@@ -170,20 +176,25 @@ class BaseObjectModel(models.Model):
         else:
             return False
 
-    def set_tags(self, _values=None, taxonomy=None, **kwargs):
+    def set_tags(self, _values=None, taxonomy='default', **kwargs):
         self.tags.all().delete()
         return self.add_tags(_values, taxonomy=taxonomy, **kwargs)
 
-    def add_tags(self, _values=None, taxonomy=None, **kwargs):
+    def add_tags(self, _values=None, taxonomy='default', **kwargs):
         if _values is not None:
             kwargs.update(_values)
 
         # make sure all names are defined terms
         for key, value in kwargs.items():
             term = Term.get_term(key, self.get_project(), taxonomy=taxonomy, create=True)
-            self.tags.create(key=term, value=value)
+            tag = self.tags.create(key=term, value=value)
+            try:
+                tag.full_clean()
+            except ValidationError as e:
+                tag.delete()
+                raise e
 
-    def update_tags(self, _values=None, taxonomy=None, **kwargs):
+    def update_tags(self, _values=None, taxonomy='default', **kwargs):
         if _values is not None:
             kwargs.update(_values)
 
@@ -194,14 +205,20 @@ class BaseObjectModel(models.Model):
                 tag = self.tags.get(key=term)
                 if value:
                     tag.value = value
+                    tag.full_clean()
                     tag.save()
                 else:
                     tag.delete()
             except ObjectDoesNotExist:
                 if value:
-                    self.tags.create(key=term, value=value)
+                    tag = self.tags.create(key=term, value=value)
+                    try:
+                        tag.full_clean()
+                    except ValidationError as e:
+                        tag.delete()
+                        raise e
 
-    def get_tag(self, key, taxonomy=None, as_list=False):
+    def get_tag(self, key, taxonomy='default', as_list=False):
         term = Term.get_term(key, self.get_project(), taxonomy=taxonomy, create=False)
         if term is None:
             return None
@@ -253,15 +270,9 @@ def validate_json_tags_dict(value):
         raise ValidationError("Value is not valid JSON")
 
 
-class Taxonomy(models.Model):
-    name = models.CharField(max_length=55)
-    slug = models.SlugField(max_length=55)
-    description = models.TextField(blank=True)
-
-
 class Term(models.Model):
-    project = models.ForeignKey("Project", on_delete=models.PROTECT)
-    taxonomy = models.ForeignKey(Taxonomy, on_delete=models.PROTECT, related_name="terms", null=True, blank=True)
+    project = models.ForeignKey("Project", on_delete=models.PROTECT, null=True, blank=True)
+    taxonomy = models.CharField(max_length=55, default='default')
     name = models.CharField(max_length=55)
     slug = models.SlugField(max_length=55)
     description = models.TextField(blank=True)
@@ -269,6 +280,13 @@ class Term(models.Model):
 
     measured = models.BooleanField(default=False)
     meta = models.TextField(blank=True, validators=[validate_json_tags_dict, ])
+
+    def clean_fields(self, exclude=None):
+        super().clean_fields(exclude=exclude)
+
+        if exclude is None or 'parent' not in exclude:
+            if self.parent and self.parent.project != self.project:
+                raise ValidationError({'parent': ['Term project must match parent term project']})
 
     class Meta:
         unique_together = ['project', 'taxonomy', 'slug']
@@ -295,7 +313,7 @@ class Term(models.Model):
         )
 
     @staticmethod
-    def get_term(string_key, project, taxonomy=None, create=True):
+    def get_term(string_key, project, taxonomy='default', create=True):
 
         # if it's already a term, return it
         if isinstance(string_key, Term):
@@ -356,14 +374,23 @@ class Tag(models.Model):
             except ValidationError as e:
                 raise ValidationError({'value': e.error_list})
 
+        if exclude is None or ('object' not in exclude and 'key' not in exclude):
+            if hasattr(self.object, 'project') and (self.key.project != self.object.project):
+                raise ValidationError({'object': ['Object project must match term project']})
+
     def save(self, *args, **kwargs):
         # update parent object modified tag
         self.object.modified = timezone.now()
-        # TODO does the parent object need to be saved?
+        self.object.save()
         super().save(*args, **kwargs)
 
     def user_can(self, user, action):
-        return True
+        if action == 'add':
+            return True
+        elif action == 'edit':
+            return user in (self.user, self.object.user)
+        else:
+            return self.object.user_can(user, action)
 
     def set_tags(self, _values=None, _save=True, **kwargs):
         if _values is not None:
@@ -429,6 +456,13 @@ class Project(BaseObjectModel):
 class ProjectTag(Tag):
     object = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="tags")
 
+    def clean_fields(self, exclude=None):
+        super().clean_fields(exclude=exclude)
+
+        if exclude is None or 'key' not in exclude:
+            if self.key.project is not None:
+                raise ValidationError({'key': ['For projects, tag terms must not have projects themselves']})
+
 
 class Location(BaseObjectModel):
     project = models.ForeignKey(Project, on_delete=models.PROTECT)
@@ -441,7 +475,7 @@ class Location(BaseObjectModel):
 
     def save(self, *args, **kwargs):
         self.project.modified = timezone.now()
-        # TODO: does the project need to be saved?
+        self.project.save()
         super().save(*args, **kwargs)
 
     @staticmethod
@@ -451,6 +485,13 @@ class Location(BaseObjectModel):
 
 class LocationTag(Tag):
     object = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="tags")
+
+    def clean_fields(self, exclude=None):
+        super().clean_fields(exclude=exclude)
+
+        if exclude is None or ('key' not in exclude and 'object' not in exclude):
+            if self.key.project != self.object.project:
+                raise ValidationError({'key': ['Key project must match object project']})
 
 
 class Sample(BaseObjectModel):
@@ -477,9 +518,16 @@ class Sample(BaseObjectModel):
     def get_project(self):
         return self.project
 
+    def clean_fields(self, exclude=None):
+        super().clean_fields(exclude=exclude)
+
+        if exclude is None or 'location' not in exclude:
+            if self.location and self.project != self.location.project:
+                raise ValidationError({'location': ['Location project must match sample project']})
+
     def save(self, *args, **kwargs):
         self.project.modified = timezone.now()
-        # TODO: does the project need to be saved?
+        self.project.save()
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -492,6 +540,13 @@ class Sample(BaseObjectModel):
 
 class SampleTag(Tag):
     object = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name="tags")
+
+    def clean_fields(self, exclude=None):
+        super().clean_fields(exclude=exclude)
+
+        if exclude is None or ('key' not in exclude and 'object' not in exclude):
+            if self.key.project != self.object.project:
+                raise ValidationError({'key': ['Key project must match object project']})
 
 
 class EntryTemplate(models.Model):
@@ -541,7 +596,7 @@ class EntryTemplate(models.Model):
 
 class EntryTemplateField(models.Model):
     template = models.ForeignKey(EntryTemplate, on_delete=models.CASCADE, related_name='fields')
-    taxonomy = models.ForeignKey(Taxonomy, on_delete=models.PROTECT, blank=True, null=True)
+    taxonomy = models.CharField(max_length=55, default='default')
     target = models.CharField(max_length=55)
     initial_value = models.TextField(blank=True)
     order = models.IntegerField(default=1)
@@ -574,7 +629,6 @@ class EntryTemplateField(models.Model):
 
 
 # make sure some default objects exist in the database
-from django.db.utils import OperationalError
 default_project = None
 try:
     default_project = Project.objects.get(slug="default_project")
@@ -584,5 +638,5 @@ except Project.DoesNotExist:
         slug="default_project"
     )
 except OperationalError:
-    # probably no such table
+    # probably no such table during initial checks
     pass

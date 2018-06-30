@@ -1,10 +1,9 @@
 
 import re
 
-from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404
 from django.forms import modelformset_factory,\
-    ModelForm, ValidationError, TextInput, BaseModelFormSet, Textarea
+    ModelForm, ValidationError, TextInput, BaseModelFormSet, Textarea, HiddenInput, CharField
 from django.views import generic
 import reversion
 from django_select2.forms import ModelSelect2Widget
@@ -12,32 +11,28 @@ from django_select2.forms import ModelSelect2Widget
 from .. import models
 
 
-class LocationSelect2Widget(ModelSelect2Widget):
+class ProjectModelSelect2Widget(ModelSelect2Widget):
     search_fields = [
         'name__icontains',
         'slug__icontains'
     ]
 
+    def filter_queryset(self, term, queryset=None, **dependent_fields):
+        qs = super().filter_queryset(term, queryset, **dependent_fields)
+        return qs
+
+
+class LocationSelect2Widget(ProjectModelSelect2Widget):
     def get_queryset(self):
         return models.Location.objects.order_by('-modified')
 
 
-class SampleSelect2Widget(ModelSelect2Widget):
-    search_fields = [
-        'name__icontains',
-        'slug__icontains'
-    ]
-
+class SampleSelect2Widget(ProjectModelSelect2Widget):
     def get_queryset(self):
         return models.Sample.objects.order_by('-modified').filter(published=True)
 
 
-class TermSelect2Widget(ModelSelect2Widget):
-    search_fields = [
-        'name__icontains',
-        'slug__icontains'
-    ]
-
+class TermSelect2Widget(ProjectModelSelect2Widget):
     def get_queryset(self):
         return models.Term.objects.order_by('name')
 
@@ -109,11 +104,13 @@ class ObjectFormView(generic.FormView):
 
 
 class BaseObjectModelForm(ModelForm):
+    project_meta_field = CharField(widget=HiddenInput(), required=True)
 
     def __init__(self, *args, user=None, project=None, tag_field_names=(), **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
         self.project = project
+        self.fields['project_meta_field'].initial = project.pk
 
         # add additional tag names that may exist from the current instance
         current_tag_keys = self.instance.get_tags().keys()
@@ -130,7 +127,7 @@ class BaseObjectModelForm(ModelForm):
         self.tag_field_names = {}
         for field_name in tag_field_names:
             # try to resolve term
-            term = models.Term.get_term(field_name, create=True)
+            term = models.Term.get_term(field_name, create=True, project=self.project)
 
             # if term can't be resolved, don't add it to the form
             # (most likely reason is that field_name is '')
@@ -148,6 +145,11 @@ class BaseObjectModelForm(ModelForm):
             initial_val = self.instance.get_tag(term)
             if initial_val:
                 self.initial[field_id] = initial_val
+
+        # make sure dependencies are added to the Select2Widget
+        for field in self.fields.values():
+            if isinstance(field.widget, ProjectModelSelect2Widget):
+                field.widget.dependent_fields = {'project_meta_field': 'project'}
 
     def clean(self):
         if not hasattr(self, 'user') or not self.user.pk:
@@ -181,6 +183,8 @@ class BaseObjectModelForm(ModelForm):
         tags_dict = {term: self.cleaned_data[field] for term, field in self.tag_field_names.items()}
 
         # update the tag information
+        # TODO: this could result in a ValidationError() from the full_clean() of
+        # tag objects
         self.instance.update_tags(_values=tags_dict)
 
         # return whatever the super() returned
