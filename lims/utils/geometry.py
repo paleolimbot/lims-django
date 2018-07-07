@@ -70,22 +70,22 @@ def wkt_bounds(value):
         if len(coords) > 1:
             x_coords, y_coords = zip(*coords)
             return {
-                "minx": min(x_coords),
-                "maxx": max(x_coords),
-                "miny": min(y_coords),
-                "maxy": max(y_coords)
+                "xmin": min(x_coords),
+                "xmax": max(x_coords),
+                "ymin": min(y_coords),
+                "ymax": max(y_coords)
             }
         elif len(coords) == 1:
             return {
-                "minx": coords[0][0],
-                "maxx": coords[0][0],
-                "miny": coords[0][1],
-                "maxy": coords[0][1]
+                "xmin": coords[0][0],
+                "xmax": coords[0][0],
+                "ymin": coords[0][1],
+                "ymax": coords[0][1]
             }
 
     return {
-        "minx": None,
-        "maxx": None,
-        "miny": None,
-        "maxy": None
+        "xmin": None,
+        "xmax": None,
+        "ymin": None,
+        "ymax": None
     }

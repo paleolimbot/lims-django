@@ -164,25 +164,25 @@ class GeometryTestCase(TestCase):
         from .utils.geometry import wkt_bounds
         self.assertEqual(
             wkt_bounds("(1 1)"),
-            {'minx': 1.0, 'maxx': 1.0, 'miny': 1.0, 'maxy': 1.0}
+            {'xmin': 1.0, 'xmax': 1.0, 'ymin': 1.0, 'ymax': 1.0}
         )
         self.assertEqual(
             wkt_bounds("(-1.45 -2.45) (1.75 2.75)"),
-            {'minx': -1.45, 'maxx': 1.75, 'miny': -2.45, 'maxy': 2.75}
+            {'xmin': -1.45, 'xmax': 1.75, 'ymin': -2.45, 'ymax': 2.75}
         )
 
         self.assertEqual(
             wkt_bounds("(-1.45 -2.45) (1.75 2.75) (0, 0)"),
-            {'minx': -1.45, 'maxx': 1.75, 'miny': -2.45, 'maxy': 2.75}
+            {'xmin': -1.45, 'xmax': 1.75, 'ymin': -2.45, 'ymax': 2.75}
         )
 
         self.assertEqual(
             wkt_bounds(''),
-            {'minx': None, 'maxx': None, 'miny': None, 'maxy': None}
+            {'xmin': None, 'xmax': None, 'ymin': None, 'ymax': None}
         )
         self.assertEqual(
             wkt_bounds(None),
-            {'minx': None, 'maxx': None, 'miny':  None, 'maxy': None}
+            {'xmin': None, 'xmax': None, 'ymin':  None, 'ymax': None}
         )
 
     def test_wkt_regex(self):
@@ -292,29 +292,29 @@ class LocationGeometryTestCase(TestCase):
         proj = Project.objects.create(name="Test Project", slug="test-proj")
         location_no_geom = Location.objects.create(project=proj, name="location1", slug="location1")
         self.assertEqual(location_no_geom.geometry, '')
-        self.assertIsNone(location_no_geom.minx)
-        self.assertIsNone(location_no_geom.maxx)
-        self.assertIsNone(location_no_geom.miny)
-        self.assertIsNone(location_no_geom.maxy)
+        self.assertIsNone(location_no_geom.xmin)
+        self.assertIsNone(location_no_geom.xmax)
+        self.assertIsNone(location_no_geom.ymin)
+        self.assertIsNone(location_no_geom.ymax)
 
         location_point = Location.objects.create(
             project=proj, name='location2', slug='location2', geometry='POINT (30 10)'
         )
         self.assertEqual(location_point.geometry, 'POINT (30 10)')
-        self.assertEqual(location_point.minx, 30)
-        self.assertEqual(location_point.maxx, 30)
-        self.assertEqual(location_point.miny, 10)
-        self.assertEqual(location_point.maxy, 10)
+        self.assertEqual(location_point.xmin, 30)
+        self.assertEqual(location_point.xmax, 30)
+        self.assertEqual(location_point.ymin, 10)
+        self.assertEqual(location_point.ymax, 10)
 
         location_polygon = Location.objects.create(
             project=proj,
             name='location3', slug='location3',
             geometry='MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)), ((15 5, 40 10, 10 20, 5 10, 15 5)))'
         )
-        self.assertEqual(location_polygon.minx, 5)
-        self.assertEqual(location_polygon.maxx, 45)
-        self.assertEqual(location_polygon.miny, 5)
-        self.assertEqual(location_polygon.maxy, 40)
+        self.assertEqual(location_polygon.xmin, 5)
+        self.assertEqual(location_polygon.xmax, 45)
+        self.assertEqual(location_polygon.ymin, 5)
+        self.assertEqual(location_polygon.ymax, 40)
 
 
 class TagsTestCase(TestCase):

@@ -141,4 +141,4 @@ class AttachmentDetailView(LimsLoginMixin, DetailViewWithTablesBase):
         return self.object.samples.all()
 
     def get_location_queryset(self):
-        return self.object.samples.all()
+        return self.object.locations.all()

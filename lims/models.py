@@ -56,10 +56,10 @@ class BaseObjectModel(models.Model):
     recursive_depth = models.IntegerField(default=0, editable=False)
 
     geometry = models.TextField(blank=True, validators=[validate_wkt, ])
-    minx = models.FloatField(editable=False, blank=True, null=True, default=None)
-    maxx = models.FloatField(editable=False, blank=True, null=True, default=None)
-    miny = models.FloatField(editable=False, blank=True, null=True, default=None)
-    maxy = models.FloatField(editable=False, blank=True, null=True, default=None)
+    xmin = models.FloatField(editable=False, blank=True, null=True, default=None)
+    xmax = models.FloatField(editable=False, blank=True, null=True, default=None)
+    ymin = models.FloatField(editable=False, blank=True, null=True, default=None)
+    ymax = models.FloatField(editable=False, blank=True, null=True, default=None)
 
     def _should_update_slug(self):
         return not self.pk and not self.slug
@@ -94,10 +94,10 @@ class BaseObjectModel(models.Model):
 
         # cache location info
         bounds = wkt_bounds(self.geometry)
-        self.minx = bounds['minx']
-        self.maxx = bounds['maxx']
-        self.miny = bounds['miny']
-        self.maxy = bounds['maxy']
+        self.xmin = bounds['xmin']
+        self.xmax = bounds['xmax']
+        self.ymin = bounds['ymin']
+        self.ymax = bounds['ymax']
         super().save(*args, **kwargs)
 
     def auto_slug_use(self):
@@ -473,6 +473,11 @@ class Location(BaseObjectModel):
     def get_project(self):
         return self.project
 
+    def delete(self, *args, **kwargs):
+        # clear relations so they don't delete attachments
+        self.attachments.clear()
+        super().delete(*args, **kwargs)
+
     def save(self, *args, **kwargs):
         self.project.modified = timezone.now()
         self.project.save()
@@ -485,6 +490,11 @@ class Location(BaseObjectModel):
 
 class LocationTag(Tag):
     object = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="tags")
+
+    def delete(self, *args, **kwargs):
+        # clear relations so they don't delete attachments
+        self.attachments.clear()
+        super().delete(*args, **kwargs)
 
     def clean_fields(self, exclude=None):
         super().clean_fields(exclude=exclude)
@@ -525,6 +535,11 @@ class Sample(BaseObjectModel):
             if self.location and self.project != self.location.project:
                 raise ValidationError({'location': ['Location project must match sample project']})
 
+    def delete(self, *args, **kwargs):
+        # clear relations so they don't delete attachments
+        self.attachments.clear()
+        super().delete(*args, **kwargs)
+
     def save(self, *args, **kwargs):
         self.project.modified = timezone.now()
         self.project.save()
@@ -540,6 +555,11 @@ class Sample(BaseObjectModel):
 
 class SampleTag(Tag):
     object = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name="tags")
+
+    def delete(self, *args, **kwargs):
+        # clear relations so they don't delete attachments
+        self.attachments.clear()
+        super().delete(*args, **kwargs)
 
     def clean_fields(self, exclude=None):
         super().clean_fields(exclude=exclude)
@@ -560,8 +580,12 @@ class Attachment(BaseObjectModel):
     locations = models.ManyToManyField(Location, related_name='attachments', blank=True)
     location_tags = models.ManyToManyField(LocationTag, related_name='attachments', blank=True)
 
-    # TODO: currently, the default setup when removing attachments is to also remove dependent
-    # objects. This obviously isn't what we want here...
+    def delete(self, *args, **kwargs):
+        # clear relations so they don't get deleted with attachments
+        self.samples.clear()
+        self.sample_tags.clear()
+        self.location_tags.clear()
+        super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -589,6 +613,21 @@ class Attachment(BaseObjectModel):
 
     def get_project(self):
         return self.project
+
+    @staticmethod
+    def get_all_terms(queryset):
+        return Term.objects.filter(attachmenttag__object__in=queryset).distinct()
+
+
+class AttachmentTag(Tag):
+    object = models.ForeignKey(Attachment, on_delete=models.CASCADE, related_name="tags")
+
+    def clean_fields(self, exclude=None):
+        super().clean_fields(exclude=exclude)
+
+        if exclude is None or ('key' not in exclude and 'object' not in exclude):
+            if self.key.project != self.object.project:
+                raise ValidationError({'key': ['Key project must match object project']})
 
 
 class EntryTemplate(models.Model):
