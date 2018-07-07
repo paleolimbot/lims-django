@@ -1,0 +1,58 @@
+{% extends "lims/detail/object_detail_tables.html" %}
+
+{% block title %}{{ attachment.name }}{% endblock %}
+
+{% block content_title %}Attachment: {{ attachment.name }}{% endblock %}
+
+{% block object_tools %}
+    <ul class="object-tools">
+        {% if view.request.user.is_staff %}
+            <li><a href="{% url 'admin:lims_attachment_change' attachment.pk %}">Admin</a></li>
+        {% endif %}
+    </ul>
+{% endblock %}
+
+{% block content_main %}
+
+    <table class="object-info">
+        <tr>
+            <th>Name</th>
+            <td>{{ attachment.name }}</td>
+        </tr>
+        <tr>
+            <th>User</th>
+            <td>
+                {% if attachment.user %}
+                    <a href="{% url 'lims:user_detail' attachment.user.pk %}">{{ attachment.user }}</a>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Identifier</th>
+            <td>{{ attachment.slug }}</td>
+        </tr>
+        <tr>
+            <th>Description</th>
+            <td>{{ attachment.description|linebreaksbr|default:'(none provided)' }}</td>
+        </tr>
+        <tr>
+            <th>Geometry</th>
+            <td>
+                {% if attachment.geometry %}
+                    {{ attachment.geometry|truncatechars:100 }}
+                {% else %}
+                    (No geometry provided)
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Date Modified (Created)</th>
+            <td>{{ attachment.modified }} ({{ attachment.created }})</td>
+        </tr>
+    </table>
+
+    {{ block.super }}
+
+    {# TODO: add tags here #}
+
+{% endblock %}

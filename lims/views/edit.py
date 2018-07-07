@@ -78,7 +78,7 @@ class LocationForm(BaseObjectModelForm):
 
 
 class SampleAddView(LimsLoginMixin, ObjectFormView, generic.CreateView):
-    template_name = 'lims/sample_form.html'
+    template_name = 'lims/forms/sample_form.html'
     form_class = SampleForm
 
     def get_success_url(self):
@@ -91,7 +91,7 @@ class SampleAddView(LimsLoginMixin, ObjectFormView, generic.CreateView):
 
 class SampleChangeView(LimsLoginMixin, ObjectFormView, generic.UpdateView):
     model = models.Sample
-    template_name = 'lims/sample_change.html'
+    template_name = 'lims/forms/sample_change.html'
     form_class = SampleForm
 
     def get_project(self):
@@ -102,7 +102,7 @@ class SampleChangeView(LimsLoginMixin, ObjectFormView, generic.UpdateView):
 
 
 class LocationAddView(LimsLoginMixin, ObjectFormView, generic.CreateView):
-    template_name = 'lims/location_form.html'
+    template_name = 'lims/forms/location_form.html'
     form_class = LocationForm
 
     def get_success_url(self):
@@ -115,7 +115,7 @@ class LocationAddView(LimsLoginMixin, ObjectFormView, generic.CreateView):
 
 class LocationChangeView(LimsLoginMixin, ObjectFormView, generic.UpdateView):
     model = models.Location
-    template_name = 'lims/location_change.html'
+    template_name = 'lims/forms/location_change.html'
     form_class = LocationForm
 
     def get_project(self):

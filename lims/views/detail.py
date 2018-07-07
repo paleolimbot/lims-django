@@ -79,7 +79,7 @@ class DetailViewWithTablesBase(generic.DetailView):
 
 
 class ProjectDetailView(LimsLoginMixin, DetailViewWithTablesBase):
-    template_name = "lims/project_detail.html"
+    template_name = "lims/detail/project_detail.html"
     model = models.Project
 
     def get_project(self):
@@ -87,7 +87,7 @@ class ProjectDetailView(LimsLoginMixin, DetailViewWithTablesBase):
 
 
 class SampleDetailView(LimsLoginMixin, DetailViewWithTablesBase):
-    template_name = 'lims/sample_detail.html'
+    template_name = 'lims/detail/sample_detail.html'
     model = models.Sample
 
     def get_project(self):
@@ -101,7 +101,7 @@ class SampleDetailView(LimsLoginMixin, DetailViewWithTablesBase):
 
 
 class LocationDetailView(LimsLoginMixin, DetailViewWithTablesBase):
-    template_name = 'lims/location_detail.html'
+    template_name = 'lims/detail/location_detail.html'
     model = models.Location
 
     def get_project(self):
@@ -112,12 +112,12 @@ class LocationDetailView(LimsLoginMixin, DetailViewWithTablesBase):
 
 
 class UserDetailView(LimsLoginMixin, DetailViewWithTablesBase):
-    template_name = 'lims/user_detail.html'
+    template_name = 'lims/detail/user_detail.html'
     model = User
 
 
 class TermDetailView(LimsLoginMixin, DetailViewWithTablesBase):
-    template_name = 'lims/term_detail.html'
+    template_name = 'lims/detail/term_detail.html'
     model = models.Term
 
     def get_project(self):
@@ -128,3 +128,17 @@ class TermDetailView(LimsLoginMixin, DetailViewWithTablesBase):
 
     def get_sample_queryset(self):
         return models.Sample.objects.filter(tags__key=self.object).distinct()
+
+
+class AttachmentDetailView(LimsLoginMixin, DetailViewWithTablesBase):
+    template_name = 'lims/detail/attachment_detail.html'
+    model = models.Attachment
+
+    def get_project(self):
+        return self.object.project
+
+    def get_sample_queryset(self):
+        return self.object.samples.all()
+
+    def get_location_queryset(self):
+        return self.object.samples.all()

@@ -30,7 +30,7 @@
     <div id="add-form-container">
         <form id="add-form" action="" method="post">
             {% csrf_token %}
-            {% include 'lims/form_div.html' with form=form %}
+            {% include 'lims/forms/form_div.html' with form=form %}
             <input type="submit" value="{% block submit_text %}Create Sample{% endblock %}" />
         </form>
     </div>

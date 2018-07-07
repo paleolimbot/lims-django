@@ -53,6 +53,9 @@ urlpatterns = [
     # term object views
     url(r'^term/(?P<pk>[0-9]+)$', views.TermDetailView.as_view(), name="term_detail"),
 
+    # attachment object views
+    url(r'^attachment/(?P<pk>[0-9]+)$', views.AttachmentDetailView.as_view(), name="attachment_detail"),
+
     # action views
     url(r'^(?P<model>[a-z]+)/(?P<pk>[0-9]+)/action/(?P<action>[a-z-]+)$', views.item_action_view, name='item_action'),
     url(r'^(?P<model>[a-z]+)/action/(?P<action>[a-z-]+)$', views.base_action_view, name='bulk_action'),

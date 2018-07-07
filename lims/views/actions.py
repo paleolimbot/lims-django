@@ -303,7 +303,7 @@ class SampleBulkEditForm(SampleForm):
 
 class SampleBulkEditView(SampleBulkAddView, ActionListView):
     model = models.Sample
-    template_name = 'lims/sample_bulk_change.html'
+    template_name = 'lims/forms/sample_bulk_change.html'
 
     def get_model_form_class(self):
         return SampleBulkEditForm

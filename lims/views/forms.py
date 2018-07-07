@@ -223,7 +223,7 @@ class BulkAddFormset(BaseModelFormSet):
 
 
 class BulkEditViewBase(ObjectFormView):
-    template_name = 'lims/sample_bulk_form.html'
+    template_name = 'lims/forms/sample_bulk_form.html'
     model = None
 
     def __init__(self, *args, **kwargs):

@@ -70,12 +70,20 @@ class SampleEntryTemplateFieldInline(admin.TabularInline):
     ordering = ('order', )
 
 
+@admin.register(models.Attachment)
+class AttachmentAdmin(LimsAdmin):
+    prepopulated_fields = {"slug": ("name",)}
+    autocomplete_fields = ['project', 'samples', 'locations', 'location_tags', 'sample_tags']
+    search_fields = ['name', 'slug', 'description', 'file_hash']
+
+
 @admin.register(models.Project)
-class ProjectAdmin(admin.ModelAdmin):
+class ProjectAdmin(LimsAdmin):
     inlines = [ProjectTagInline, ]
     list_display = ('name', 'slug', 'user', 'modified')
     autocomplete_fields = ['parent', 'user']
     search_fields = ['name', 'slug']
+    ordering = ['-modified', ]
 
 
 @admin.register(models.Sample)
@@ -85,6 +93,7 @@ class SampleAdmin(LimsAdmin):
     date_hierarchy = "collected"
     autocomplete_fields = ['project', 'location', 'user', 'parent']
     search_fields = ['slug', ]
+    ordering = ['-modified', ]
 
 
 @admin.register(models.Location)
@@ -94,8 +103,23 @@ class LocationAdmin(LimsAdmin):
     list_display = ('name', 'slug', 'parent', 'user', 'modified')
     autocomplete_fields = ['project', 'parent', 'user']
     search_fields = ['name', 'slug']
+    ordering = ['-modified', ]
 
 
 @admin.register(models.EntryTemplate)
 class SampleEntryTemplateAdmin(LimsAdmin):
     inlines = [SampleEntryTemplateFieldInline, ]
+
+
+@admin.register(models.SampleTag)
+class SampleTagAdmin(admin.ModelAdmin):
+    autocomplete_fields = ['key', 'object']
+    search_fields = ['key__name', 'key__slug', 'object__slug']
+    ordering = ['-modified', ]
+
+
+@admin.register(models.LocationTag)
+class LocationTagAdmin(admin.ModelAdmin):
+    autocomplete_fields = ['key', 'object']
+    search_fields = ['key__name', 'key__slug', 'object__slug']
+    ordering = ['-modified', ]

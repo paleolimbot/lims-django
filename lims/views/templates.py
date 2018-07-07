@@ -60,7 +60,7 @@ def template_form_class_factory(template):
 
 
 class TemplateFormView(LimsLoginMixin, ObjectFormView, generic.CreateView):
-    template_name = 'lims/template_form.html'
+    template_name = 'lims/forms/template_form.html'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -87,7 +87,7 @@ class TemplateFormView(LimsLoginMixin, ObjectFormView, generic.CreateView):
 
 class TemplateBulkView(LimsLoginMixin, BulkEditViewBase):
     model = None
-    template_name = 'lims/template_bulk.html'
+    template_name = 'lims/forms/template_bulk.html'
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -437,7 +437,7 @@ class Tag(models.Model):
         return list(all_terms)
 
     def __str__(self):
-        return '%s="%s"' % (self.key, self.value)
+        return '%s/%s="%s"' % (self.object, self.key, self.value)
 
 
 class Project(BaseObjectModel):
@@ -547,6 +547,48 @@ class SampleTag(Tag):
         if exclude is None or ('key' not in exclude and 'object' not in exclude):
             if self.key.project != self.object.project:
                 raise ValidationError({'key': ['Key project must match object project']})
+
+
+class Attachment(BaseObjectModel):
+    project = models.ForeignKey(Project, on_delete=models.PROTECT)
+    file = models.FileField()
+    file_hash = models.CharField(max_length=128, blank=True)
+    mime_type = models.CharField(max_length=256, blank=True)
+
+    samples = models.ManyToManyField(Sample, related_name='attachments', blank=True)
+    sample_tags = models.ManyToManyField(SampleTag, related_name='attachments', blank=True)
+    locations = models.ManyToManyField(Location, related_name='attachments', blank=True)
+    location_tags = models.ManyToManyField(LocationTag, related_name='attachments', blank=True)
+
+    # TODO: currently, the default setup when removing attachments is to also remove dependent
+    # objects. This obviously isn't what we want here...
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        for sample in self.samples.all():
+            if sample.project != self.project:
+                raise ValidationError({'samples': ['At least one related sample is of a different project']})
+
+        for location in self.locations.all():
+            if location.project != self.project:
+                raise ValidationError({'locations': ['At least one related location is of a different project']})
+
+        for location_tag in self.location_tags.all():
+            if location_tag.object.project != self.project:
+                raise ValidationError(
+                    {'location_tags': ['At least one related location tag is of a different project']}
+                )
+
+        for sample_tag in self.sample_tags.all():
+            if sample_tag.object.project != self.project:
+                raise ValidationError({'sample_tags': ['At least one related sample tag is of a different project']})
+
+    def get_absolute_url(self):
+        return reverse_lazy('lims:attachment_detail', kwargs={'pk': self.pk})
+
+    def get_project(self):
+        return self.project
 
 
 class EntryTemplate(models.Model):
