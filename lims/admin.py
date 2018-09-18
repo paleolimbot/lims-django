@@ -70,11 +70,19 @@ class SampleEntryTemplateFieldInline(admin.TabularInline):
     ordering = ('order', )
 
 
+class AttachmentTagInline(admin.TabularInline):
+    model = models.AttachmentTag
+    formfield_overrides = text_overrides
+    extra = 1
+    autocomplete_fields = ['key', ]
+
+
 @admin.register(models.Attachment)
 class AttachmentAdmin(LimsAdmin):
     prepopulated_fields = {"slug": ("name",)}
     autocomplete_fields = ['project', 'samples', 'locations', 'location_tags', 'sample_tags']
     search_fields = ['name', 'slug', 'description', 'file_hash']
+    inlines = [AttachmentTagInline, ]
 
 
 @admin.register(models.Project)
@@ -120,6 +128,13 @@ class SampleTagAdmin(admin.ModelAdmin):
 
 @admin.register(models.LocationTag)
 class LocationTagAdmin(admin.ModelAdmin):
+    autocomplete_fields = ['key', 'object']
+    search_fields = ['key__name', 'key__slug', 'object__slug']
+    ordering = ['-modified', ]
+
+
+@admin.register(models.AttachmentTag)
+class AttachmentTagAdmin(admin.ModelAdmin):
     autocomplete_fields = ['key', 'object']
     search_fields = ['key__name', 'key__slug', 'object__slug']
     ordering = ['-modified', ]
