@@ -106,7 +106,10 @@ class MySampleListView(SampleListView):
 
 
 def default_published_filter(queryset, user):
-    return queryset.filter(Q(published=True) | Q(user=user))
+    # in list views, published samples show up in everyone's view, but draft samples
+    # show up in only the user's view. auto-draft samples never show up in a list view
+    # but should show up in the admin view
+    return queryset.filter(Q(status='published') | (Q(user=user) & Q(status='draft')))
 
 
 def query_string_filter(queryset, query_dict, use=(), search=(), search_func="icontains", prefix=''):

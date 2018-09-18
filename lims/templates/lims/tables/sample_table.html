@@ -32,13 +32,13 @@
                     <th>Parent</th>
                     <th>Location</th>
                     <th>Geometry</th>
-                    <th>Published</th>
+                    <th>Status</th>
                     <th>Modified</th>
                 </tr>
             </thead>
 
             {% for sample in page_obj %}
-                <tr{% if not sample.published %} class="object-row-draft"{% endif %}>
+                <tr class="object-row-{{ sample.status }}">
                     <td>{{ sample.get_checkbox }}</td>
                     <td>
                         <a class="editlink" href="{% url 'lims:sample_change' sample.pk %}?from={{ view.request.get_full_path|urlencode }}">edit</a>
@@ -67,7 +67,7 @@
                         {% endif %}
                     </td>
                     <td>{{ sample.geometry|truncatechars:25 }}</td>
-                    <td>{{ sample.published }}</td>
+                    <td>{{ sample.status }}</td>
                     <td>{{ sample.modified }}</td>
                 </tr>
 

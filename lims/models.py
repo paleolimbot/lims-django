@@ -176,11 +176,16 @@ class BaseObjectModel(models.Model):
         else:
             return False
 
-    def set_tags(self, _values=None, taxonomy='default', **kwargs):
+    def default_taxonomy(self):
+        return type(self).__name__
+
+    def set_tags(self, _values=None, taxonomy=None, **kwargs):
+        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
         self.tags.all().delete()
         return self.add_tags(_values, taxonomy=taxonomy, **kwargs)
 
-    def add_tags(self, _values=None, taxonomy='default', **kwargs):
+    def add_tags(self, _values=None, taxonomy=None, **kwargs):
+        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
         if _values is not None:
             kwargs.update(_values)
 
@@ -194,7 +199,9 @@ class BaseObjectModel(models.Model):
                 tag.delete()
                 raise e
 
-    def update_tags(self, _values=None, taxonomy='default', **kwargs):
+    def update_tags(self, _values=None, taxonomy=None, **kwargs):
+        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
+
         if _values is not None:
             kwargs.update(_values)
 
@@ -218,7 +225,9 @@ class BaseObjectModel(models.Model):
                         tag.delete()
                         raise e
 
-    def get_tag(self, key, taxonomy='default', as_list=False):
+    def get_tag(self, key, taxonomy=None, as_list=False):
+        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
+
         term = Term.get_term(key, self.get_project(), taxonomy=taxonomy, create=False)
         if term is None:
             return None
@@ -364,6 +373,9 @@ class Tag(models.Model):
     class Meta:
         abstract = True
 
+    def default_taxonomy(self):
+        return 'default'
+
     def clean_fields(self, exclude=None):
         super().clean_fields(exclude=exclude)
 
@@ -400,7 +412,7 @@ class Tag(models.Model):
         string_tags = {}
         for key, value in kwargs.items():
             if value:
-                term = Term.get_term(key, self.object.get_project(), create=True)
+                term = Term.get_term(key, self.object.get_project(), self.default_taxonomy(), create=True)
                 string_tags[term.slug] = value
 
         if kwargs:
@@ -508,10 +520,14 @@ class Sample(BaseObjectModel):
     project = models.ForeignKey(Project, on_delete=models.PROTECT)
     collected = models.DateTimeField("collected")
     location = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True)
-    published = models.BooleanField(default=False)
+    status = models.CharField(
+        max_length=55,
+        validators=[RegexValidator("^(auto-draft|draft|published)$"), ],
+        default='draft'
+    )
 
     def _should_update_slug(self):
-        return super()._should_update_slug() or not self.published
+        return super()._should_update_slug() or (self.status != 'published')
 
     def auto_slug_use(self):
         # get parts of the calculated sample slug
@@ -654,7 +670,7 @@ class EntryTemplate(models.Model):
 
     def get_model_fields(self):
         if self.model == 'Sample':
-            return ['collected', 'name', 'description', 'location', 'parent', 'geometry', 'published']
+            return ['collected', 'name', 'description', 'location', 'parent', 'geometry']
         elif self.model == 'SampleTag' or self.model == 'LocationTag':
             return ['object', 'key', 'value', 'comment', 'meta']
         elif self.model == 'Location':
@@ -677,7 +693,7 @@ class EntryTemplate(models.Model):
 
 class EntryTemplateField(models.Model):
     template = models.ForeignKey(EntryTemplate, on_delete=models.CASCADE, related_name='fields')
-    taxonomy = models.CharField(max_length=55, default='default')
+    taxonomy = models.CharField(max_length=55, default='', blank=True)
     target = models.CharField(max_length=55)
     initial_value = models.TextField(blank=True)
     order = models.IntegerField(default=1)
@@ -686,18 +702,26 @@ class EntryTemplateField(models.Model):
         if exclude is None or 'target' not in exclude:
             # target should be a field of self.template.model or a Term
             if self.target not in self.template.get_model_fields() and self.term is None:
-                raise ValidationError({'target': 'Target is not a field of %s and is not a defined term slug' %
-                                       self.template.model})
+                raise ValidationError(
+                    {'target': 'Target is not a field of %s and is not a defined term slug' % self.template.model}
+                )
 
     def get_project(self):
         return self.template.get_project()
+
+    def default_taxonomy(self):
+        return self.template.get_model().__name__
 
     @cached_property
     def term(self):
         if self.target in self.template.get_model_fields():
             return None
         try:
-            return Term.objects.get(slug=self.target, project=self.get_project(), taxonomy=self.taxonomy)
+            return Term.objects.get(
+                slug=self.target,
+                project=self.get_project(),
+                taxonomy=self.taxonomy if self.taxonomy else self.default_taxonomy()
+            )
         except Term.DoesNotExist:
             return None
 

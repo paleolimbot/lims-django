@@ -15,8 +15,7 @@ HELP_TEXTS = {
         'description': 'Extra information about the sample that is not expressed in other fields.',
         'location': 'Choose a previously added location at which this sample was collected.',
         'parent': 'Choose a parent sample from which this sample was subsampled.',
-        'geometry': 'Well-known-text (e.g. POINT (lon lat) that describes where this sample was collected.',
-        'published': 'Publish a sample to make it visible to others, unpublish it to fix a sample ID.'
+        'geometry': 'Well-known-text (e.g. POINT (lon lat) that describes where this sample was collected.'
     },
     'SampleTag': {
         'object': 'The sample to which this tag should be assigned',
@@ -63,7 +62,7 @@ class SampleForm(BaseObjectModelForm):
 
     class Meta:
         model = models.Sample
-        fields = ['collected', 'name', 'description', 'location', 'parent', 'geometry', 'published']
+        fields = ['collected', 'name', 'description', 'location', 'parent', 'geometry']
         widgets = WIDGETS['Sample']
         help_texts = HELP_TEXTS['Sample']
 

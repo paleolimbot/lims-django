@@ -261,7 +261,7 @@ class SamplePublishView(LimsLoginMixin, BulkActionView):
     action_name = 'publish'
 
     def new_status(self):
-        return True
+        return 'published'
 
     def do_action(self, request, queryset):
         current_user = request.user
@@ -269,15 +269,17 @@ class SamplePublishView(LimsLoginMixin, BulkActionView):
             with reversion.create_revision():
                 for obj in queryset:
                     if obj.user_can(current_user, 'edit'):
-                        obj.published = self.new_status()
+                        obj.status = self.new_status()
                         obj.save()
                     else:
                         raise models.ObjectPermissionError(obj)
 
         except models.ObjectPermissionError as e:
             self.add_error(
-                format_html('You are not allowed to change the published status for sample <a href="{}">{}</a>.',
-                            e.get_object().get_absolute_url(), e.get_object())
+                format_html(
+                    'You are not allowed to change the published status for sample <a href="{}">{}</a>.',
+                    e.get_object().get_absolute_url(), e.get_object()
+                )
             )
 
         self.add_message('%s items were successfully %sed' % (queryset.count(), self.action_name))
@@ -288,7 +290,7 @@ class SampleUnPublishView(SamplePublishView):
     action_name = 'unpublish'
 
     def new_status(self):
-        return False
+        return 'draft'
 
 
 class SampleBulkEditForm(SampleForm):

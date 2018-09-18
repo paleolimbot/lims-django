@@ -29,7 +29,7 @@ class LocationSelect2Widget(ProjectModelSelect2Widget):
 
 class SampleSelect2Widget(ProjectModelSelect2Widget):
     def get_queryset(self):
-        return models.Sample.objects.order_by('-modified').filter(published=True)
+        return models.Sample.objects.order_by('-modified').filter(status='published')
 
 
 class TermSelect2Widget(ProjectModelSelect2Widget):
