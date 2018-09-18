@@ -63,6 +63,7 @@
             {% endif %}
         </div>
 
+        {% block breadrumbs_tag %}
         <div class="breadcrumbs">
             <a href="{% url 'lims:project_list' %}">All Projects</a>
         {% if project %}
@@ -70,6 +71,7 @@
         {% endif %}
         {% block breadcrumbs %}{% endblock %}
         </div>
+        {% endblock %}
 
         {% block content_tag %}
         <div id="content" class="flex">
