@@ -1,5 +1,6 @@
 import re
 import json
+import math
 
 from django.db.utils import OperationalError
 from django.db import models
@@ -343,7 +344,12 @@ class Term(models.Model):
                 return Term.objects.get(project=project, taxonomy=taxonomy, name=string_key)
             except Term.DoesNotExist:
                 if create:
-                    return Term.objects.create(project=project, taxonomy=taxonomy, slug=slugify(string_key))
+                    return Term.objects.create(
+                        project=project,
+                        taxonomy=taxonomy,
+                        slug=slugify(string_key),
+                        name=string_key
+                    )
                 else:
                     return None
 
@@ -571,11 +577,21 @@ class Sample(BaseObjectModel):
 
 class SampleTag(Tag):
     object = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name="tags")
+    numeric_value = models.FloatField(default=float("Nan"), editable=False, blank=True, null=True)
+    numeric_value_autoset = models.BooleanField(default=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        if self.numeric_value_autoset:
+            try:
+                self.numeric_value = float(self.value)
+            except ValueError:
+                self.numeric_value = None
+        return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         # clear relations so they don't delete attachments
         self.attachments.clear()
-        super().delete(*args, **kwargs)
+        return super().delete(*args, **kwargs)
 
     def clean_fields(self, exclude=None):
         super().clean_fields(exclude=exclude)
