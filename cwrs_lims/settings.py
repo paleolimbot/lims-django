@@ -123,5 +123,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-# Media root for uploaded files
+# Media root for uploaded files. Note that MEDIA_URL is intentionally not set,
+# because uploaded files should not be served statically (so that login, permissions can
+# be checked before somebody tries to access a file)
 MEDIA_ROOT = 'uploads/'

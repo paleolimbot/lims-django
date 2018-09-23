@@ -603,7 +603,7 @@ class SampleTag(Tag):
 
 class Attachment(BaseObjectModel):
     project = models.ForeignKey(Project, on_delete=models.PROTECT)
-    file = models.FileField()
+    file = models.FileField(upload_to='attachments')
     file_hash = models.CharField(max_length=128, blank=True)
     mime_type = models.CharField(max_length=256, blank=True)
 

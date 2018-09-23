@@ -55,6 +55,7 @@ urlpatterns = [
 
     # attachment object views
     url(r'^attachment/(?P<pk>[0-9]+)$', views.AttachmentDetailView.as_view(), name="attachment_detail"),
+    url(r'^attachment/(?P<pk>[0-9]+)/download$', views.AttachmentDownloadView.as_view(), name="attachment_download"),
 
     # action views
     url(r'^(?P<model>[a-z]+)/(?P<pk>[0-9]+)/action/(?P<action>[a-z-]+)$', views.item_action_view, name='item_action'),

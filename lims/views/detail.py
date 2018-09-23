@@ -1,6 +1,7 @@
 
 from django.views import generic
 from django.shortcuts import get_object_or_404
+from django.http import FileResponse
 from django.core.paginator import Paginator
 from django.contrib.auth.models import User
 
@@ -142,3 +143,10 @@ class AttachmentDetailView(LimsLoginMixin, DetailViewWithTablesBase):
 
     def get_location_queryset(self):
         return self.object.locations.all()
+
+
+class AttachmentDownloadView(LimsLoginMixin, generic.View):
+
+    def dispatch(self, request, *args, **kwargs):
+        obj = get_object_or_404(models.Attachment, pk=kwargs['pk'])
+        return FileResponse(obj.file.open('rb'), filename=obj.file.name, as_attachment=True)
