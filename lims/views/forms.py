@@ -124,10 +124,16 @@ class BaseObjectModelForm(ModelForm):
                 tag_field_names.append(re.search('^tag_form_field_(.*)$', key).group(1))
 
         # set the tag names from tag_field_names
+        # currently only the model taxonomy can be used
         self.tag_field_names = {}
         for field_name in tag_field_names:
             # try to resolve term
-            term = models.Term.get_term(field_name, create=True, project=self.project)
+            term = models.Term.get_term(
+                field_name,
+                create=True,
+                project=self.project,
+                taxonomy=self._meta.model.__name__
+            )
 
             # if term can't be resolved, don't add it to the form
             # (most likely reason is that field_name is '')
