@@ -57,10 +57,10 @@ class BaseObjectModel(models.Model):
     recursive_depth = models.IntegerField(default=0, editable=False)
 
     geometry = models.TextField(blank=True, validators=[validate_wkt, ])
-    xmin = models.FloatField(editable=False, blank=True, null=True, default=None)
-    xmax = models.FloatField(editable=False, blank=True, null=True, default=None)
-    ymin = models.FloatField(editable=False, blank=True, null=True, default=None)
-    ymax = models.FloatField(editable=False, blank=True, null=True, default=None)
+    geo_xmin = models.FloatField(editable=False, blank=True, null=True, default=None)
+    geo_xmax = models.FloatField(editable=False, blank=True, null=True, default=None)
+    geo_ymin = models.FloatField(editable=False, blank=True, null=True, default=None)
+    geo_ymax = models.FloatField(editable=False, blank=True, null=True, default=None)
 
     def _should_update_slug(self):
         return not self.pk and not self.slug
@@ -95,10 +95,10 @@ class BaseObjectModel(models.Model):
 
         # cache location info
         bounds = wkt_bounds(self.geometry)
-        self.xmin = bounds['xmin']
-        self.xmax = bounds['xmax']
-        self.ymin = bounds['ymin']
-        self.ymax = bounds['ymax']
+        self.geo_xmin = bounds['xmin']
+        self.geo_xmax = bounds['xmax']
+        self.geo_ymin = bounds['ymin']
+        self.geo_ymax = bounds['ymax']
         super().save(*args, **kwargs)
 
     def auto_slug_use(self):
@@ -760,4 +760,5 @@ except Project.DoesNotExist:
     )
 except Exception as e:
     # probably no such table during initial checks
-    print("Could not create default project: ", e)
+    # print("Could not create default project: ", e)
+    pass
