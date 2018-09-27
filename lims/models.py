@@ -758,6 +758,6 @@ except Project.DoesNotExist:
         name="Default Project",
         slug="default_project"
     )
-except OperationalError:
+except Exception as e:
     # probably no such table during initial checks
-    pass
+    print("Could not create default project: ", e)
