@@ -113,7 +113,7 @@ class BaseObjectModelForm(ModelForm):
         self.fields['project_meta_field'].initial = project.pk
 
         # add additional tag names that may exist from the current instance
-        current_tag_keys = self.instance.get_tags().keys()
+        current_tag_keys = self.instance.get_tags(taxonomy=None).keys()
         tag_field_names = list(tag_field_names)
         for key in current_tag_keys:
             tag_field_names.append(key)
@@ -127,7 +127,7 @@ class BaseObjectModelForm(ModelForm):
         self.tag_field_names = {}
         for field_name in tag_field_names:
             # try to resolve term
-            term = models.Term.get_term(field_name, create=True, project=self.project)
+            term = models.Term.get_term(field_name, taxonomy=self._meta.model.__name__, create=True, project=self.project)
 
             # if term can't be resolved, don't add it to the form
             # (most likely reason is that field_name is '')

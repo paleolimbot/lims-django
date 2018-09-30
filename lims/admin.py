@@ -63,6 +63,12 @@ class ProjectTagInline(admin.TabularInline):
     autocomplete_fields = ['key', ]
 
 
+class ProjectPermissionInline(admin.TabularInline):
+    model = models.ProjectPermission
+    formfield_overrides = text_overrides
+    extra = 1
+
+
 class SampleEntryTemplateFieldInline(admin.TabularInline):
     model = models.EntryTemplateField
     formfield_overrides = text_overrides
@@ -87,7 +93,7 @@ class AttachmentAdmin(LimsAdmin):
 
 @admin.register(models.Project)
 class ProjectAdmin(LimsAdmin):
-    inlines = [ProjectTagInline, ]
+    inlines = [ProjectTagInline, ProjectPermissionInline]
     list_display = ('name', 'slug', 'user', 'modified')
     autocomplete_fields = ['parent', 'user']
     search_fields = ['name', 'slug']

@@ -1,8 +1,6 @@
 import re
 import json
-import math
 
-from django.db.utils import OperationalError
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -48,6 +46,7 @@ class BaseObjectModel(models.Model):
     name = models.CharField(max_length=55)
     slug = SlugIdField()
     description = models.TextField(blank=True)
+    project = None
 
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
     created = models.DateTimeField("created", auto_now_add=True)
@@ -161,19 +160,12 @@ class BaseObjectModel(models.Model):
         return mark_safe(qrcode_html(self))
 
     def user_can(self, user, action):
-        # non-existent users can't do anything
-        if not user.pk:
-            return False
-
-        if user.is_staff or user == self.user:
-            # owners and staff can do anything
+        if user.is_staff:
+            # staff can do anything
             return True
-        elif action == 'add':
-            # any logged in user can add samples
-            return True
-        elif action == 'view':
-            # any logged in user can view
-            return True
+        elif self.project:
+            # permissions live with projects
+            return self.project.permissions.filter(user=user, permission=action).count() > 0
         else:
             return False
 
@@ -192,7 +184,7 @@ class BaseObjectModel(models.Model):
 
         # make sure all names are defined terms
         for key, value in kwargs.items():
-            term = Term.get_term(key, self.get_project(), taxonomy=taxonomy, create=True)
+            term = Term.get_term(key, self.project, taxonomy=taxonomy, create=True)
             tag = self.tags.create(key=term, value=value)
             try:
                 tag.full_clean()
@@ -208,7 +200,7 @@ class BaseObjectModel(models.Model):
 
         # make sure all names are defined terms
         for key, value in kwargs.items():
-            term = Term.get_term(key, self.get_project(), taxonomy=taxonomy, create=True)
+            term = Term.get_term(key, self.project, taxonomy=taxonomy, create=True)
             try:
                 tag = self.tags.get(key=term)
                 if value:
@@ -229,7 +221,7 @@ class BaseObjectModel(models.Model):
     def get_tag(self, key, taxonomy=None, as_list=False):
         taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
 
-        term = Term.get_term(key, self.get_project(), taxonomy=taxonomy, create=False)
+        term = Term.get_term(key, self.project, taxonomy=taxonomy, create=False)
         if term is None:
             return None
         try:
@@ -244,8 +236,9 @@ class BaseObjectModel(models.Model):
         except ObjectDoesNotExist:
             return None
 
-    def get_tags(self):
-        return {tag.key.slug: tag.value for tag in self.tags.all()}
+    def get_tags(self, taxonomy=None):
+        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
+        return {tag.key.slug: tag.value for tag in self.tags.filter(key__taxonomy=taxonomy)}
 
     def __str__(self):
         return self.name
@@ -301,6 +294,16 @@ class Term(models.Model):
     class Meta:
         unique_together = ['project', 'taxonomy', 'slug']
 
+    def user_can(self, user, action):
+        if user.is_staff:
+            # staff can do anything
+            return True
+        elif self.project:
+            # permissions live with projects
+            return self.project.permissions.filter(user=user, permission=action).count() > 0
+        else:
+            return False
+
     def get_absolute_url(self):
         return reverse_lazy('lims:term_detail', kwargs={'pk': self.pk})
 
@@ -354,7 +357,7 @@ class Term(models.Model):
                     return None
 
     def __str__(self):
-        return self.name
+        return "%s/%s" % (self.taxonomy, self.name)
 
 
 class TermValidator(models.Model):
@@ -393,7 +396,7 @@ class Tag(models.Model):
                 raise ValidationError({'value': e.error_list})
 
         if exclude is None or ('object' not in exclude and 'key' not in exclude):
-            if hasattr(self.object, 'project') and (self.key.project != self.object.project):
+            if self.key.project != self.object.project:
                 raise ValidationError({'object': ['Object project must match term project']})
 
     def save(self, *args, **kwargs):
@@ -403,12 +406,14 @@ class Tag(models.Model):
         super().save(*args, **kwargs)
 
     def user_can(self, user, action):
-        if action == 'add':
+        if user.is_staff:
+            # staff can do anything
             return True
-        elif action == 'edit':
-            return user in (self.user, self.object.user)
+        elif self.object.project:
+            # permissions live with projects
+            return self.object.project.permissions.filter(user=user, permission=action).count() > 0
         else:
-            return self.object.user_can(user, action)
+            return False
 
     def set_tags(self, _values=None, _save=True, **kwargs):
         if _values is not None:
@@ -418,7 +423,7 @@ class Tag(models.Model):
         string_tags = {}
         for key, value in kwargs.items():
             if value:
-                term = Term.get_term(key, self.object.get_project(), self.default_taxonomy(), create=True)
+                term = Term.get_term(key, self.object.project, self.default_taxonomy(), create=True)
                 string_tags[term.slug] = value
 
         if kwargs:
@@ -443,7 +448,9 @@ class Tag(models.Model):
         tags = self.get_tags()
         return tags[key] if key in tags else None
 
-    def get_tags(self):
+    def get_tags(self, taxonomy=None):
+        if taxonomy is not None:
+            raise NotImplementedError("taxonomy must be None for meta fields")
         tags = json.loads(self.meta) if self.meta else {}
         return tags
 
@@ -466,6 +473,16 @@ class Project(BaseObjectModel):
     def get_project(self):
         return self
 
+    def user_can(self, user, action):
+        if user.is_staff:
+            # staff can do anything
+            return True
+        elif action == 'view':
+            # permissions live with projects
+            return self.permissions.filter(user=user, permission=action).count() > 0
+        else:
+            return False
+
     @staticmethod
     def get_all_terms(queryset):
         return Term.objects.filter(projecttag__object__in=queryset).distinct()
@@ -474,12 +491,23 @@ class Project(BaseObjectModel):
 class ProjectTag(Tag):
     object = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="tags")
 
-    def clean_fields(self, exclude=None):
-        super().clean_fields(exclude=exclude)
+    def user_can(self, user, action):
+        return self.object.user_can(user, action)
 
-        if exclude is None or 'key' not in exclude:
-            if self.key.project is not None:
-                raise ValidationError({'key': ['For projects, tag terms must not have projects themselves']})
+
+class ProjectPermission(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='permissions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='project_permissions')
+    permission = models.CharField(max_length=55, choices=(
+        ('add', 'Add objects'),
+        ('edit', 'Edit objects'),
+        ('delete', 'Remove Objects'),
+        ('view', 'View objects')
+    ))
+
+    class Meta:
+        # also creates index on these fields
+        unique_together = ('project', 'user', 'permission')
 
 
 class Location(BaseObjectModel):
@@ -528,7 +556,11 @@ class Sample(BaseObjectModel):
     location = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True)
     status = models.CharField(
         max_length=55,
-        validators=[RegexValidator("^(auto-draft|draft|published)$"), ],
+        choices=(
+            ('auto-draft', 'Auto Draft'),
+            ('draft', 'Draft'),
+            ('published', 'Published')
+        ),
         default='draft'
     )
 
@@ -577,7 +609,7 @@ class Sample(BaseObjectModel):
 
 class SampleTag(Tag):
     object = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name="tags")
-    numeric_value = models.FloatField(default=float("Nan"), editable=False, blank=True, null=True)
+    numeric_value = models.FloatField(default=None, editable=False, blank=True, null=True)
     numeric_value_autoset = models.BooleanField(default=True, editable=False)
 
     def save(self, *args, **kwargs):
@@ -667,8 +699,14 @@ class EntryTemplate(models.Model):
     user = models.ForeignKey(User, on_delete=models.PROTECT, blank=True, null=True)
     name = models.CharField(max_length=55, unique=True)
     model = models.CharField(
-        max_length=55, default='Sample',
-        validators=[RegexValidator('^(Sample|SampleTag|Location|LocationTag)$')]
+        max_length=55,
+        default='Sample',
+        choices=(
+            ('Sample', 'Sample'),
+            ('SampleTag', 'Sample Tag'),
+            ('Location', 'Location'),
+            ('LocationTag', 'Location Tag')
+        )
     )
     last_used = models.DateTimeField('last_used', auto_now=True)
 
@@ -747,17 +785,3 @@ class EntryTemplateField(models.Model):
             return self.target.replace('_', ' ').title()
         else:
             return str(term)
-
-
-# make sure some default objects exist in the database
-default_project = None
-try:
-    default_project = Project.objects.get(slug="default_project")
-except Project.DoesNotExist:
-    default_project = Project.objects.create(
-        name="Default Project",
-        slug="default_project"
-    )
-except OperationalError:
-    # probably no such table during initial checks
-    pass

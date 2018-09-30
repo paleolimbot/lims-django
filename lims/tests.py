@@ -8,7 +8,7 @@ from django.db import transaction
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
-from .models import Sample, Location, SampleTag, BaseValidator, Term, Project
+from .models import Sample, Location, SampleTag, BaseValidator, Term, Project,ProjectPermission
 
 
 def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_tags=3, test_user=None,
@@ -453,11 +453,11 @@ class ProjectLayerTestCase(TestCase):
 
         self.proj1.set_tags(_values={t1: "fishval"})
         self.assertEqual(self.proj1.get_tag(t1), "fishval")
-        with self.assertRaisesRegex(ValidationError, "terms must not have projects"):
+        with self.assertRaisesRegex(ValidationError, "Object project must match term project"):
             self.proj1.set_tags(_values={t2: "fishval"})
         self.assertIsNone(self.proj1.get_tag(t2))
 
-        with self.assertRaisesRegex(ValidationError, "terms must not have projects"):
+        with self.assertRaisesRegex(ValidationError, "Object project must match term project"):
             self.proj1.update_tags(_values={t2: "fishval"})
         self.assertIsNone(self.proj1.get_tag(t2))
 
@@ -498,3 +498,93 @@ class ProjectLayerTestCase(TestCase):
         with self.assertRaisesRegex(ValidationError, "Parent must belong to same project as child"):
             newl = Location(project=self.proj2, name="loc", parent=l2)
             newl.full_clean()
+
+
+class PermissionTestCase(TestCase):
+
+    def setUp(self):
+        self.test_user1 = User.objects.create(username='tuser1')
+        self.test_user2 = User.objects.create(username='tuser2')
+        self.staff_user = User.objects.create(username='staff_user', is_staff=True)
+
+        self.proj1 = Project.objects.create(name="Project 1", slug="project-1")
+        self.proj1.set_tags(atag='avalue1')
+        self.ptag1 = self.proj1.tags.all()[0]
+        self.sample1 = Sample.objects.create(collected=timezone.now(), project=self.proj1, name="user1's sample")
+        self.sample1.set_tags(atag='avalue1')
+        self.stag1 = self.sample1.tags.all()[0]
+        self.sterm1 = self.stag1.key
+
+        self.proj2 = Project.objects.create(name="Project 2", slug="project-2")
+        self.proj2.set_tags(atag='avalue2')
+        self.ptag2 = self.proj2.tags.all()[0]
+        self.sample2 = Sample.objects.create(collected=timezone.now(), project=self.proj2, name="user2's sample")
+        self.sample2.set_tags(atag='avalue2')
+        self.stag2 = self.sample2.tags.all()[0]
+        self.sterm2 = self.stag2.key
+
+        self.pterm = self.ptag1.key
+
+        ProjectPermission.objects.create(user=self.test_user1, project=self.proj1, permission='view')
+        ProjectPermission.objects.create(user=self.test_user1, project=self.proj1, permission='edit')
+        ProjectPermission.objects.create(user=self.test_user2, project=self.proj2, permission='view')
+        ProjectPermission.objects.create(user=self.test_user2, project=self.proj2, permission='edit')
+
+    def test_project_permissions(self):
+
+        # view permission allows viewing of project in a list
+        self.assertTrue(self.proj1.user_can(self.test_user1, 'view'))
+        self.assertTrue(self.ptag1.user_can(self.test_user1, 'view'))
+        self.assertFalse(self.proj1.user_can(self.test_user2, 'view'))
+        self.assertFalse(self.ptag1.user_can(self.test_user2, 'view'))
+
+        # only staff can do anything else to actual project objects
+        self.assertFalse(self.proj1.user_can(self.test_user1, 'edit'))
+        self.assertTrue(self.proj1.user_can(self.staff_user, 'edit'))
+        self.assertFalse(self.ptag1.user_can(self.test_user1, 'edit'))
+        self.assertTrue(self.ptag1.user_can(self.staff_user, 'edit'))
+
+        # nobody can view project terms, nobody can edit them except staff
+        self.assertFalse(self.pterm.user_can(self.test_user1, 'view'))
+        self.assertFalse(self.pterm.user_can(self.test_user1, 'edit'))
+        self.assertTrue(self.pterm.user_can(self.staff_user, 'view'))
+        self.assertTrue(self.pterm.user_can(self.staff_user, 'edit'))
+
+    def test_sample_permissions(self):
+
+        # samples follow project permissions
+        self.assertTrue(self.sample1.user_can(self.test_user1, 'view'))
+        self.assertFalse(self.sample1.user_can(self.test_user2, 'view'))
+        self.assertTrue(self.sample1.user_can(self.staff_user, 'view'))
+        self.assertTrue(self.sample1.user_can(self.staff_user, 'edit'))
+
+        self.assertTrue(self.sample2.user_can(self.test_user2, 'view'))
+        self.assertFalse(self.sample2.user_can(self.test_user1, 'view'))
+        self.assertTrue(self.sample2.user_can(self.staff_user, 'view'))
+        self.assertTrue(self.sample2.user_can(self.staff_user, 'edit'))
+
+    def test_sample_tag_permissions(self):
+
+        # sample tags follow samples
+        self.assertTrue(self.stag1.user_can(self.test_user1, 'view'))
+        self.assertFalse(self.stag1.user_can(self.test_user2, 'view'))
+        self.assertTrue(self.stag1.user_can(self.staff_user, 'view'))
+        self.assertTrue(self.stag1.user_can(self.staff_user, 'edit'))
+
+        self.assertTrue(self.stag2.user_can(self.test_user2, 'view'))
+        self.assertFalse(self.stag2.user_can(self.test_user1, 'view'))
+        self.assertTrue(self.stag2.user_can(self.staff_user, 'view'))
+        self.assertTrue(self.stag2.user_can(self.staff_user, 'edit'))
+
+    def test_term_permissions(self):
+
+        # terms follow projects
+        self.assertTrue(self.sterm1.user_can(self.test_user1, 'view'))
+        self.assertFalse(self.sterm1.user_can(self.test_user2, 'view'))
+        self.assertTrue(self.sterm1.user_can(self.staff_user, 'view'))
+        self.assertTrue(self.sterm1.user_can(self.staff_user, 'edit'))
+
+        self.assertTrue(self.sterm2.user_can(self.test_user2, 'view'))
+        self.assertFalse(self.sterm2.user_can(self.test_user1, 'view'))
+        self.assertTrue(self.sterm2.user_can(self.staff_user, 'view'))
+        self.assertTrue(self.sterm2.user_can(self.staff_user, 'edit'))
