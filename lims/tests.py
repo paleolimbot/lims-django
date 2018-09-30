@@ -292,29 +292,29 @@ class LocationGeometryTestCase(TestCase):
         proj = Project.objects.create(name="Test Project", slug="test-proj")
         location_no_geom = Location.objects.create(project=proj, name="location1", slug="location1")
         self.assertEqual(location_no_geom.geometry, '')
-        self.assertIsNone(location_no_geom.xmin)
-        self.assertIsNone(location_no_geom.xmax)
-        self.assertIsNone(location_no_geom.ymin)
-        self.assertIsNone(location_no_geom.ymax)
+        self.assertIsNone(location_no_geom.geo_xmin)
+        self.assertIsNone(location_no_geom.geo_xmax)
+        self.assertIsNone(location_no_geom.geo_ymin)
+        self.assertIsNone(location_no_geom.geo_ymax)
 
         location_point = Location.objects.create(
             project=proj, name='location2', slug='location2', geometry='POINT (30 10)'
         )
         self.assertEqual(location_point.geometry, 'POINT (30 10)')
-        self.assertEqual(location_point.xmin, 30)
-        self.assertEqual(location_point.xmax, 30)
-        self.assertEqual(location_point.ymin, 10)
-        self.assertEqual(location_point.ymax, 10)
+        self.assertEqual(location_point.geo_xmin, 30)
+        self.assertEqual(location_point.geo_xmax, 30)
+        self.assertEqual(location_point.geo_ymin, 10)
+        self.assertEqual(location_point.geo_ymax, 10)
 
         location_polygon = Location.objects.create(
             project=proj,
             name='location3', slug='location3',
             geometry='MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)), ((15 5, 40 10, 10 20, 5 10, 15 5)))'
         )
-        self.assertEqual(location_polygon.xmin, 5)
-        self.assertEqual(location_polygon.xmax, 45)
-        self.assertEqual(location_polygon.ymin, 5)
-        self.assertEqual(location_polygon.ymax, 40)
+        self.assertEqual(location_polygon.geo_xmin, 5)
+        self.assertEqual(location_polygon.geo_xmax, 45)
+        self.assertEqual(location_polygon.geo_ymin, 5)
+        self.assertEqual(location_polygon.geo_ymax, 40)
 
 
 class TagsTestCase(TestCase):
