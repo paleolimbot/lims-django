@@ -588,3 +588,56 @@ class PermissionTestCase(TestCase):
         self.assertFalse(self.sterm2.user_can(self.test_user1, 'view'))
         self.assertTrue(self.sterm2.user_can(self.staff_user, 'view'))
         self.assertTrue(self.sterm2.user_can(self.staff_user, 'edit'))
+
+
+class DefaultObjectTestCase(TestCase):
+
+    def test_default_project(self):
+        new_user = User.objects.create(username="anewuser")
+
+        from . import default_objects
+        default_p = default_objects.get_or_create_default_project()
+
+        # should be a project
+        self.assertTrue(isinstance(default_p, Project))
+
+        # all existing users should be able to do the things in the default project
+        default_p_sample = Sample.objects.create(project=default_p, name="ds", collected=timezone.now())
+        self.assertTrue(default_p_sample.user_can(new_user, 'add'))
+        self.assertTrue(default_p_sample.user_can(new_user, 'view'))
+        self.assertTrue(default_p_sample.user_can(new_user, 'edit'))
+        self.assertTrue(default_p_sample.user_can(new_user, 'delete'))
+
+        # subsequent calls should return the same project
+        self.assertEqual(
+            default_objects.get_or_create_default_project(),
+            default_p
+        )
+
+    def test_user_projects(self):
+        user = User.objects.create(username="anewuser")
+        other_user = User.objects.create(username="other")
+        staff_user = User.objects.create(username="staffer", is_staff=True)
+
+        from . import default_objects
+        user_proj = default_objects.get_or_create_user_project(user)
+
+        # should be a project
+        self.assertTrue(isinstance(user_proj, Project))
+
+        # only the user and the staffer should be able to do anything
+        default_p_sample = Sample.objects.create(project=user_proj, name="ds", collected=timezone.now())
+        self.assertTrue(default_p_sample.user_can(user, 'add'))
+        self.assertTrue(default_p_sample.user_can(user, 'view'))
+        self.assertTrue(default_p_sample.user_can(user, 'edit'))
+        self.assertTrue(default_p_sample.user_can(user, 'delete'))
+
+        self.assertTrue(default_p_sample.user_can(staff_user, 'add'))
+        self.assertTrue(default_p_sample.user_can(staff_user, 'view'))
+        self.assertTrue(default_p_sample.user_can(staff_user, 'edit'))
+        self.assertTrue(default_p_sample.user_can(staff_user, 'delete'))
+
+        self.assertFalse(default_p_sample.user_can(other_user, 'add'))
+        self.assertFalse(default_p_sample.user_can(other_user, 'view'))
+        self.assertFalse(default_p_sample.user_can(other_user, 'edit'))
+        self.assertFalse(default_p_sample.user_can(other_user, 'delete'))

@@ -10,7 +10,7 @@ def get_or_create_default_project():
         p = Project.objects.get_or_create(
             name="Default Project",
             slug="default_project"
-        )
+        )[0]
 
         for user in User.objects.all():
             ProjectPermission.objects.get_or_create(project=p, user=user, permission='add')
@@ -28,7 +28,7 @@ def get_or_create_user_project(user):
         p = Project.objects.get_or_create(
             name='User Project: %s' % user.username,
             slug='user_project_%s' % user.pk
-        )
+        )[0]
 
         ProjectPermission.objects.get_or_create(project=p, user=user, permission='add')
         ProjectPermission.objects.get_or_create(project=p, user=user, permission='edit')
@@ -38,7 +38,7 @@ def get_or_create_user_project(user):
         return p
 
 
-def user_post_save_handler(sender, instance, get_or_created, raw, using, update_fields):
+def user_post_save_handler(sender, instance, *args, **kwargs):
     # add to default project
     p = get_or_create_default_project()
     ProjectPermission.objects.get_or_create(project=p, user=instance, permission='add')
