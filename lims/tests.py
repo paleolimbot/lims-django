@@ -556,6 +556,15 @@ class PermissionTestCase(TestCase):
         self.assertTrue(self.pterm.user_can(self.staff_user, 'view'))
         self.assertTrue(self.pterm.user_can(self.staff_user, 'edit'))
 
+        # user querysets
+        self.assertTrue(self.proj1 in Project.queryset_for_user(self.test_user1, 'view'))
+        self.assertTrue(self.proj1 in Project.queryset_for_user(self.staff_user, 'view'))
+        self.assertFalse(self.proj1 in Project.queryset_for_user(self.test_user2, 'view'))
+
+        self.assertTrue(self.proj2 in Project.queryset_for_user(self.test_user2, 'view'))
+        self.assertTrue(self.proj2 in Project.queryset_for_user(self.staff_user, 'view'))
+        self.assertFalse(self.proj2 in Project.queryset_for_user(self.test_user1, 'view'))
+
     def test_sample_permissions(self):
 
         # samples follow project permissions for Sample
@@ -568,6 +577,15 @@ class PermissionTestCase(TestCase):
         self.assertFalse(self.sample2.user_can(self.test_user1, 'view'))
         self.assertTrue(self.sample2.user_can(self.staff_user, 'view'))
         self.assertTrue(self.sample2.user_can(self.staff_user, 'edit'))
+
+        # user querysets
+        self.assertTrue(self.sample1 in Sample.queryset_for_user(self.test_user1, 'view'))
+        self.assertTrue(self.sample1 in Sample.queryset_for_user(self.staff_user, 'view'))
+        self.assertFalse(self.sample1 in Sample.queryset_for_user(self.test_user2, 'view'))
+
+        self.assertTrue(self.sample2 in Sample.queryset_for_user(self.test_user2, 'view'))
+        self.assertTrue(self.sample2 in Sample.queryset_for_user(self.staff_user, 'view'))
+        self.assertFalse(self.sample2 in Sample.queryset_for_user(self.test_user1, 'view'))
 
     def test_sample_tag_permissions(self):
 
@@ -582,6 +600,15 @@ class PermissionTestCase(TestCase):
         self.assertTrue(self.stag2.user_can(self.staff_user, 'view'))
         self.assertTrue(self.stag2.user_can(self.staff_user, 'edit'))
 
+        # user querysets
+        self.assertTrue(self.stag1 in SampleTag.queryset_for_user(self.test_user1, 'view'))
+        self.assertTrue(self.stag1 in SampleTag.queryset_for_user(self.staff_user, 'view'))
+        self.assertFalse(self.stag1 in SampleTag.queryset_for_user(self.test_user2, 'view'))
+
+        self.assertTrue(self.stag2 in SampleTag.queryset_for_user(self.test_user2, 'view'))
+        self.assertTrue(self.stag2 in SampleTag.queryset_for_user(self.staff_user, 'view'))
+        self.assertFalse(self.stag2 in SampleTag.queryset_for_user(self.test_user1, 'view'))
+
     def test_term_permissions(self):
 
         # samples follow project permissions for Term
@@ -594,6 +621,17 @@ class PermissionTestCase(TestCase):
         self.assertFalse(self.sterm2.user_can(self.test_user1, 'view'))
         self.assertTrue(self.sterm2.user_can(self.staff_user, 'view'))
         self.assertTrue(self.sterm2.user_can(self.staff_user, 'edit'))
+
+        # user querysets
+        self.assertTrue(self.sterm1 in Term.queryset_for_user(self.test_user1, 'view'))
+        self.assertFalse(self.sterm1 in Term.queryset_for_user(self.test_user1, 'edit'))
+        self.assertTrue(self.sterm1 in Term.queryset_for_user(self.staff_user, 'view'))
+        self.assertFalse(self.sterm1 in Term.queryset_for_user(self.test_user2, 'view'))
+
+        self.assertTrue(self.sterm2 in Term.queryset_for_user(self.test_user2, 'view'))
+        self.assertFalse(self.sterm2 in Term.queryset_for_user(self.test_user2, 'edit'))
+        self.assertTrue(self.sterm2 in Term.queryset_for_user(self.staff_user, 'view'))
+        self.assertFalse(self.sterm2 in Term.queryset_for_user(self.test_user1, 'view'))
 
 
 class DefaultObjectTestCase(TestCase):
