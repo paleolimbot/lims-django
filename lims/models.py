@@ -26,20 +26,137 @@ class ObjectPermissionError(PermissionError):
         return self.args[0]
 
 
+def validate_is_a_regex(value):
+    try:
+        re.compile(value)
+    except Exception as e:
+        raise ValidationError('Value is not a valid Python regex: %s' % e)
+
+
+def validate_json_tags_dict(value):
+    if not value:
+        return
+    try:
+        obj = json.loads(value)
+        if not isinstance(obj, dict):
+            raise ValidationError('Value is not a valid JSON object')
+
+    except ValueError:
+        raise ValidationError('Value is not valid JSON')
+
+
 class SlugIdField(models.CharField):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(
-            max_length=55,
-            unique=True,
-            blank=True,
-            validators=[RegexValidator("[A-Za-z0-9._-]*")]
-        )
+    def __init__(self, **kwargs):
+        defaults = {
+            'max_length': 55,
+            'unique': True,
+            'blank': True,
+            'validators': [RegexValidator('[A-Za-z0-9._-]*')]
+        }
+        defaults.update(**kwargs)
+        super().__init__(**defaults)
 
     @staticmethod
     def idify(obj):
-        txt = re.sub(r"[^A-Za-z0-9._-]+", "-", str(obj).lower())
-        return re.sub(r"(^-)|(-$)", "", txt)
+        txt = re.sub(r'[^A-Za-z0-9._-]+', '-', str(obj).lower())
+        return re.sub(r'(^-)|(-$)', '', txt)
+
+
+class LimsModelField(models.CharField):
+    """
+    This field type specifies a model defined in this module.
+    """
+
+    def __init__(self, **kwargs):
+        defaults = {
+            'max_length': 55,
+            'choices': (
+                ('Sample', 'Sample'),
+                ('SampleTag', 'Sample Tag'),
+                ('Location', 'Location'),
+                ('LocationTag', 'Location Tag'),
+                ('Attachment', 'Attachment'),
+                ('AttachmentTag', 'Attachment Tag')
+            )
+        }
+        defaults.update(**kwargs)
+        super().__init__(**defaults)
+
+    @staticmethod
+    def get_model(model):
+        """
+        Resolve a model class from a string.
+
+        :param model: A value from  this field
+        :return: A model class
+        """
+        if model == 'Sample':
+            return Sample
+        elif model == 'SampleTag':
+            return SampleTag
+        elif model == 'Location':
+            return Location
+        elif model == 'LocationTag':
+            return LocationTag
+        elif model == 'Attachment':
+            return Attachment
+        elif model == 'AttachmentTag':
+            return AttachmentTag
+        else:
+            raise ValueError('No such model: %s' % model)
+
+
+def object_queryset_for_user(model, user, permission):
+    if user.is_staff:
+        return model.objects.all()
+
+    model_name = model.__name__
+    return model.objects.filter(
+        models.Q(project__permissions__user=user) &
+        models.Q(project__permissions__permission=permission) &
+        models.Q(project__permissions__model=model_name)
+    )
+
+
+def tag_queryset_for_user(model, user, permission):
+    if user.is_staff:
+        return model.objects.all()
+
+    model_name = re.sub(r'Tag$', '', model.__name__)
+    return model.objects.filter(
+        models.Q(object__project__permissions__user=user) &
+        models.Q(object__project__permissions__permission=permission) &
+        models.Q(object__project__permissions__model=model_name)
+    )
+
+
+def object_user_can(obj, user, permission, project=None):
+    if user.is_staff:
+        return True
+    if project is None:
+        project = obj.project
+
+    model_name = type(obj).__name__
+    try:
+        ProjectPermission.objects.get(project=project, user=user, model=model_name, permission=permission)
+        return True
+    except ProjectPermission.DoesNotExist:
+        return False
+
+
+def tag_user_can(obj, user, permission, project=None):
+    if user.is_staff:
+        return True
+    if project is None:
+        project = obj.object.project
+
+    model_name = re.sub(r'Tag$', '', type(obj).__name__)
+    try:
+        ProjectPermission.objects.get(project=project, user=user, model=model_name, permission=permission)
+        return True
+    except ProjectPermission.DoesNotExist:
+        return False
 
 
 class BaseObjectModel(models.Model):
@@ -49,8 +166,8 @@ class BaseObjectModel(models.Model):
     project = None
 
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
-    created = models.DateTimeField("created", auto_now_add=True)
-    modified = models.DateTimeField("modified", auto_now=True)
+    created = models.DateTimeField('created', auto_now_add=True)
+    modified = models.DateTimeField('modified', auto_now=True)
 
     parent = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True, related_name='children')
     recursive_depth = models.IntegerField(default=0, editable=False)
@@ -114,7 +231,7 @@ class BaseObjectModel(models.Model):
             suffix = '_%d' % suffix_index if suffix_index else ''
 
             # construct the sample slug
-            id_str_prefix = "_".join(item for item in slug_parts if item)
+            id_str_prefix = '_'.join(item for item in slug_parts if item)
             id_str_prefix = id_str_prefix[:(55 - len(suffix))]
             id_str = id_str_prefix + suffix
 
@@ -141,7 +258,7 @@ class BaseObjectModel(models.Model):
 
         # this could theoretically happen but would probably be very difficult
         # because the previous code should resolve a valid sample ID in 2 iterations
-        raise ValueError("Cannot create unique slug for object")
+        raise ValueError('Cannot create unique slug for object')
 
     def get_absolute_url(self):
         raise NotImplementedError()
@@ -159,15 +276,8 @@ class BaseObjectModel(models.Model):
     def get_qrcode_html(self):
         return mark_safe(qrcode_html(self))
 
-    def user_can(self, user, action):
-        if user.is_staff:
-            # staff can do anything
-            return True
-        elif self.project:
-            # permissions live with projects
-            return self.project.permissions.filter(user=user, permission=action).count() > 0
-        else:
-            return False
+    def user_can(self, user, permission):
+        return object_user_can(self, user=user, permission=permission)
 
     def default_taxonomy(self):
         return type(self).__name__
@@ -244,13 +354,6 @@ class BaseObjectModel(models.Model):
         return self.name
 
 
-def validate_is_a_regex(value):
-    try:
-        re.compile(value)
-    except Exception as e:
-        raise ValidationError('Value is not a valid Python regex: %s' % e)
-
-
 class BaseValidator(models.Model):
     name = models.CharField(max_length=55)
     description = models.TextField(blank=True)
@@ -261,21 +364,9 @@ class BaseValidator(models.Model):
         return self.name
 
 
-def validate_json_tags_dict(value):
-    if not value:
-        return
-    try:
-        obj = json.loads(value)
-        if not isinstance(obj, dict):
-            raise ValidationError("Value is not a valid JSON object")
-
-    except ValueError:
-        raise ValidationError("Value is not valid JSON")
-
-
 class Term(models.Model):
-    project = models.ForeignKey("Project", on_delete=models.PROTECT, null=True, blank=True)
-    taxonomy = models.CharField(max_length=55, default='default')
+    project = models.ForeignKey('Project', on_delete=models.PROTECT, null=True, blank=True, related_name='terms')
+    taxonomy = models.CharField(max_length=55)
     name = models.CharField(max_length=55)
     slug = models.SlugField(max_length=55)
     description = models.TextField(blank=True)
@@ -294,15 +385,8 @@ class Term(models.Model):
     class Meta:
         unique_together = ['project', 'taxonomy', 'slug']
 
-    def user_can(self, user, action):
-        if user.is_staff:
-            # staff can do anything
-            return True
-        elif self.project:
-            # permissions live with projects
-            return self.project.permissions.filter(user=user, permission=action).count() > 0
-        else:
-            return False
+    def user_can(self, user, permission):
+        return object_user_can(self, user=user, permission=permission)
 
     def get_absolute_url(self):
         return reverse_lazy('lims:term_detail', kwargs={'pk': self.pk})
@@ -326,7 +410,7 @@ class Term(models.Model):
         )
 
     @staticmethod
-    def get_term(string_key, project, taxonomy='default', create=True):
+    def get_term(string_key, project, taxonomy, create=True):
 
         # if it's already a term, return it
         if isinstance(string_key, Term):
@@ -357,7 +441,11 @@ class Term(models.Model):
                     return None
 
     def __str__(self):
-        return "%s/%s" % (self.taxonomy, self.name)
+        return '%s/%s' % (self.taxonomy, self.name)
+
+    @staticmethod
+    def queryset_for_user(user, permission='view'):
+        return object_queryset_for_user(Term, user=user, permission=permission)
 
 
 class TermValidator(models.Model):
@@ -376,8 +464,8 @@ class Tag(models.Model):
     meta = models.TextField(blank=True, validators=[validate_json_tags_dict, ])
 
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
-    created = models.DateTimeField("created", auto_now_add=True)
-    modified = models.DateTimeField("modified", auto_now=True)
+    created = models.DateTimeField('created', auto_now_add=True)
+    modified = models.DateTimeField('modified', auto_now=True)
 
     class Meta:
         abstract = True
@@ -405,15 +493,8 @@ class Tag(models.Model):
         self.object.save()
         super().save(*args, **kwargs)
 
-    def user_can(self, user, action):
-        if user.is_staff:
-            # staff can do anything
-            return True
-        elif self.object.project:
-            # permissions live with projects
-            return self.object.project.permissions.filter(user=user, permission=action).count() > 0
-        else:
-            return False
+    def user_can(self, user, permission):
+        return tag_user_can(self, user=user, permission=permission)
 
     def set_tags(self, _values=None, _save=True, **kwargs):
         if _values is not None:
@@ -450,7 +531,7 @@ class Tag(models.Model):
 
     def get_tags(self, taxonomy=None):
         if taxonomy is not None:
-            raise NotImplementedError("taxonomy must be None for meta fields")
+            raise NotImplementedError('taxonomy must be None for meta fields')
         tags = json.loads(self.meta) if self.meta else {}
         return tags
 
@@ -466,6 +547,7 @@ class Tag(models.Model):
 
 
 class Project(BaseObjectModel):
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_projects')
 
     def get_absolute_url(self):
         return reverse_lazy('lims:project_detail', kwargs={'pk': self.pk})
@@ -473,45 +555,65 @@ class Project(BaseObjectModel):
     def get_project(self):
         return self
 
-    def user_can(self, user, action):
-        if user.is_staff:
-            # staff can do anything
-            return True
-        elif action == 'view':
-            # permissions live with projects
-            return self.permissions.filter(user=user, permission=action).count() > 0
-        else:
-            return False
+    def user_can(self, user, permission):
+        return object_user_can(self, user=user, permission=permission, project=self)
 
     @staticmethod
     def get_all_terms(queryset):
         return Term.objects.filter(projecttag__object__in=queryset).distinct()
 
+    @staticmethod
+    def queryset_for_user(user, permission='view'):
+        if user.is_staff:
+            return Project.objects.all()
+
+        return Project.objects.filter(
+            models.Q(permissions__user=user) &
+            models.Q(permissions__permission=permission) &
+            models.Q(permissions__model='Project')
+        )
+
 
 class ProjectTag(Tag):
-    object = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="tags")
+    object = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_project_tags')
+    key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True, related_name='project_tags')
 
     def user_can(self, user, action):
         return self.object.user_can(user, action)
 
+    @staticmethod
+    def queryset_for_user(user, permission='view'):
+        if user.is_staff:
+            return ProjectTag.objects.all()
+        return ProjectTag.objects.filter(
+            models.Q(object__project__permissions__user=user) &
+            models.Q(object__project__permissions__permission=permission) &
+            models.Q(object__project__permissions__model='Project')
+        )
+
 
 class ProjectPermission(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='permissions')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='project_permissions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='lims_project_permissions')
+    model = LimsModelField()
     permission = models.CharField(max_length=55, choices=(
-        ('add', 'Add objects'),
         ('edit', 'Edit objects'),
-        ('delete', 'Remove Objects'),
         ('view', 'View objects')
     ))
 
     class Meta:
         # also creates index on these fields
-        unique_together = ('project', 'user', 'permission')
+        unique_together = ('project', 'user', 'model', 'permission')
+
+    def __str__(self):
+        return '%s/%s/%s/%s' % (self.project.slug, self.user.username, self.model, self.permission)
 
 
 class Location(BaseObjectModel):
-    project = models.ForeignKey(Project, on_delete=models.PROTECT)
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='locations')
+    name = models.CharField(max_length=55, default='location')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_locations')
 
     def get_absolute_url(self):
         return reverse_lazy('lims:location_detail', kwargs={'pk': self.pk})
@@ -531,11 +633,19 @@ class Location(BaseObjectModel):
 
     @staticmethod
     def get_all_terms(queryset):
-        return Term.objects.filter(locationtag__object__in=queryset).distinct()
+        return Term.objects.filter(location_tags__object__in=queryset).distinct()
+
+    @staticmethod
+    def queryset_for_user(user, permission='view'):
+        return Location.objects.filter(
+            models.Q(project__permissions__user=user) & models.Q(project__permissions__permission=permission)
+        )
 
 
 class LocationTag(Tag):
-    object = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="tags")
+    object = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='tags')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_location_tags')
+    key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True, related_name='location_tags')
 
     def delete(self, *args, **kwargs):
         # clear relations so they don't delete attachments
@@ -549,11 +659,17 @@ class LocationTag(Tag):
             if self.key.project != self.object.project:
                 raise ValidationError({'key': ['Key project must match object project']})
 
+    @staticmethod
+    def queryset_for_user(user, permission='view'):
+        return tag_queryset_for_user(LocationTag, user=user, permission=permission)
+
 
 class Sample(BaseObjectModel):
-    project = models.ForeignKey(Project, on_delete=models.PROTECT)
-    collected = models.DateTimeField("collected")
-    location = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True)
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='samples')
+    name = models.CharField(max_length=55, default='sample')
+    collected = models.DateTimeField('collected', default=timezone.now)
+    location = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True, related_name='samples')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_samples')
     status = models.CharField(
         max_length=55,
         choices=(
@@ -569,9 +685,9 @@ class Sample(BaseObjectModel):
 
     def auto_slug_use(self):
         # get parts of the calculated sample slug
-        dt_str = str(self.collected.astimezone(timezone.get_default_timezone()).date())
-        location_slug = SlugIdField.idify(self.location.slug[:10]) if self.location else ""
-        user = self.user.username[:15] if self.user else ""
+        dt_str = str(self.collected.astimezone(timezone.get_default_timezone()).date()) if self.collected else ''
+        location_slug = SlugIdField.idify(self.location.slug[:10]) if self.location else ''
+        user = self.user.username[:15] if self.user else ''
         hint = SlugIdField.idify(self.name)
 
         return [user, dt_str, location_slug, hint]
@@ -604,11 +720,17 @@ class Sample(BaseObjectModel):
 
     @staticmethod
     def get_all_terms(queryset):
-        return Term.objects.filter(sampletag__object__in=queryset).distinct()
+        return Term.objects.filter(sample_tags__object__in=queryset).distinct()
+
+    @staticmethod
+    def queryset_for_user(user, permission='view'):
+        return object_queryset_for_user(Sample, user=user, permission=permission)
 
 
 class SampleTag(Tag):
-    object = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name="tags")
+    object = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name='tags')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_sample_tags')
+    key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True, related_name='sample_tags')
     numeric_value = models.FloatField(default=None, editable=False, blank=True, null=True)
     numeric_value_autoset = models.BooleanField(default=True, editable=False)
 
@@ -632,9 +754,14 @@ class SampleTag(Tag):
             if self.key.project != self.object.project:
                 raise ValidationError({'key': ['Key project must match object project']})
 
+    @staticmethod
+    def queryset_for_user(user, permission='view'):
+        return tag_queryset_for_user(SampleTag, user=user, permission=permission)
+
 
 class Attachment(BaseObjectModel):
-    project = models.ForeignKey(Project, on_delete=models.PROTECT)
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='attachments')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_attachments')
     file = models.FileField(upload_to='attachments')
     file_hash = models.CharField(max_length=128, blank=True)
     mime_type = models.CharField(max_length=256, blank=True)
@@ -680,11 +807,17 @@ class Attachment(BaseObjectModel):
 
     @staticmethod
     def get_all_terms(queryset):
-        return Term.objects.filter(attachmenttag__object__in=queryset).distinct()
+        return Term.objects.filter(attachment_tags__object__in=queryset).distinct()
+
+    @staticmethod
+    def queryset_for_user(user, permission='view'):
+        return object_queryset_for_user(Attachment, user=user, permission=permission)
 
 
 class AttachmentTag(Tag):
-    object = models.ForeignKey(Attachment, on_delete=models.CASCADE, related_name="tags")
+    object = models.ForeignKey(Attachment, on_delete=models.CASCADE, related_name='tags')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_attachment_tags')
+    key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True, related_name='attachment_tags')
 
     def clean_fields(self, exclude=None):
         super().clean_fields(exclude=exclude)
@@ -693,41 +826,29 @@ class AttachmentTag(Tag):
             if self.key.project != self.object.project:
                 raise ValidationError({'key': ['Key project must match object project']})
 
+    @staticmethod
+    def queryset_for_user(user, permission='view'):
+        return tag_queryset_for_user(AttachmentTag, user=user, permission=permission)
+
 
 class EntryTemplate(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.PROTECT)
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='templates')
     user = models.ForeignKey(User, on_delete=models.PROTECT, blank=True, null=True)
     name = models.CharField(max_length=55, unique=True)
-    model = models.CharField(
-        max_length=55,
-        default='Sample',
-        choices=(
-            ('Sample', 'Sample'),
-            ('SampleTag', 'Sample Tag'),
-            ('Location', 'Location'),
-            ('LocationTag', 'Location Tag')
-        )
-    )
+    model = LimsModelField()
     last_used = models.DateTimeField('last_used', auto_now=True)
 
     def get_model(self):
-        if self.model == 'Sample':
-            return Sample
-        elif self.model == 'SampleTag':
-            return SampleTag
-        elif self.model == 'Location':
-            return Location
-        elif self.model == 'LocationTag':
-            return LocationTag
-        else:
-            raise ValueError('No such model: %s' % self.model)
+        LimsModelField.get_model(self.model)
 
     def get_model_fields(self):
         if self.model == 'Sample':
             return ['collected', 'name', 'description', 'location', 'parent', 'geometry']
-        elif self.model == 'SampleTag' or self.model == 'LocationTag':
+        elif self.model == 'SampleTag' or self.model == 'LocationTag' or self.model == 'AttachmentTag':
             return ['object', 'key', 'value', 'comment', 'meta']
         elif self.model == 'Location':
+            return ['name', 'slug', 'description', 'parent', 'geometry']
+        elif self.model == 'Attachment':
             return ['name', 'slug', 'description', 'parent', 'geometry']
         else:
             raise ValueError('No such model: %s' % self.model)
@@ -743,6 +864,10 @@ class EntryTemplate(models.Model):
 
     def __str__(self):
         return self.name
+
+    @staticmethod
+    def queryset_for_user(user, permission='view'):
+        return object_queryset_for_user(EntryTemplate, user=user, permission=permission)
 
 
 class EntryTemplateField(models.Model):

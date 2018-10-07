@@ -151,7 +151,7 @@ class MultiDeleteView(BulkActionView):
         try:
             with reversion.create_revision():
                 for obj in queryset:
-                    if obj.user_can(current_user, 'delete'):
+                    if obj.user_can(current_user, 'edit'):
                         obj.delete()
                         deleted += 1
                     else:

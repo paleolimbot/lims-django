@@ -13,12 +13,19 @@ def get_or_create_default_project():
         )[0]
 
         for user in User.objects.all():
-            ProjectPermission.objects.get_or_create(project=p, user=user, permission='add')
-            ProjectPermission.objects.get_or_create(project=p, user=user, permission='edit')
-            ProjectPermission.objects.get_or_create(project=p, user=user, permission='delete')
-            ProjectPermission.objects.get_or_create(project=p, user=user, permission='view')
+            add_user_to_default_project(user)
 
         return p
+
+
+def add_user_to_default_project(user):
+    p = get_or_create_default_project()
+    for model in ('Sample', 'Location', 'Attachment', 'Term'):
+        ProjectPermission.objects.get_or_create(project=p, user=user, permission='edit', model=model)
+        ProjectPermission.objects.get_or_create(project=p, user=user, permission='view', model=model)
+
+    ProjectPermission.objects.get_or_create(project=p, user=user, permission='view', model='Project')
+    return user
 
 
 def get_or_create_user_project(user):
@@ -30,21 +37,17 @@ def get_or_create_user_project(user):
             slug='user_project_%s' % user.pk
         )[0]
 
-        ProjectPermission.objects.get_or_create(project=p, user=user, permission='add')
-        ProjectPermission.objects.get_or_create(project=p, user=user, permission='edit')
-        ProjectPermission.objects.get_or_create(project=p, user=user, permission='delete')
-        ProjectPermission.objects.get_or_create(project=p, user=user, permission='view')
+        for model in ('Sample', 'Location', 'Attachment', 'Term'):
+            ProjectPermission.objects.get_or_create(project=p, user=user, permission='edit', model=model)
+            ProjectPermission.objects.get_or_create(project=p, user=user, permission='view', model=model)
 
+        ProjectPermission.objects.get_or_create(project=p, user=user, permission='view', model='Project')
         return p
 
 
 def user_post_save_handler(sender, instance, *args, **kwargs):
     # add to default project
-    p = get_or_create_default_project()
-    ProjectPermission.objects.get_or_create(project=p, user=instance, permission='add')
-    ProjectPermission.objects.get_or_create(project=p, user=instance, permission='edit')
-    ProjectPermission.objects.get_or_create(project=p, user=instance, permission='delete')
-    ProjectPermission.objects.get_or_create(project=p, user=instance, permission='view')
+    add_user_to_default_project(instance)
 
     # add user project (or make sure it exists)
     get_or_create_user_project(instance)

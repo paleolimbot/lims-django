@@ -525,10 +525,16 @@ class PermissionTestCase(TestCase):
 
         self.pterm = self.ptag1.key
 
-        ProjectPermission.objects.create(user=self.test_user1, project=self.proj1, permission='view')
-        ProjectPermission.objects.create(user=self.test_user1, project=self.proj1, permission='edit')
-        ProjectPermission.objects.create(user=self.test_user2, project=self.proj2, permission='view')
-        ProjectPermission.objects.create(user=self.test_user2, project=self.proj2, permission='edit')
+        # a realistic set of permissions, users generally cannot edit projects or terms
+        ProjectPermission.objects.create(user=self.test_user1, project=self.proj1, permission='view', model='Project')
+        ProjectPermission.objects.create(user=self.test_user1, project=self.proj1, permission='view', model='Term')
+        ProjectPermission.objects.create(user=self.test_user1, project=self.proj1, permission='view', model='Sample')
+        ProjectPermission.objects.create(user=self.test_user1, project=self.proj1, permission='edit', model='Sample')
+
+        ProjectPermission.objects.create(user=self.test_user2, project=self.proj2, permission='view', model='Project')
+        ProjectPermission.objects.create(user=self.test_user2, project=self.proj2, permission='view', model='Term')
+        ProjectPermission.objects.create(user=self.test_user2, project=self.proj2, permission='view', model='Sample')
+        ProjectPermission.objects.create(user=self.test_user2, project=self.proj2, permission='edit', model='Sample')
 
     def test_project_permissions(self):
 
@@ -552,7 +558,7 @@ class PermissionTestCase(TestCase):
 
     def test_sample_permissions(self):
 
-        # samples follow project permissions
+        # samples follow project permissions for Sample
         self.assertTrue(self.sample1.user_can(self.test_user1, 'view'))
         self.assertFalse(self.sample1.user_can(self.test_user2, 'view'))
         self.assertTrue(self.sample1.user_can(self.staff_user, 'view'))
@@ -578,7 +584,7 @@ class PermissionTestCase(TestCase):
 
     def test_term_permissions(self):
 
-        # terms follow projects
+        # samples follow project permissions for Term
         self.assertTrue(self.sterm1.user_can(self.test_user1, 'view'))
         self.assertFalse(self.sterm1.user_can(self.test_user2, 'view'))
         self.assertTrue(self.sterm1.user_can(self.staff_user, 'view'))
@@ -603,10 +609,8 @@ class DefaultObjectTestCase(TestCase):
 
         # all existing users should be able to do the things in the default project
         default_p_sample = Sample.objects.create(project=default_p, name="ds", collected=timezone.now())
-        self.assertTrue(default_p_sample.user_can(new_user, 'add'))
         self.assertTrue(default_p_sample.user_can(new_user, 'view'))
         self.assertTrue(default_p_sample.user_can(new_user, 'edit'))
-        self.assertTrue(default_p_sample.user_can(new_user, 'delete'))
 
         # subsequent calls should return the same project
         self.assertEqual(
@@ -627,17 +631,17 @@ class DefaultObjectTestCase(TestCase):
 
         # only the user and the staffer should be able to do anything
         default_p_sample = Sample.objects.create(project=user_proj, name="ds", collected=timezone.now())
-        self.assertTrue(default_p_sample.user_can(user, 'add'))
         self.assertTrue(default_p_sample.user_can(user, 'view'))
         self.assertTrue(default_p_sample.user_can(user, 'edit'))
-        self.assertTrue(default_p_sample.user_can(user, 'delete'))
 
-        self.assertTrue(default_p_sample.user_can(staff_user, 'add'))
         self.assertTrue(default_p_sample.user_can(staff_user, 'view'))
         self.assertTrue(default_p_sample.user_can(staff_user, 'edit'))
-        self.assertTrue(default_p_sample.user_can(staff_user, 'delete'))
 
-        self.assertFalse(default_p_sample.user_can(other_user, 'add'))
         self.assertFalse(default_p_sample.user_can(other_user, 'view'))
         self.assertFalse(default_p_sample.user_can(other_user, 'edit'))
-        self.assertFalse(default_p_sample.user_can(other_user, 'delete'))
+
+        # subsequent calls should return the same project
+        self.assertEqual(
+            default_objects.get_or_create_user_project(user),
+            user_proj
+        )

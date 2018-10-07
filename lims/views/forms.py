@@ -176,7 +176,7 @@ class BaseObjectModelForm(ModelForm):
         super().clean()
 
         # check that user can add/edit this sample
-        if not self.instance.pk and not self.instance.user_can(self.user, 'add'):
+        if not self.instance.pk and not self.instance.user_can(self.user, 'edit'):
             raise ValidationError('User is not allowed to add this sample')
         if self.instance.pk and not self.instance.user_can(self.user, 'edit'):
             raise ValidationError('User is not allowed to edit this sample')
