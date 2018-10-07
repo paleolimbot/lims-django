@@ -385,13 +385,6 @@ class Term(BaseObjectModel):
     taxonomy = models.CharField(max_length=55)
     measured = models.BooleanField(default=False)
 
-    def clean_fields(self, exclude=None):
-        super().clean_fields(exclude=exclude)
-
-        if exclude is None or 'parent' not in exclude:
-            if self.parent and self.parent.project != self.project:
-                raise ValidationError({'parent': ['Term project must match parent term project']})
-
     class Meta:
         unique_together = ['project', 'taxonomy', 'slug']
 
@@ -448,7 +441,10 @@ class Term(BaseObjectModel):
                     return None
 
     def __str__(self):
-        return '%s/%s' % (self.taxonomy, self.name)
+        if self.project is None:
+            return '%s/%s' % (self.taxonomy, self.name)
+        else:
+            return '%s/%s/%s' % (self.project, self.taxonomy, self.name)
 
     @staticmethod
     def queryset_for_user(user, permission='view'):
@@ -490,8 +486,10 @@ class Tag(models.Model):
                 raise ValidationError({'value': e.error_list})
 
         if exclude is None or ('object' not in exclude and 'key' not in exclude):
-            if self.key.project != self.object.project:
-                raise ValidationError({'object': ['Object project must match term project']})
+            if (self.key.project is not None) and (self.key.project != self.object.project):
+                raise ValidationError(
+                    {'object': ['Object project must match term project, or the term project must be None']}
+                )
 
     def save(self, *args, **kwargs):
         # update parent object modified tag
@@ -539,15 +537,12 @@ class Project(BaseObjectModel):
     def get_absolute_url(self):
         return reverse_lazy('lims:project_detail', kwargs={'pk': self.pk})
 
-    def get_project(self):
-        return self
-
     def user_can(self, user, permission):
         return object_user_can(self, user=user, permission=permission, project=self)
 
     @staticmethod
     def get_all_terms(queryset):
-        return Term.objects.filter(projecttag__object__in=queryset).distinct()
+        return Term.objects.filter(project_tags__object__in=queryset).distinct()
 
     @staticmethod
     def queryset_for_user(user, permission='view'):
@@ -566,8 +561,9 @@ class ProjectTag(Tag):
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_project_tags')
     key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True, related_name='project_tags')
 
-    def get_project(self):
-        return self.object
+    @cached_property
+    def project(self):
+        return None
 
     def user_can(self, user, action):
         return self.object.user_can(user, action)
@@ -654,13 +650,6 @@ class SampleTag(TagsMixin, Tag):
         self.attachments.clear()
         return super().delete(*args, **kwargs)
 
-    def clean_fields(self, exclude=None):
-        super().clean_fields(exclude=exclude)
-
-        if exclude is None or ('key' not in exclude and 'object' not in exclude):
-            if self.key.project != self.object.project:
-                raise ValidationError({'key': ['Key project must match object project']})
-
     @staticmethod
     def queryset_for_user(user, permission='view'):
         return tag_queryset_for_user(SampleTag, user=user, permission=permission)
@@ -685,11 +674,13 @@ class Attachment(BaseObjectModel):
 
     samples = models.ManyToManyField(Sample, related_name='attachments', blank=True)
     sample_tags = models.ManyToManyField(SampleTag, related_name='attachments', blank=True)
+    terms = models.ManyToManyField(Term, related_name='attachments', blank=True)
 
     def delete(self, *args, **kwargs):
         # clear relations so they don't get deleted with attachments
         self.samples.clear()
         self.sample_tags.clear()
+        self.terms.clear()
         super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
@@ -703,11 +694,12 @@ class Attachment(BaseObjectModel):
             if sample_tag.object.project != self.project:
                 raise ValidationError({'sample_tags': ['At least one related sample tag is of a different project']})
 
+        for term in self.terms.all():
+            if term.project != self.project:
+                raise ValidationError({'samples': ['At least one related sample is of a different project']})
+
     def get_absolute_url(self):
         return reverse_lazy('lims:attachment_detail', kwargs={'pk': self.pk})
-
-    def get_project(self):
-        return self.project
 
     @staticmethod
     def get_all_terms(queryset):
@@ -722,13 +714,6 @@ class AttachmentTag(Tag):
     object = models.ForeignKey(Attachment, on_delete=models.CASCADE, related_name='tags')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_attachment_tags')
     key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True, related_name='attachment_tags')
-
-    def clean_fields(self, exclude=None):
-        super().clean_fields(exclude=exclude)
-
-        if exclude is None or ('key' not in exclude and 'object' not in exclude):
-            if self.key.project != self.object.project:
-                raise ValidationError({'key': ['Key project must match object project']})
 
     @staticmethod
     def queryset_for_user(user, permission='view'):
@@ -761,9 +746,6 @@ class EntryTemplate(models.Model):
     def get_absolute_url(self):
         return reverse_lazy('lims:template_form', kwargs={'template_pk': self.pk})
 
-    def get_project(self):
-        return self.project
-
     def __str__(self):
         return self.name
 
@@ -787,8 +769,9 @@ class EntryTemplateField(models.Model):
                     {'target': 'Target is not a field of %s and is not a defined term slug' % self.template.model}
                 )
 
-    def get_project(self):
-        return self.template.get_project()
+    @cached_property
+    def project(self):
+        return self.template.project
 
     def default_taxonomy(self):
         return self.template.get_model().__name__
@@ -800,7 +783,7 @@ class EntryTemplateField(models.Model):
         try:
             return Term.objects.get(
                 slug=self.target,
-                project=self.get_project(),
+                project=self.project,
                 taxonomy=self.taxonomy if self.taxonomy else self.default_taxonomy()
             )
         except Term.DoesNotExist:

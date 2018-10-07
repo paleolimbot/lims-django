@@ -427,9 +427,9 @@ class ProjectLayerTestCase(TestCase):
         s1.set_tags(_values={t1: 'stringval'})
         self.assertEqual(s1.get_tag(t1), 'stringval')
 
-        # no project should not work
-        with self.assertRaisesRegex(ValidationError, "Object project must match term project"):
-            s1.set_tags(_values={t0: "stringval"})
+        # no project for term should not work
+        s1.set_tags(_values={t0: "stringval0"})
+        self.assertEqual(s1.get_tag(t0), 'stringval0')
 
         # proj2 should not work
         with self.assertRaisesRegex(ValidationError, "Object project must match term project"):
