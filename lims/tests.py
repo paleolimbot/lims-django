@@ -8,10 +8,10 @@ from django.db import transaction
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
-from .models import Sample, Location, SampleTag, BaseValidator, Term, Project,ProjectPermission
+from .models import Sample, SampleTag, BaseValidator, Term, Project ,ProjectPermission, Attachment
 
 
-def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_tags=3, test_user=None,
+def populate_test_data(n_samples=700, n_sub_samples=150, max_tags=3, test_user=None,
                        test_proj=None, clear=True, quiet=False):
 
     with transaction.atomic():
@@ -35,80 +35,58 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
                 print("Clearing previous test data...")
             clear_models(
                 models=(Sample, ),
+                queryset=lambda model: model.objects.filter(
+                    slug__contains="_test-sub-sample", user=test_user
+                ),
+                quiet=quiet
+            )
+            clear_models(
+                models=(Sample,),
                 queryset=lambda model: model.objects.filter(slug__contains="_test-sample", user=test_user),
                 quiet=quiet
             )
             clear_models(
-                models=(Location, ),
-                queryset=lambda model: model.objects.filter(slug__startswith="test-", user=test_user),
-                quiet=quiet
-            )
-            clear_models(
                 models=(Term,),
-                queryset=lambda model: model.objects.filter(slug__startswith="key", project=test_proj),
+                queryset=lambda model: model.objects.filter(slug__startswith="key", user=test_user),
                 quiet=quiet
             )
-
-        if not quiet:
-            print("Generating locations...")
-        for loc_num in range(n_locations):
-            if not quiet:
-                print("\r%d/%d" % (loc_num + 1, n_locations), end='')
-
-            loc = Location.objects.create(
-                project=proj,
-                name="Test Location %d" % (loc_num + 1),
-                slug="test-location-%d" % (loc_num + 1),
-                geometry="POINT (%d %d)" % (randint(-179, 180), randint(-85, 86)),
-                user=test_user
-            )
-
-            n_tags = randint(0, max_tags)
-            for tag_num in range(n_tags):
-                loc.add_tags(**{
-                    "key%d" % (tag_num + 1): "value%d" % (tag_num + 1)
-                })
-        if not quiet:
-            print("\nGenerating sub-locations...")
-        for loc_num in range(n_sub_locations):
-            if not quiet:
-                print("\r%d/%d" % (loc_num + 1, n_sub_locations), end='')
-
-            n_locs = Location.objects.all().count()
-            parent_loc = Location.objects.all()[randint(0, n_locs - 1)]
-            loc = Location.objects.create(
-                project=proj,
-                name="Test Sub Location %d" % (loc_num + 1),
-                slug="test-sub-location-%d" % (loc_num + 1),
-                geometry="POINT (%d %d)" % (randint(-179, 180), randint(-85, 86)),
-                parent=parent_loc,
-                user=test_user
-            )
-
-            n_tags = randint(0, max_tags)
-            for tag_num in range(n_tags):
-                loc.add_tags(**{
-                    "key%d" % (tag_num + 1): "value%d" % (tag_num + 1)
-                })
 
         if not quiet:
             print("\nGenerating samples...")
+
+        parent_samples = []
         for sample_num in range(n_samples):
             if not quiet:
                 print("\r%d/%d" % (sample_num + 1, n_samples), end='')
 
-            n_locs = Location.objects.filter(user=test_user, slug__contains="test-").count()
-            loc_index = randint(0, int(n_locs * 1.5))
-            if loc_index < n_locs:
-                parent_loc = Location.objects.all()[loc_index]
-            else:
-                parent_loc = None
-
             sample = Sample.objects.create(
                 project=proj,
                 name="Test Sample %s" % (sample_num + 1),
-                location=parent_loc,
-                collected=timezone.now(),
+                user=test_user,
+                status='published'
+            )
+
+            n_tags = randint(0, max_tags)
+            for tag_num in range(n_tags):
+                sample.add_tags(**{
+                    "key%d" % (tag_num + 1): "value%d" % (tag_num + 1)
+                })
+
+            parent_samples.append(sample)
+
+        if not quiet:
+            print("\nGenerating sub samples...")
+
+        for sample_num in range(n_sub_samples):
+            if not quiet:
+                print("\r%d/%d" % (sample_num + 1, n_samples), end='')
+
+            parent_sample_index = randint(0, len(parent_samples) - 1)
+
+            sample = Sample.objects.create(
+                project=proj,
+                name="Test Sub Sample %s" % (sample_num + 1),
+                parent=parent_samples[parent_sample_index],
                 user=test_user,
                 status='published'
             )
@@ -123,7 +101,7 @@ def populate_test_data(n_locations=150, n_sub_locations=150, n_samples=700, max_
             print("\nComplete!")
 
 
-def clear_models(models=(Sample, Location, Term, BaseValidator),
+def clear_models(models=(Sample, Attachment, Term, Project, BaseValidator),
                  queryset=lambda model: model.objects.all(), quiet=False):
     if not quiet:
         print("Clearing models...")
@@ -263,58 +241,53 @@ class GeometryTestCase(TestCase):
             validate_wkt('not valid wkt')
 
 
-class LocationRecursionTestCase(TestCase):
+class SampleRecursionTestCase(TestCase):
 
-    def test_recursive_locations(self):
+    def test_recursive_samples(self):
         proj = Project.objects.create(name="Test Project", slug="test-proj")
-        parent_loc = Location.objects.create(project=proj, name="Location1", slug="location-1")
-        child_loc = Location.objects.create(project=proj, name="Sub Location 1", slug="sub-location-1",
-                                            parent=parent_loc)
-        child_loc_2 = Location.objects.create(project=proj, name="Sub Location 2", slug="sub-location-2",
-                                              parent=parent_loc)
-        child_child_loc = Location.objects.create(project=proj,
-                                                  name="Sub Sub Location", slug="sub-sub-location", parent=child_loc)
+        parent = Sample.objects.create(project=proj)
+        child1 = Sample.objects.create(project=proj, parent=parent)
+        child2 = Sample.objects.create(project=proj, parent=parent)
+        child_child = Sample.objects.create(project=proj, parent=child1)
 
-        self.assertEqual(parent_loc.recursive_depth, 0)
-        self.assertEqual(child_loc.recursive_depth, 1)
-        self.assertEqual(child_loc_2.recursive_depth, 1)
-        self.assertEqual(child_child_loc.recursive_depth, 2)
+        self.assertEqual(parent.recursive_depth, 0)
+        self.assertEqual(child1.recursive_depth, 1)
+        self.assertEqual(child2.recursive_depth, 1)
+        self.assertEqual(child_child.recursive_depth, 2)
 
-        self.assertEqual(
-            list(parent_loc.children.all().order_by('pk')),
-            list(Location.objects.all().filter(slug__startswith="sub-location").order_by('pk')),
-        )
+        self.assertTrue(child1 in parent.children.all())
+        self.assertTrue(child2 in parent.children.all())
+        self.assertTrue(child_child in child1.children.all())
 
 
-class LocationGeometryTestCase(TestCase):
+class SampleGeometryTestCase(TestCase):
 
-    def test_location_geometry(self):
+    def test_sample_geometry(self):
         proj = Project.objects.create(name="Test Project", slug="test-proj")
-        location_no_geom = Location.objects.create(project=proj, name="location1", slug="location1")
-        self.assertEqual(location_no_geom.geometry, '')
-        self.assertIsNone(location_no_geom.geo_xmin)
-        self.assertIsNone(location_no_geom.geo_xmax)
-        self.assertIsNone(location_no_geom.geo_ymin)
-        self.assertIsNone(location_no_geom.geo_ymax)
+        sample_no_geom = Sample.objects.create(project=proj)
+        self.assertEqual(sample_no_geom.geometry, '')
+        self.assertIsNone(sample_no_geom.geo_xmin)
+        self.assertIsNone(sample_no_geom.geo_xmax)
+        self.assertIsNone(sample_no_geom.geo_ymin)
+        self.assertIsNone(sample_no_geom.geo_ymax)
 
-        location_point = Location.objects.create(
-            project=proj, name='location2', slug='location2', geometry='POINT (30 10)'
+        sample_point = Sample.objects.create(
+            project=proj, geometry='POINT (30 10)'
         )
-        self.assertEqual(location_point.geometry, 'POINT (30 10)')
-        self.assertEqual(location_point.geo_xmin, 30)
-        self.assertEqual(location_point.geo_xmax, 30)
-        self.assertEqual(location_point.geo_ymin, 10)
-        self.assertEqual(location_point.geo_ymax, 10)
+        self.assertEqual(sample_point.geometry, 'POINT (30 10)')
+        self.assertEqual(sample_point.geo_xmin, 30)
+        self.assertEqual(sample_point.geo_xmax, 30)
+        self.assertEqual(sample_point.geo_ymin, 10)
+        self.assertEqual(sample_point.geo_ymax, 10)
 
-        location_polygon = Location.objects.create(
+        sample_polygon = Sample.objects.create(
             project=proj,
-            name='location3', slug='location3',
             geometry='MULTIPOLYGON (((30 20, 45 40, 10 40, 30 20)), ((15 5, 40 10, 10 20, 5 10, 15 5)))'
         )
-        self.assertEqual(location_polygon.geo_xmin, 5)
-        self.assertEqual(location_polygon.geo_xmax, 45)
-        self.assertEqual(location_polygon.geo_ymin, 5)
-        self.assertEqual(location_polygon.geo_ymax, 40)
+        self.assertEqual(sample_polygon.geo_xmin, 5)
+        self.assertEqual(sample_polygon.geo_xmax, 45)
+        self.assertEqual(sample_polygon.geo_ymin, 5)
+        self.assertEqual(sample_polygon.geo_ymax, 40)
 
 
 class TagsTestCase(TestCase):
@@ -349,18 +322,6 @@ class SampleTestCase(TestCase):
     def setUp(self):
         self.proj = Project.objects.create(name="Test Project", slug="test-proj")
         self.test_user = User.objects.create(username="test_user_with_a_long_name")
-        self.test_location1 = Location.objects.create(
-            project=self.proj,
-            name='test location 1 with a long name',
-            slug='test_location_1_with_a_long_name',
-            user=self.test_user
-        )
-        self.test_location2 = Location.objects.create(
-            project=self.proj,
-            name='test location 2 with a long name',
-            slug='test_location_2_with_a_long_name',
-            user=self.test_user
-        )
 
     def test_slug_calculation(self):
         """Test that unique slugs get generated for samples"""
@@ -368,8 +329,7 @@ class SampleTestCase(TestCase):
         sample1 = Sample.objects.create(
             project=self.proj,
             collected=now,
-            name='a quite long name',
-            location=self.test_location1,
+            name='a quite long name that will probably overflow the slug',
             user=self.test_user
         )
         self.assertTrue(len(sample1.slug), 55)
@@ -377,17 +337,15 @@ class SampleTestCase(TestCase):
         sample2 = Sample.objects.create(
             project=self.proj,
             collected=now,
-            name='a quite long name',
-            location=self.test_location1,
+            name='a quite long name that will probably overflow the slug',
             user=self.test_user
         )
         self.assertTrue(len(sample2.slug), 55)
         self.assertRegex(sample2.slug, '_1$')
 
-    def test_slug_calculation_fail(self):
+    def test_slug_calculation_large(self):
         """
-        There is a 500-sample limit on unique sample creation to avoid a long-running loop in
-        Sample.calculate_slug()...this test creates 501 samples and breaks it
+        This creates a lot of samples with the same name to make sure that repeat calculation is robust
         """
         now = timezone.now()
         with transaction.atomic():
@@ -413,11 +371,6 @@ class SampleTestCase(TestCase):
         for n1, n2 in zip(sorted(suffix_numbers), range(1, 500)):
             self.assertEqual(n1, n2)
 
-    def test_str_output(self):
-        """Tests that the string output should be the sample slug"""
-        sample = Sample.objects.create(project=self.proj, collected=timezone.now(), user=self.test_user)
-        self.assertEqual(sample.slug, str(sample))
-
 
 class TestDataTestCase(TestCase):
 
@@ -428,15 +381,14 @@ class TestDataTestCase(TestCase):
         """Test that the populate sample data method populates and re-populates properly"""
 
         # starting with an empty db, the app should populate the correct number of samples
-        populate_test_data(n_locations=28, n_sub_locations=31, n_samples=109, test_user=self.test_user, quiet=True)
-        self.assertEqual(Location.objects.filter(user=self.test_user).count(), 59)
-        self.assertEqual(Sample.objects.filter(user=self.test_user).count(), 109)
+        populate_test_data(n_samples=109, n_sub_samples=29, test_user=self.test_user, quiet=True)
+        self.assertEqual(Sample.objects.filter(user=self.test_user, recursive_depth=0).count(), 109)
+        self.assertEqual(Sample.objects.filter(user=self.test_user, recursive_depth__gt=0).count(), 29)
 
-        # starting with an full db of test data, the app should still populate the correct number of samples
-        populate_test_data(n_locations=41, n_sub_locations=35, n_samples=27, test_user=self.test_user, clear=True,
-                           quiet=True)
-        self.assertEqual(Location.objects.filter(user=self.test_user).count(), 76)
-        self.assertEqual(Sample.objects.filter(user=self.test_user).count(), 27)
+        # starting with an empty db, the app should populate the correct number of samples
+        populate_test_data(n_samples=72, n_sub_samples=79, test_user=self.test_user, quiet=True, clear=True)
+        self.assertEqual(Sample.objects.filter(user=self.test_user, recursive_depth=0).count(), 72)
+        self.assertEqual(Sample.objects.filter(user=self.test_user, recursive_depth__gt=0).count(), 79)
 
 
 class ProjectLayerTestCase(TestCase):
@@ -462,42 +414,32 @@ class ProjectLayerTestCase(TestCase):
         self.assertIsNone(self.proj1.get_tag(t2))
 
     def test_object_projects(self):
-        t1 = Term.objects.create(name="t1", slug="t1", project=None)
-        t2 = Term.objects.create(name="t2", slug="t2", project=self.proj1)
-        t3 = Term.objects.create(name="t3", slug="t3", project=self.proj2)
+        t0 = Term.objects.create(name="t1", slug="t1", project=None)
+        t1 = Term.objects.create(name="t2", slug="t2", project=self.proj1)
+        t2 = Term.objects.create(name="t3", slug="t3", project=self.proj2)
 
-        s2 = Sample(project=self.proj1, name="sample", user=self.test_user, collected=timezone.now())
-        s2.save()
+        s1 = Sample.objects.create(project=self.proj1, user=self.test_user)
+        s2 = Sample.objects.create(project=self.proj2, user=self.test_user)
 
-        l2 = Location.objects.create(project=self.proj1, name="loc", slug="loc")
-        l3 = Location.objects.create(project=self.proj2, name="loc", slug="loc2")
+        # same project should work
+        st1 = SampleTag.objects.create(object=s1, key=t1, value='value')
+        self.assertEqual(st1.object, s1)
+        self.assertEqual(st1.key, t1)
+        s1.set_tags(_values={t1: 'stringval'})
+        self.assertEqual(s1.get_tag(t1), 'stringval')
 
         # no project should not work
         with self.assertRaisesRegex(ValidationError, "Object project must match term project"):
-            s2.set_tags(_values={t1: "stringval"})
-        with self.assertRaisesRegex(ValidationError, "Object project must match term project"):
-            l2.set_tags(_values={t1: "stringval"})
+            s1.set_tags(_values={t0: "stringval"})
 
         # proj2 should not work
         with self.assertRaisesRegex(ValidationError, "Object project must match term project"):
-            s2.set_tags(_values={t3: "stringval"})
-        with self.assertRaisesRegex(ValidationError, "Object project must match term project"):
-            l2.set_tags(_values={t3: "stringval"})
-
-        # location with other proj should not work
-        with self.assertRaisesRegex(ValidationError, "Location project must match sample project"):
-            news = Sample(project=self.proj1, name="loc", location=l3, collected=timezone.now())
-            news.full_clean()
+            s1.set_tags(_values={t2: "stringval"})
 
         # parent sample with other proj should not work
         with self.assertRaisesRegex(ValidationError, "Parent must belong to same project as child"):
-            news = Sample(project=self.proj2, name="loc", parent=s2, collected=timezone.now())
+            news = Sample(project=self.proj2, parent=s1)
             news.full_clean()
-
-        # parent location with other proj should not work
-        with self.assertRaisesRegex(ValidationError, "Parent must belong to same project as child"):
-            newl = Location(project=self.proj2, name="loc", parent=l2)
-            newl.full_clean()
 
 
 class PermissionTestCase(TestCase):
@@ -640,6 +582,7 @@ class DefaultObjectTestCase(TestCase):
         new_user = User.objects.create(username="anewuser")
 
         from . import default_objects
+        # test assumes there is no default project before
         default_p = default_objects.get_or_create_default_project()
 
         # should be a project

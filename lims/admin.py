@@ -42,13 +42,6 @@ class TermAdmin(LimsAdmin):
     autocomplete_fields = ['parent', 'project']
 
 
-class LocationTagInline(admin.TabularInline):
-    model = models.LocationTag
-    formfield_overrides = text_overrides
-    extra = 1
-    autocomplete_fields = ['key', ]
-
-
 class SampleTagInline(admin.TabularInline):
     model = models.SampleTag
     formfield_overrides = text_overrides
@@ -86,7 +79,7 @@ class AttachmentTagInline(admin.TabularInline):
 @admin.register(models.Attachment)
 class AttachmentAdmin(LimsAdmin):
     prepopulated_fields = {"slug": ("name",)}
-    autocomplete_fields = ['project', 'samples', 'locations', 'location_tags', 'sample_tags']
+    autocomplete_fields = ['project', 'samples', 'sample_tags']
     search_fields = ['name', 'slug', 'description', 'file_hash']
     inlines = [AttachmentTagInline, ]
 
@@ -103,20 +96,10 @@ class ProjectAdmin(LimsAdmin):
 @admin.register(models.Sample)
 class SampleAdmin(LimsAdmin):
     inlines = [SampleTagInline, ]
-    list_display = ('slug', 'user', 'location', 'modified', 'collected')
+    list_display = ('slug', 'user', 'modified', 'collected')
     date_hierarchy = "collected"
-    autocomplete_fields = ['project', 'location', 'user', 'parent']
+    autocomplete_fields = ['project', 'user', 'parent']
     search_fields = ['slug', ]
-    ordering = ['-modified', ]
-
-
-@admin.register(models.Location)
-class LocationAdmin(LimsAdmin):
-    inlines = [LocationTagInline, ]
-    prepopulated_fields = {"slug": ("name", )}
-    list_display = ('name', 'slug', 'parent', 'user', 'modified')
-    autocomplete_fields = ['project', 'parent', 'user']
-    search_fields = ['name', 'slug']
     ordering = ['-modified', ]
 
 
@@ -127,13 +110,6 @@ class SampleEntryTemplateAdmin(LimsAdmin):
 
 @admin.register(models.SampleTag)
 class SampleTagAdmin(admin.ModelAdmin):
-    autocomplete_fields = ['key', 'object']
-    search_fields = ['key__name', 'key__slug', 'object__slug']
-    ordering = ['-modified', ]
-
-
-@admin.register(models.LocationTag)
-class LocationTagAdmin(admin.ModelAdmin):
     autocomplete_fields = ['key', 'object']
     search_fields = ['key__name', 'key__slug', 'object__slug']
     ordering = ['-modified', ]

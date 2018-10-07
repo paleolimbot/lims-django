@@ -74,8 +74,6 @@ class LimsModelField(models.CharField):
             'choices': (
                 ('Sample', 'Sample'),
                 ('SampleTag', 'Sample Tag'),
-                ('Location', 'Location'),
-                ('LocationTag', 'Location Tag'),
                 ('Attachment', 'Attachment'),
                 ('AttachmentTag', 'Attachment Tag')
             )
@@ -95,10 +93,6 @@ class LimsModelField(models.CharField):
             return Sample
         elif model == 'SampleTag':
             return SampleTag
-        elif model == 'Location':
-            return Location
-        elif model == 'LocationTag':
-            return LocationTag
         elif model == 'Attachment':
             return Attachment
         elif model == 'AttachmentTag':
@@ -222,7 +216,7 @@ class BaseObjectModel(models.Model):
 
     def calculate_slug(self):
         slug_parts = self.auto_slug_use()
-        ObjectType = type(self)
+        model = type(self)
 
         # this is constructed such that it should always finish in 2 iterations
         suffix_index = 0
@@ -236,7 +230,7 @@ class BaseObjectModel(models.Model):
             id_str = id_str_prefix + suffix
 
             # make sure the id_str is unique
-            other_object_with_slug = ObjectType.objects.filter(slug=id_str)
+            other_object_with_slug = model.objects.filter(slug=id_str)
 
             if other_object_with_slug.count() == 0:
                 # no object with this slug, use it!
@@ -245,7 +239,7 @@ class BaseObjectModel(models.Model):
                 # an object exists with this slug, find objects that could
                 # possibly collide with the slug
 
-                possible_collisions = ObjectType.objects.filter(
+                possible_collisions = model.objects.filter(
                     slug__startswith=id_str_prefix
                 ).values_list('slug', flat=True)
 
@@ -369,6 +363,7 @@ class Term(models.Model):
     taxonomy = models.CharField(max_length=55)
     name = models.CharField(max_length=55)
     slug = models.SlugField(max_length=55)
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_terms')
     description = models.TextField(blank=True)
     parent = models.ForeignKey('self', on_delete=models.PROTECT, blank=True, null=True, related_name='children')
 
@@ -610,65 +605,10 @@ class ProjectPermission(models.Model):
         return '%s/%s/%s/%s' % (self.project.slug, self.user.username, self.model, self.permission)
 
 
-class Location(BaseObjectModel):
-    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='locations')
-    name = models.CharField(max_length=55, default='location')
-    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_locations')
-
-    def get_absolute_url(self):
-        return reverse_lazy('lims:location_detail', kwargs={'pk': self.pk})
-
-    def get_project(self):
-        return self.project
-
-    def delete(self, *args, **kwargs):
-        # clear relations so they don't delete attachments
-        self.attachments.clear()
-        super().delete(*args, **kwargs)
-
-    def save(self, *args, **kwargs):
-        self.project.modified = timezone.now()
-        self.project.save()
-        super().save(*args, **kwargs)
-
-    @staticmethod
-    def get_all_terms(queryset):
-        return Term.objects.filter(location_tags__object__in=queryset).distinct()
-
-    @staticmethod
-    def queryset_for_user(user, permission='view'):
-        return Location.objects.filter(
-            models.Q(project__permissions__user=user) & models.Q(project__permissions__permission=permission)
-        )
-
-
-class LocationTag(Tag):
-    object = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='tags')
-    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_location_tags')
-    key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True, related_name='location_tags')
-
-    def delete(self, *args, **kwargs):
-        # clear relations so they don't delete attachments
-        self.attachments.clear()
-        super().delete(*args, **kwargs)
-
-    def clean_fields(self, exclude=None):
-        super().clean_fields(exclude=exclude)
-
-        if exclude is None or ('key' not in exclude and 'object' not in exclude):
-            if self.key.project != self.object.project:
-                raise ValidationError({'key': ['Key project must match object project']})
-
-    @staticmethod
-    def queryset_for_user(user, permission='view'):
-        return tag_queryset_for_user(LocationTag, user=user, permission=permission)
-
-
 class Sample(BaseObjectModel):
     project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='samples')
     name = models.CharField(max_length=55, default='sample')
     collected = models.DateTimeField('collected', default=timezone.now)
-    location = models.ForeignKey(Location, on_delete=models.PROTECT, null=True, blank=True, related_name='samples')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_samples')
     status = models.CharField(
         max_length=55,
@@ -686,24 +626,16 @@ class Sample(BaseObjectModel):
     def auto_slug_use(self):
         # get parts of the calculated sample slug
         dt_str = str(self.collected.astimezone(timezone.get_default_timezone()).date()) if self.collected else ''
-        location_slug = SlugIdField.idify(self.location.slug[:10]) if self.location else ''
         user = self.user.username[:15] if self.user else ''
         hint = SlugIdField.idify(self.name)
 
-        return [user, dt_str, location_slug, hint]
+        return [user, dt_str, hint]
 
     def get_absolute_url(self):
         return reverse_lazy('lims:sample_detail', kwargs={'pk': self.pk})
 
     def get_project(self):
         return self.project
-
-    def clean_fields(self, exclude=None):
-        super().clean_fields(exclude=exclude)
-
-        if exclude is None or 'location' not in exclude:
-            if self.location and self.project != self.location.project:
-                raise ValidationError({'location': ['Location project must match sample project']})
 
     def delete(self, *args, **kwargs):
         # clear relations so they don't delete attachments
@@ -768,14 +700,11 @@ class Attachment(BaseObjectModel):
 
     samples = models.ManyToManyField(Sample, related_name='attachments', blank=True)
     sample_tags = models.ManyToManyField(SampleTag, related_name='attachments', blank=True)
-    locations = models.ManyToManyField(Location, related_name='attachments', blank=True)
-    location_tags = models.ManyToManyField(LocationTag, related_name='attachments', blank=True)
 
     def delete(self, *args, **kwargs):
         # clear relations so they don't get deleted with attachments
         self.samples.clear()
         self.sample_tags.clear()
-        self.location_tags.clear()
         super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
@@ -784,16 +713,6 @@ class Attachment(BaseObjectModel):
         for sample in self.samples.all():
             if sample.project != self.project:
                 raise ValidationError({'samples': ['At least one related sample is of a different project']})
-
-        for location in self.locations.all():
-            if location.project != self.project:
-                raise ValidationError({'locations': ['At least one related location is of a different project']})
-
-        for location_tag in self.location_tags.all():
-            if location_tag.object.project != self.project:
-                raise ValidationError(
-                    {'location_tags': ['At least one related location tag is of a different project']}
-                )
 
         for sample_tag in self.sample_tags.all():
             if sample_tag.object.project != self.project:
@@ -843,11 +762,9 @@ class EntryTemplate(models.Model):
 
     def get_model_fields(self):
         if self.model == 'Sample':
-            return ['collected', 'name', 'description', 'location', 'parent', 'geometry']
-        elif self.model == 'SampleTag' or self.model == 'LocationTag' or self.model == 'AttachmentTag':
+            return ['collected', 'name', 'description', 'parent', 'geometry']
+        elif self.model == 'SampleTag' or self.model == 'AttachmentTag':
             return ['object', 'key', 'value', 'comment', 'meta']
-        elif self.model == 'Location':
-            return ['name', 'slug', 'description', 'parent', 'geometry']
         elif self.model == 'Attachment':
             return ['name', 'slug', 'description', 'parent', 'geometry']
         else:

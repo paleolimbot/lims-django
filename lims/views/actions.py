@@ -15,13 +15,11 @@ import reversion
 from .. import models
 from .accounts import LimsLoginMixin
 from .edit import SampleBulkAddView, SampleForm
-from .forms import SampleSelect2Widget, LocationSelect2Widget
+from .forms import SampleSelect2Widget
 
 
 def find_action_view(model, action):
-    if model == 'location':
-        action_list = LOCATION_ACTIONS
-    elif model == 'sample':
+    if model == 'sample':
         action_list = SAMPLE_ACTIONS
     else:
         raise Http404('No such model')
@@ -185,11 +183,6 @@ class SampleDeleteView(LimsLoginMixin, MultiDeleteView):
     success_url = reverse_lazy('lims:my_sample_list')
 
 
-class LocationDeleteView(LimsLoginMixin, MultiDeleteView):
-    model = models.Location
-    success_url = reverse_lazy('lims:location_list')
-
-
 class SamplePrintBarcodeView(LimsLoginMixin, BulkActionView):
     model = models.Sample
     template_name = 'lims/action_views/sample_print_barcode.html'
@@ -239,19 +232,7 @@ class SampleExportView(LimsLoginMixin, BulkActionView):
     def do_action(self, request, queryset):
         return export_response(
             queryset,
-            fields=['id', 'slug', 'user', 'name', 'description', 'collected', 'location'],
-            terms=self.model.get_all_terms(queryset)
-        )
-
-
-class LocationExportView(LimsLoginMixin, BulkActionView):
-    model = models.Location
-    action_name = 'export'
-
-    def do_action(self, request, queryset):
-        return export_response(
-            queryset,
-            fields=['id', 'slug', 'user', 'name', 'description', 'parent', 'geometry'],
+            fields=['id', 'slug', 'user', 'name', 'description', 'collected'],
             terms=self.model.get_all_terms(queryset)
         )
 
@@ -296,9 +277,8 @@ class SampleUnPublishView(SamplePublishView):
 class SampleBulkEditForm(SampleForm):
 
     class Meta:
-        fields = ['collected', 'name', 'description', 'location', 'parent', 'geometry']
+        fields = ['collected', 'name', 'description', 'parent', 'geometry']
         widgets = {
-            'location': LocationSelect2Widget,
             'parent': SampleSelect2Widget
         }
 
@@ -324,9 +304,4 @@ SAMPLE_ACTIONS = [
     {'value': 'publish', 'label': 'Publish selected samples', 'view': SamplePublishView},
     {'value': 'unpublish', 'label': 'Unpublish selected samples', 'view': SampleUnPublishView},
     {'value': 'bulkedit', 'label': 'Bulk Edit selected samples', 'view': SampleBulkEditView}
-]
-
-LOCATION_ACTIONS = [
-    {'value': 'delete', 'label': 'Delete selected locations', 'view': LocationDeleteView},
-    {'value': 'export', 'label': 'Export selected locations', 'view': LocationExportView}
 ]

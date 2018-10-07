@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from .. import models
 from .accounts import LimsLoginMixin
 from .list import query_string_filter, default_published_filter
-from .actions import SAMPLE_ACTIONS, LOCATION_ACTIONS
+from .actions import SAMPLE_ACTIONS
 
 
 class DetailViewWithTablesBase(generic.DetailView):
@@ -18,9 +18,6 @@ class DetailViewWithTablesBase(generic.DetailView):
             return get_object_or_404(models.Project, pk=self.kwargs['project_id'])
         else:
             return None
-
-    def get_location_queryset(self):
-        return self.object.location_set
 
     def get_sample_queryset(self):
         return self.object.sample_set
@@ -57,25 +54,6 @@ class DetailViewWithTablesBase(generic.DetailView):
             # add some actions for the child samples
             context['sample_actions'] = SAMPLE_ACTIONS
 
-        location_queryset = self.get_location_queryset()
-
-        if location_queryset is not None:
-            if view_project is not None:
-                location_queryset = location_queryset.filter(project=view_project)
-
-            # setup the child locations list
-            locations = query_string_filter(
-                location_queryset.order_by('-modified'),
-                self.request.GET,
-                prefix='location_'
-            )
-            location_paginator = Paginator(locations, per_page=100)
-            context['location_page_obj'] = location_paginator.page(self.request.GET.get('location_page', 1))
-            context['location_page_kwarg'] = 'location_page'
-
-            # add some actions for the child locations
-            context['location_actions'] = LOCATION_ACTIONS
-
         return context
 
 
@@ -97,20 +75,6 @@ class SampleDetailView(LimsLoginMixin, DetailViewWithTablesBase):
     def get_sample_queryset(self):
         return self.object.children.all()
 
-    def get_location_queryset(self):
-        return None
-
-
-class LocationDetailView(LimsLoginMixin, DetailViewWithTablesBase):
-    template_name = 'lims/detail/location_detail.html'
-    model = models.Location
-
-    def get_project(self):
-        return self.object.project
-
-    def get_location_queryset(self):
-        return self.object.children
-
 
 class UserDetailView(LimsLoginMixin, DetailViewWithTablesBase):
     template_name = 'lims/detail/user_detail.html'
@@ -123,9 +87,6 @@ class TermDetailView(LimsLoginMixin, DetailViewWithTablesBase):
 
     def get_project(self):
         return self.object.project
-
-    def get_location_queryset(self):
-        return models.Location.objects.filter(tags__key=self.object).distinct()
 
     def get_sample_queryset(self):
         return models.Sample.objects.filter(tags__key=self.object).distinct()
@@ -140,9 +101,6 @@ class AttachmentDetailView(LimsLoginMixin, DetailViewWithTablesBase):
 
     def get_sample_queryset(self):
         return self.object.samples.all()
-
-    def get_location_queryset(self):
-        return self.object.locations.all()
 
 
 class AttachmentDownloadView(LimsLoginMixin, generic.View):

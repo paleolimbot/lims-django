@@ -8,7 +8,7 @@ from django.db.models import Q
 
 from .. import models
 from .accounts import LimsLoginMixin
-from .actions import SAMPLE_ACTIONS, LOCATION_ACTIONS
+from .actions import SAMPLE_ACTIONS
 
 
 class LimsListView(generic.ListView):
@@ -59,32 +59,6 @@ class SampleListView(LimsLoginMixin, LimsListView):
             search=('name', 'slug', 'description'),
             prefix='sample_'
         ).order_by("-modified")
-
-
-class LocationListView(LimsLoginMixin, LimsListView):
-    template_name = 'lims/lists/location_list.html'
-    context_object_name = 'location_list'
-    paginate_by = 100
-    page_kwarg = 'location_page'
-
-    def get_queryset(self):
-        project = self.get_project()
-        queryset = models.Location.objects.all()
-        if project is not None:
-            queryset = queryset.filter(project=project)
-
-        return query_string_filter(
-            queryset,
-            self.request.GET,
-            use=(),
-            search=('name', 'slug', 'description'),
-            prefix='location_'
-        ).order_by("-modified")
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(LocationListView, self).get_context_data(*args, **kwargs)
-        context['actions'] = LOCATION_ACTIONS
-        return context
 
 
 class MySampleListView(SampleListView):

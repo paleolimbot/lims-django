@@ -1,5 +1,5 @@
 
-from django.conf.urls import url, include
+from django.conf.urls import url
 from . import views
 
 app_name = 'lims'
@@ -28,15 +28,6 @@ urlpatterns = [
     # sample object views
     url(r'^sample/(?P<pk>[0-9]+)$', views.SampleDetailView.as_view(), name="sample_detail"),
     url(r'^sample/(?P<pk>[0-9]+)/change$', views.SampleChangeView.as_view(), name="sample_change"),
-
-    # location static views
-    url(r'^location/$', views.LocationListView.as_view(), name="location_list"),
-    url(r'^project/(?P<project_id>[0-9]+)/location/$', views.LocationListView.as_view(), name="project_location_list"),
-    url(r'^project/(?P<project_id>[0-9]+)/location/add$', views.LocationAddView.as_view(), name="location_add"),
-
-    # location object views
-    url(r'^location/(?P<pk>[0-9]+)$', views.LocationDetailView.as_view(), name="location_detail"),
-    url(r'^location/(?P<pk>[0-9]+)/change$', views.LocationChangeView.as_view(), name="location_change"),
 
     # template views
     url(r'^project/(?P<project_id>[0-9]+)/template/$', views.TemplateListView.as_view(), name='project_template_list'),

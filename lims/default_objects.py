@@ -20,7 +20,7 @@ def get_or_create_default_project():
 
 def add_user_to_default_project(user):
     p = get_or_create_default_project()
-    for model in ('Sample', 'Location', 'Attachment', 'Term'):
+    for model in ('Sample', 'Attachment', 'Term'):
         ProjectPermission.objects.get_or_create(project=p, user=user, permission='edit', model=model)
         ProjectPermission.objects.get_or_create(project=p, user=user, permission='view', model=model)
 
@@ -37,7 +37,7 @@ def get_or_create_user_project(user):
             slug='user_project_%s' % user.pk
         )[0]
 
-        for model in ('Sample', 'Location', 'Attachment', 'Term'):
+        for model in ('Sample', 'Attachment', 'Term'):
             ProjectPermission.objects.get_or_create(project=p, user=user, permission='edit', model=model)
             ProjectPermission.objects.get_or_create(project=p, user=user, permission='view', model=model)
 

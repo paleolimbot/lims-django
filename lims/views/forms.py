@@ -22,11 +22,6 @@ class ProjectModelSelect2Widget(ModelSelect2Widget):
         return qs
 
 
-class LocationSelect2Widget(ProjectModelSelect2Widget):
-    def get_queryset(self):
-        return models.Location.objects.order_by('-modified')
-
-
 class SampleSelect2Widget(ProjectModelSelect2Widget):
     def get_queryset(self):
         return models.Sample.objects.order_by('-modified').filter(status='published')
