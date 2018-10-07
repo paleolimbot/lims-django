@@ -8,7 +8,7 @@ from django.db import transaction
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
-from .models import Sample, SampleTag, BaseValidator, Term, Project, ProjectPermission, Attachment
+from .models import Sample, SampleTag, Term, Project, ProjectPermission, Attachment
 
 
 def populate_test_data(n_samples=700, n_sub_samples=150, max_tags=3, test_user=None,
@@ -101,7 +101,7 @@ def populate_test_data(n_samples=700, n_sub_samples=150, max_tags=3, test_user=N
             print("\nComplete!")
 
 
-def clear_models(models=(Sample, Attachment, Term, Project, BaseValidator),
+def clear_models(models=(Sample, Attachment, Term, Project),
                  queryset=lambda model: model.objects.all(), quiet=False):
     if not quiet:
         print("Clearing models...")
@@ -296,13 +296,9 @@ class TagsTestCase(TestCase):
         proj = Project.objects.create(name="Test Project", slug="test-proj")
         self.sample = Sample.objects.create(project=proj, collected=timezone.now(), name='a sample')
 
-        self.number_validator = BaseValidator.objects.create(
-            name='Number', regex='^[0-9]+$', error_message='Value is not a number'
-        )
-
         self.generic_term = Term.objects.create(project=proj, name='A generic tag', slug='generic-tag')
         self.number_term = Term.objects.create(project=proj, name='A Number Tag', slug='number-tag')
-        self.number_term.validators.create(validator=self.number_validator)
+        self.number_term.validators.create(validator='Float')
 
     def test_object_tags(self):
         sample_tag_generic = SampleTag(object=self.sample, key=self.generic_term, value='literally anything')
@@ -312,7 +308,7 @@ class TagsTestCase(TestCase):
         sample_tag_numeric.full_clean()
         sample_tag_numeric.save()
 
-        with self.assertRaisesRegex(ValidationError, 'Value is not a number'):
+        with self.assertRaisesRegex(ValidationError, 'Value cannot be converted to float'):
             sample_tag_numeric_bad = SampleTag(object=self.sample, key=self.number_term, value='AAA')
             sample_tag_numeric_bad.full_clean()
 

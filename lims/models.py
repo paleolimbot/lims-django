@@ -14,6 +14,7 @@ from django.utils.functional import cached_property
 
 from .utils.geometry import validate_wkt, wkt_bounds
 from .utils.barcode import qrcode_html
+from .validators import JSONDictValidator, resolve_validator
 
 
 class ObjectPermissionError(PermissionError):
@@ -23,25 +24,6 @@ class ObjectPermissionError(PermissionError):
 
     def get_object(self):
         return self.args[0]
-
-
-def validate_is_a_regex(value):
-    try:
-        re.compile(value)
-    except Exception as e:
-        raise ValidationError('Value is not a valid Python regex: %s' % e)
-
-
-def validate_json_tags_dict(value):
-    if not value:
-        return
-    try:
-        obj = json.loads(value)
-        if not isinstance(obj, dict):
-            raise ValidationError('Value is not a valid JSON object')
-
-    except ValueError:
-        raise ValidationError('Value is not valid JSON')
 
 
 class SlugIdField(models.CharField):
@@ -367,16 +349,6 @@ class BaseObjectModel(TagsMixin, models.Model):
         return self.name
 
 
-class BaseValidator(models.Model):
-    name = models.CharField(max_length=55)
-    description = models.TextField(blank=True)
-    regex = models.TextField(validators=[validate_is_a_regex, ])
-    error_message = models.TextField()
-
-    def __str__(self):
-        return self.name
-
-
 class Term(BaseObjectModel):
     project = models.ForeignKey('Project', on_delete=models.PROTECT, null=True, blank=True, related_name='terms')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_terms')
@@ -394,17 +366,15 @@ class Term(BaseObjectModel):
     def get_absolute_url(self):
         return reverse_lazy('lims:term_detail', kwargs={'pk': self.pk})
 
-    def get_validators(self):
-        validators = []
-        for validator in self.validators.all():
-            validators.append(RegexValidator(validator.validator.regex, message=validator.validator.error_message))
-        return validators
+    def resolve_validators(self):
+        validators = [v.resolve(strict=False) for v in self.validators.order_by('order')]
+        return [v for v in validators if v is not None]
 
     @cached_property
     def form_field(self):
         return CharField(
             label='%s' % self,
-            validators=self.get_validators(),
+            validators=self.resolve_validators(),
             required=False,
             help_text=self.description
         )
@@ -453,7 +423,23 @@ class Term(BaseObjectModel):
 
 class TermValidator(models.Model):
     term = models.ForeignKey(Term, on_delete=models.CASCADE, related_name='validators')
-    validator = models.ForeignKey(BaseValidator, on_delete=models.PROTECT)
+    order = models.IntegerField(default=0)
+    validator = models.CharField(max_length=55)
+    validator_arguments = models.TextField(validators=[JSONDictValidator(), ], blank=True)
+
+    def resolve(self, strict=True):
+        try:
+            kwargs = json.loads(self.validator_arguments) if self.validator_arguments else {}
+            return resolve_validator(self.validator, **kwargs)
+        except Exception as e:
+            if strict:
+                raise ValidationError('Could not resolve validator: %s' % e)
+            else:
+                return None
+
+    def clean_fields(self, exclude=None):
+        super().clean_fields(exclude=exclude)
+        self.resolve(strict=True)
 
     def __str__(self):
         return '"%s" validator for term "%s"' % (self.term, self.validator)

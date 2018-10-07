@@ -29,11 +29,6 @@ class TermValidatorInline(admin.TabularInline):
     extra = 1
 
 
-@admin.register(models.BaseValidator)
-class BaseValidatorAdmin(LimsAdmin):
-    pass
-
-
 @admin.register(models.Term)
 class TermAdmin(LimsAdmin):
     inlines = [TermValidatorInline, ]
