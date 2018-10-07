@@ -4,7 +4,6 @@ import json
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-from django.utils.text import slugify
 from django.urls import reverse_lazy
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -50,9 +49,9 @@ class SlugIdField(models.CharField):
     def __init__(self, **kwargs):
         defaults = {
             'max_length': 55,
-            'unique': True,
             'blank': True,
-            'validators': [RegexValidator('[A-Za-z0-9._-]*')]
+            'validators': [RegexValidator('[A-Za-z0-9._-]*')],
+            'db_index': True
         }
         defaults.update(**kwargs)
         super().__init__(**defaults)
@@ -99,6 +98,22 @@ class LimsModelField(models.CharField):
             return AttachmentTag
         else:
             raise ValueError('No such model: %s' % model)
+
+
+class LimsStatusField(models.CharField):
+
+    def __init__(self, **kwargs):
+        defaults = {
+            'max_length': 55,
+            'choices': (
+                ('auto-draft', 'Auto Draft'),
+                ('draft', 'Draft'),
+                ('published', 'Published')
+            ),
+            'default': 'published'
+        }
+        defaults.update(**kwargs)
+        super().__init__(**defaults)
 
 
 def object_queryset_for_user(model, user, permission):
@@ -153,11 +168,88 @@ def tag_user_can(obj, user, permission, project=None):
         return False
 
 
-class BaseObjectModel(models.Model):
-    name = models.CharField(max_length=55)
+class TagsMixin:
+    tags = None
+    project = None
+
+    def default_taxonomy(self):
+        return type(self).__name__
+
+    def set_tags(self, _values=None, taxonomy=None, **kwargs):
+        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
+        self.tags.all().delete()
+        return self.add_tags(_values, taxonomy=taxonomy, **kwargs)
+
+    def add_tags(self, _values=None, taxonomy=None, **kwargs):
+        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
+        if _values is not None:
+            kwargs.update(_values)
+
+        # make sure all names are defined terms
+        for key, value in kwargs.items():
+            term = Term.get_term(key, self.project, taxonomy=taxonomy, create=True)
+            tag = self.tags.create(key=term, value=value)
+            try:
+                tag.full_clean()
+            except ValidationError as e:
+                tag.delete()
+                raise e
+
+    def update_tags(self, _values=None, taxonomy=None, **kwargs):
+        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
+
+        if _values is not None:
+            kwargs.update(_values)
+
+        # make sure all names are defined terms
+        for key, value in kwargs.items():
+            term = Term.get_term(key, self.project, taxonomy=taxonomy, create=True)
+            try:
+                tag = self.tags.get(key=term)
+                if value:
+                    tag.value = value
+                    tag.full_clean()
+                    tag.save()
+                else:
+                    tag.delete()
+            except ObjectDoesNotExist:
+                if value:
+                    tag = self.tags.create(key=term, value=value)
+                    try:
+                        tag.full_clean()
+                    except ValidationError as e:
+                        tag.delete()
+                        raise e
+
+    def get_tag(self, key, taxonomy=None, as_list=False):
+        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
+
+        term = Term.get_term(key, self.project, taxonomy=taxonomy, create=False)
+        if term is None:
+            return None
+        try:
+            tags = self.tags.all().filter(key=term)
+            if as_list:
+                return [tag.value for tag in tags]
+            elif tags:
+                # always return the *last* value
+                return tags[tags.count()-1].value
+            else:
+                return None
+        except ObjectDoesNotExist:
+            return None
+
+    def get_tags(self, taxonomy=None):
+        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
+        return {tag.key.slug: tag.value for tag in self.tags.filter(key__taxonomy=taxonomy)}
+
+
+class BaseObjectModel(TagsMixin, models.Model):
+    name = models.CharField(max_length=256)
     slug = SlugIdField()
     description = models.TextField(blank=True)
     project = None
+    status = LimsStatusField()
 
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
     created = models.DateTimeField('created', auto_now_add=True)
@@ -173,7 +265,7 @@ class BaseObjectModel(models.Model):
     geo_ymax = models.FloatField(editable=False, blank=True, null=True, default=None)
 
     def _should_update_slug(self):
-        return not self.pk and not self.slug
+        return (self.status != 'published') or (not self.pk and not self.slug)
 
     def calculate_recursive_depth(self):
         if self.parent:
@@ -257,9 +349,7 @@ class BaseObjectModel(models.Model):
     def get_absolute_url(self):
         raise NotImplementedError()
 
-    def get_project(self):
-        raise NotImplementedError()
-
+    # TODO: these three links should be implemented as filters, not object methods
     def get_link(self):
         return format_html('<a href="{}">{}</a>', self.get_absolute_url(), self)
 
@@ -272,77 +362,6 @@ class BaseObjectModel(models.Model):
 
     def user_can(self, user, permission):
         return object_user_can(self, user=user, permission=permission)
-
-    def default_taxonomy(self):
-        return type(self).__name__
-
-    def set_tags(self, _values=None, taxonomy=None, **kwargs):
-        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
-        self.tags.all().delete()
-        return self.add_tags(_values, taxonomy=taxonomy, **kwargs)
-
-    def add_tags(self, _values=None, taxonomy=None, **kwargs):
-        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
-        if _values is not None:
-            kwargs.update(_values)
-
-        # make sure all names are defined terms
-        for key, value in kwargs.items():
-            term = Term.get_term(key, self.project, taxonomy=taxonomy, create=True)
-            tag = self.tags.create(key=term, value=value)
-            try:
-                tag.full_clean()
-            except ValidationError as e:
-                tag.delete()
-                raise e
-
-    def update_tags(self, _values=None, taxonomy=None, **kwargs):
-        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
-
-        if _values is not None:
-            kwargs.update(_values)
-
-        # make sure all names are defined terms
-        for key, value in kwargs.items():
-            term = Term.get_term(key, self.project, taxonomy=taxonomy, create=True)
-            try:
-                tag = self.tags.get(key=term)
-                if value:
-                    tag.value = value
-                    tag.full_clean()
-                    tag.save()
-                else:
-                    tag.delete()
-            except ObjectDoesNotExist:
-                if value:
-                    tag = self.tags.create(key=term, value=value)
-                    try:
-                        tag.full_clean()
-                    except ValidationError as e:
-                        tag.delete()
-                        raise e
-
-    def get_tag(self, key, taxonomy=None, as_list=False):
-        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
-
-        term = Term.get_term(key, self.project, taxonomy=taxonomy, create=False)
-        if term is None:
-            return None
-        try:
-            tags = self.tags.all().filter(key=term)
-            if as_list:
-                return [tag.value for tag in tags]
-            elif tags:
-                # always return the *last* value
-                return tags[tags.count()-1].value
-            else:
-                return None
-        except ObjectDoesNotExist:
-            return None
-
-    def get_tags(self, taxonomy=None):
-        taxonomy = self.default_taxonomy() if taxonomy is None else taxonomy
-        return {tag.key.slug: tag.value for tag in self.tags.filter(key__taxonomy=taxonomy)}
 
     def __str__(self):
         return self.name
@@ -358,17 +377,13 @@ class BaseValidator(models.Model):
         return self.name
 
 
-class Term(models.Model):
+class Term(BaseObjectModel):
     project = models.ForeignKey('Project', on_delete=models.PROTECT, null=True, blank=True, related_name='terms')
-    taxonomy = models.CharField(max_length=55)
-    name = models.CharField(max_length=55)
-    slug = models.SlugField(max_length=55)
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_terms')
-    description = models.TextField(blank=True)
     parent = models.ForeignKey('self', on_delete=models.PROTECT, blank=True, null=True, related_name='children')
 
+    taxonomy = models.CharField(max_length=55)
     measured = models.BooleanField(default=False)
-    meta = models.TextField(blank=True, validators=[validate_json_tags_dict, ])
 
     def clean_fields(self, exclude=None):
         super().clean_fields(exclude=exclude)
@@ -385,9 +400,6 @@ class Term(models.Model):
 
     def get_absolute_url(self):
         return reverse_lazy('lims:term_detail', kwargs={'pk': self.pk})
-
-    def get_link(self):
-        return format_html('<a href="{}">{}</a>', self.get_absolute_url(), self)
 
     def get_validators(self):
         validators = []
@@ -420,7 +432,7 @@ class Term(models.Model):
 
         # try to get by name and slug
         try:
-            return Term.objects.get(project=project, taxonomy=taxonomy, slug=slugify(string_key))
+            return Term.objects.get(project=project, taxonomy=taxonomy, slug=SlugIdField.idify(string_key))
         except Term.DoesNotExist:
             try:
                 return Term.objects.get(project=project, taxonomy=taxonomy, name=string_key)
@@ -429,7 +441,7 @@ class Term(models.Model):
                     return Term.objects.create(
                         project=project,
                         taxonomy=taxonomy,
-                        slug=slugify(string_key),
+                        slug=SlugIdField.idify(string_key),
                         name=string_key
                     )
                 else:
@@ -456,17 +468,16 @@ class Tag(models.Model):
     key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True)
     value = models.TextField(blank=True)
     comment = models.TextField(blank=True)
-    meta = models.TextField(blank=True, validators=[validate_json_tags_dict, ])
 
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
     created = models.DateTimeField('created', auto_now_add=True)
     modified = models.DateTimeField('modified', auto_now=True)
 
+    numeric_value = models.FloatField(default=None, editable=False, blank=True, null=True)
+    numeric_value_autoset = models.BooleanField(default=True, editable=False)
+
     class Meta:
         abstract = True
-
-    def default_taxonomy(self):
-        return 'default'
 
     def clean_fields(self, exclude=None):
         super().clean_fields(exclude=exclude)
@@ -486,59 +497,40 @@ class Tag(models.Model):
         # update parent object modified tag
         self.object.modified = timezone.now()
         self.object.save()
+
+        # cache numeric value
+        if self.numeric_value_autoset:
+            try:
+                self.numeric_value = float(self.value)
+            except ValueError:
+                if self.value.lower() == 'true':
+                    self.numeric_value = 1
+                elif self.value.lower() == 'false':
+                    self.numeric_value = 0
+                else:
+                    self.numeric_value = None
+
         super().save(*args, **kwargs)
+
+    @cached_property
+    def project(self):
+        return self.object.project
 
     def user_can(self, user, permission):
         return tag_user_can(self, user=user, permission=permission)
 
-    def set_tags(self, _values=None, _save=True, **kwargs):
-        if _values is not None:
-            kwargs.update(_values)
-
-        # make sure all names are defined terms
-        string_tags = {}
-        for key, value in kwargs.items():
-            if value:
-                term = Term.get_term(key, self.object.project, self.default_taxonomy(), create=True)
-                string_tags[term.slug] = value
-
-        if kwargs:
-            self.meta = json.dumps(string_tags)
-        else:
-            self.meta = ''
-
-        if _save:
-            self.save()
-
-    def add_tags(self, _values=None, **kwargs):
-        self.update_tags(_value=_values, **kwargs)
-
-    def update_tags(self, _values=None, **kwargs):
-        if _values is not None:
-            kwargs.update(_values)
-        tags = self.get_tags()
-        tags.update(kwargs)
-        self.set_tags(_values=tags)
-
-    def get_tag(self, key):
-        tags = self.get_tags()
-        return tags[key] if key in tags else None
-
-    def get_tags(self, taxonomy=None):
-        if taxonomy is not None:
-            raise NotImplementedError('taxonomy must be None for meta fields')
-        tags = json.loads(self.meta) if self.meta else {}
-        return tags
-
-    @staticmethod
-    def get_all_terms(queryset):
-        all_terms = set()
-        for tag in queryset:
-            all_terms.update(tag.gettags().keys())
-        return list(all_terms)
-
     def __str__(self):
         return '%s/%s="%s"' % (self.object, self.key, self.value)
+
+
+class TermTag(Tag):
+    object = models.ForeignKey(Term, on_delete=models.CASCADE, related_name='tags')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_term_tags')
+    key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True, related_name='term_tags')
+
+    @staticmethod
+    def queryset_for_user(user, permission='view'):
+        tag_queryset_for_user(TermTag, user=user, permission=permission)
 
 
 class Project(BaseObjectModel):
@@ -574,6 +566,9 @@ class ProjectTag(Tag):
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_project_tags')
     key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True, related_name='project_tags')
 
+    def get_project(self):
+        return self.object
+
     def user_can(self, user, action):
         return self.object.user_can(user, action)
 
@@ -582,9 +577,9 @@ class ProjectTag(Tag):
         if user.is_staff:
             return ProjectTag.objects.all()
         return ProjectTag.objects.filter(
-            models.Q(object__project__permissions__user=user) &
-            models.Q(object__project__permissions__permission=permission) &
-            models.Q(object__project__permissions__model='Project')
+            models.Q(object__permissions__user=user) &
+            models.Q(object__permissions__permission=permission) &
+            models.Q(object__permissions__model='Project')
         )
 
 
@@ -607,21 +602,11 @@ class ProjectPermission(models.Model):
 
 class Sample(BaseObjectModel):
     project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='samples')
-    name = models.CharField(max_length=55, default='sample')
+    name = models.CharField(max_length=256, default='sample')
+    slug = SlugIdField(unique=True)
     collected = models.DateTimeField('collected', default=timezone.now)
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_samples')
-    status = models.CharField(
-        max_length=55,
-        choices=(
-            ('auto-draft', 'Auto Draft'),
-            ('draft', 'Draft'),
-            ('published', 'Published')
-        ),
-        default='draft'
-    )
-
-    def _should_update_slug(self):
-        return super()._should_update_slug() or (self.status != 'published')
+    status = LimsStatusField(default='draft')
 
     def auto_slug_use(self):
         # get parts of the calculated sample slug
@@ -659,20 +644,10 @@ class Sample(BaseObjectModel):
         return object_queryset_for_user(Sample, user=user, permission=permission)
 
 
-class SampleTag(Tag):
+class SampleTag(TagsMixin, Tag):
     object = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name='tags')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_sample_tags')
     key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True, related_name='sample_tags')
-    numeric_value = models.FloatField(default=None, editable=False, blank=True, null=True)
-    numeric_value_autoset = models.BooleanField(default=True, editable=False)
-
-    def save(self, *args, **kwargs):
-        if self.numeric_value_autoset:
-            try:
-                self.numeric_value = float(self.value)
-            except ValueError:
-                self.numeric_value = None
-        return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         # clear relations so they don't delete attachments
@@ -689,6 +664,16 @@ class SampleTag(Tag):
     @staticmethod
     def queryset_for_user(user, permission='view'):
         return tag_queryset_for_user(SampleTag, user=user, permission=permission)
+
+
+class SampleTagTag(Tag):
+    object = models.ForeignKey(SampleTag, on_delete=models.CASCADE, related_name='tags')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_sample_tag_tags')
+    key = models.ForeignKey(Term, on_delete=models.PROTECT, db_index=True, related_name='sample_tag_tags')
+
+    @staticmethod
+    def queryset_for_user(user, permission='view'):
+        return tag_queryset_for_user(SampleTagTag, user=user, permission=permission)
 
 
 class Attachment(BaseObjectModel):

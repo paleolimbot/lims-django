@@ -8,7 +8,7 @@ from django.db import transaction
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
-from .models import Sample, SampleTag, BaseValidator, Term, Project ,ProjectPermission, Attachment
+from .models import Sample, SampleTag, BaseValidator, Term, Project, ProjectPermission, Attachment
 
 
 def populate_test_data(n_samples=700, n_sub_samples=150, max_tags=3, test_user=None,
@@ -419,7 +419,6 @@ class ProjectLayerTestCase(TestCase):
         t2 = Term.objects.create(name="t3", slug="t3", project=self.proj2)
 
         s1 = Sample.objects.create(project=self.proj1, user=self.test_user)
-        s2 = Sample.objects.create(project=self.proj2, user=self.test_user)
 
         # same project should work
         st1 = SampleTag.objects.create(object=s1, key=t1, value='value')
