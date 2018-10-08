@@ -15,6 +15,7 @@ from django.utils.functional import cached_property
 from .utils.geometry import validate_wkt, wkt_bounds
 from .utils.barcode import qrcode_html
 from .validators import JSONDictValidator, resolve_validator
+from .widgets import resolve_input_widget, resolve_output_widget
 
 
 class ObjectPermissionError(PermissionError):
@@ -357,6 +358,11 @@ class Term(BaseObjectModel):
     taxonomy = models.CharField(max_length=55)
     measured = models.BooleanField(default=False)
 
+    input_widget_class = models.CharField(max_length=55, default='TextInput')
+    input_widget_arguments = models.TextField(validators=[JSONDictValidator(), ], blank=True)
+    output_widget_class = models.CharField(max_length=55, default='IdentityOutput')
+    output_widget_arguments = models.TextField(validators=[JSONDictValidator(), ], blank=True)
+
     class Meta:
         unique_together = ['project', 'taxonomy', 'slug']
 
@@ -366,18 +372,82 @@ class Term(BaseObjectModel):
     def get_absolute_url(self):
         return reverse_lazy('lims:term_detail', kwargs={'pk': self.pk})
 
-    def resolve_validators(self):
-        validators = [v.resolve(strict=False) for v in self.validators.order_by('order')]
+    @cached_property
+    def validators(self):
+        return self.resolve_validators(strict=False)
+
+    def resolve_validators(self, strict=False):
+        if strict:
+            validators = [v.resolve_validator(strict=True) for v in self.term_validators.order_by('order')]
+        else:
+            validators = [v.validator for v in self.term_validators.order_by('order')]
+
         return [v for v in validators if v is not None]
 
     @cached_property
-    def form_field(self):
-        return CharField(
-            label='%s' % self,
-            validators=self.resolve_validators(),
-            required=False,
-            help_text=self.description
-        )
+    def input_widget(self):
+        return self.resolve_input_widget(strict=False)
+
+    @cached_property
+    def output_widget(self):
+        return self.resolve_output_widget(strict=False)
+
+    def resolve_input_widget(self, strict=False):
+        try:
+            kwargs = json.loads(self.input_widget_arguments) if self.input_widget_arguments else {}
+            return resolve_input_widget(self.input_widget_class, **kwargs)
+        except Exception as e:
+            if strict:
+                raise ValidationError('Could not resolve input widget: %s' % e)
+            else:
+                return resolve_input_widget('TextInput')
+
+    def resolve_output_widget(self, strict=False):
+        try:
+            kwargs = json.loads(self.output_widget_arguments) if self.output_widget_arguments else {}
+            return resolve_output_widget(self.output_widget_class, **kwargs)
+        except Exception as e:
+            if strict:
+                raise ValidationError('Could not resolve output widget: %s' % e)
+            else:
+                return resolve_output_widget('IdentityOutput')
+
+    @cached_property
+    def field(self):
+        return self.resolve_field()
+
+    def resolve_field(self, klass=CharField, **kwargs):
+        defaults = {
+            'label': '%s' % self,
+            'validators': self.validators,
+            'required': False,
+            'help_text': self.description,
+            'widget': self.input_widget
+        }
+        defaults.update(**kwargs)
+        return klass(**defaults)
+
+    def clean_fields(self, exclude=None):
+        errors = []
+        try:
+            super().clean_fields(exclude=exclude)
+        except ValidationError as e:
+            errors = e.error_list
+
+        if exclude is None or all(x in exclude for x in ('input_widget_arguments', 'input_widget_class')):
+            try:
+                self.resolve_input_widget(strict=True)
+            except ValidationError as e:
+                errors = errors + e.error_list
+
+        if exclude is None or all(x in exclude for x in ('output_widget_arguments', 'output_widget_class')):
+            try:
+                self.resolve_output_widget(strict=True)
+            except ValidationError as e:
+                errors = errors + e.error_list
+
+        if errors:
+            raise ValidationError(errors)
 
     @staticmethod
     def get_term(string_key, project, taxonomy, create=True):
@@ -422,15 +492,19 @@ class Term(BaseObjectModel):
 
 
 class TermValidator(models.Model):
-    term = models.ForeignKey(Term, on_delete=models.CASCADE, related_name='validators')
+    term = models.ForeignKey(Term, on_delete=models.CASCADE, related_name='term_validators')
     order = models.IntegerField(default=0)
-    validator = models.CharField(max_length=55)
+    validator_class = models.CharField(max_length=55)
     validator_arguments = models.TextField(validators=[JSONDictValidator(), ], blank=True)
 
-    def resolve(self, strict=True):
+    @cached_property
+    def validator(self):
+        return self.resolve_validator(strict=False)
+
+    def resolve_validator(self, strict=False):
         try:
             kwargs = json.loads(self.validator_arguments) if self.validator_arguments else {}
-            return resolve_validator(self.validator, **kwargs)
+            return resolve_validator(self.validator_class, **kwargs)
         except Exception as e:
             if strict:
                 raise ValidationError('Could not resolve validator: %s' % e)
@@ -439,10 +513,10 @@ class TermValidator(models.Model):
 
     def clean_fields(self, exclude=None):
         super().clean_fields(exclude=exclude)
-        self.resolve(strict=True)
+        self.resolve_validator(strict=True)
 
     def __str__(self):
-        return '"%s" validator for term "%s"' % (self.term, self.validator)
+        return '"%s" validator for term "%s%s"' % (self.term, self.validator_class, self.validator_arguments)
 
 
 class Tag(models.Model):
@@ -465,7 +539,7 @@ class Tag(models.Model):
         super().clean_fields(exclude=exclude)
 
         if exclude is None or 'value' not in exclude:
-            field = self.key.form_field
+            field = self.key.field
             try:
                 field.clean(self.value)
             except ValidationError as e:

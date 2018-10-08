@@ -298,7 +298,7 @@ class TagsTestCase(TestCase):
 
         self.generic_term = Term.objects.create(project=proj, name='A generic tag', slug='generic-tag')
         self.number_term = Term.objects.create(project=proj, name='A Number Tag', slug='number-tag')
-        self.number_term.validators.create(validator='Float')
+        self.number_term.term_validators.create(validator_class='Float')
 
     def test_object_tags(self):
         sample_tag_generic = SampleTag(object=self.sample, key=self.generic_term, value='literally anything')

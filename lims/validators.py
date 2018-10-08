@@ -13,20 +13,20 @@ class ValidatorError(Exception):
     pass
 
 
-validators = {}
+_validators = {}
 
 
 def register_validator(validator_class, name=None):
-    global validators
+    global _validators
     if name is None:
         name = re.sub(r'Validator$', '', validator_class.__name__)
-    validators[name] = validator_class
+    _validators[name] = validator_class
     return validator_class
 
 
 def resolve_validator_class(name):
     try:
-        return validators[name]
+        return _validators[name]
     except KeyError:
         raise ValidatorError('Could not find validator: "%s"' % name)
 
