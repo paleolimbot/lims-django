@@ -12,10 +12,12 @@ from django.forms import CharField
 from django.core.validators import RegexValidator
 from django.utils.functional import cached_property
 
+import reversion
+
 from .utils.geometry import validate_wkt, wkt_bounds
 from .utils.barcode import qrcode_html
-from .validators import JSONDictValidator, resolve_validator
-from .widgets import resolve_input_widget, resolve_output_widget
+from .validators import JSONDictValidator, resolve_validator, ValidatorError
+from .widgets import resolve_input_widget, resolve_output_widget, WidgetError
 
 
 class ObjectPermissionError(PermissionError):
@@ -57,7 +59,9 @@ class LimsModelField(models.CharField):
                 ('Sample', 'Sample'),
                 ('SampleTag', 'Sample Tag'),
                 ('Attachment', 'Attachment'),
-                ('AttachmentTag', 'Attachment Tag')
+                ('AttachmentTag', 'Attachment Tag'),
+                ('Term', 'Term'),
+                ('TermTag', 'Term Tag')
             )
         }
         defaults.update(**kwargs)
@@ -350,6 +354,7 @@ class BaseObjectModel(TagsMixin, models.Model):
         return self.name
 
 
+@reversion.register(follow=('tags', 'term_validators'))
 class Term(BaseObjectModel):
     project = models.ForeignKey('Project', on_delete=models.PROTECT, null=True, blank=True, related_name='terms')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_terms')
@@ -396,9 +401,9 @@ class Term(BaseObjectModel):
         try:
             kwargs = json.loads(self.input_widget_arguments) if self.input_widget_arguments else {}
             return resolve_input_widget(self.input_widget_class, **kwargs)
-        except Exception as e:
+        except WidgetError as e:
             if strict:
-                raise ValidationError('Could not resolve input widget: %s' % e)
+                raise ValidationError({'input_widget_class': [str(e), ]})
             else:
                 return resolve_input_widget('TextInput')
 
@@ -406,9 +411,9 @@ class Term(BaseObjectModel):
         try:
             kwargs = json.loads(self.output_widget_arguments) if self.output_widget_arguments else {}
             return resolve_output_widget(self.output_widget_class, **kwargs)
-        except Exception as e:
+        except WidgetError as e:
             if strict:
-                raise ValidationError('Could not resolve output widget: %s' % e)
+                raise ValidationError({'output_widget_class': [str(e), ]})
             else:
                 return resolve_output_widget('IdentityOutput')
 
@@ -428,26 +433,13 @@ class Term(BaseObjectModel):
         return klass(**defaults)
 
     def clean_fields(self, exclude=None):
-        errors = []
-        try:
-            super().clean_fields(exclude=exclude)
-        except ValidationError as e:
-            errors = e.error_list
+        super().clean_fields(exclude=exclude)
 
-        if exclude is None or all(x in exclude for x in ('input_widget_arguments', 'input_widget_class')):
-            try:
-                self.resolve_input_widget(strict=True)
-            except ValidationError as e:
-                errors = errors + e.error_list
+        if exclude is None or not all(x in exclude for x in ('input_widget_arguments', 'input_widget_class')):
+            self.resolve_input_widget(strict=True)
 
-        if exclude is None or all(x in exclude for x in ('output_widget_arguments', 'output_widget_class')):
-            try:
-                self.resolve_output_widget(strict=True)
-            except ValidationError as e:
-                errors = errors + e.error_list
-
-        if errors:
-            raise ValidationError(errors)
+        if exclude is None or not all(x in exclude for x in ('output_widget_arguments', 'output_widget_class')):
+            self.resolve_output_widget(strict=True)
 
     @staticmethod
     def get_term(string_key, project, taxonomy, create=True):
@@ -505,9 +497,9 @@ class TermValidator(models.Model):
         try:
             kwargs = json.loads(self.validator_arguments) if self.validator_arguments else {}
             return resolve_validator(self.validator_class, **kwargs)
-        except Exception as e:
+        except ValidatorError as e:
             if strict:
-                raise ValidationError('Could not resolve validator: %s' % e)
+                raise ValidationError({'validator_class': [str(e), ]})
             else:
                 return None
 
@@ -581,6 +573,7 @@ class Tag(models.Model):
         return '%s/%s="%s"' % (self.object, self.key, self.value)
 
 
+@reversion.register()
 class TermTag(Tag):
     object = models.ForeignKey(Term, on_delete=models.CASCADE, related_name='tags')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_term_tags')
@@ -591,6 +584,7 @@ class TermTag(Tag):
         tag_queryset_for_user(TermTag, user=user, permission=permission)
 
 
+@reversion.register(follow=('tags', 'permissions'))
 class Project(BaseObjectModel):
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_projects')
 
@@ -616,6 +610,7 @@ class Project(BaseObjectModel):
         )
 
 
+@reversion.register()
 class ProjectTag(Tag):
     object = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tags')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_project_tags')
@@ -639,6 +634,7 @@ class ProjectTag(Tag):
         )
 
 
+@reversion.register()
 class ProjectPermission(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='permissions')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='lims_project_permissions')
@@ -656,6 +652,7 @@ class ProjectPermission(models.Model):
         return '%s/%s/%s/%s' % (self.project.slug, self.user.username, self.model, self.permission)
 
 
+@reversion.register(follow=('tags', ))
 class Sample(BaseObjectModel):
     project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='samples')
     name = models.CharField(max_length=256, default='sample')
@@ -700,6 +697,7 @@ class Sample(BaseObjectModel):
         return object_queryset_for_user(Sample, user=user, permission=permission)
 
 
+@reversion.register(follow=('tags', ))
 class SampleTag(TagsMixin, Tag):
     object = models.ForeignKey(Sample, on_delete=models.CASCADE, related_name='tags')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_sample_tags')
@@ -715,6 +713,7 @@ class SampleTag(TagsMixin, Tag):
         return tag_queryset_for_user(SampleTag, user=user, permission=permission)
 
 
+@reversion.register()
 class SampleTagTag(Tag):
     object = models.ForeignKey(SampleTag, on_delete=models.CASCADE, related_name='tags')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_sample_tag_tags')
@@ -725,6 +724,7 @@ class SampleTagTag(Tag):
         return tag_queryset_for_user(SampleTagTag, user=user, permission=permission)
 
 
+@reversion.register(follow='tags')
 class Attachment(BaseObjectModel):
     project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='attachments')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_attachments')
@@ -735,12 +735,14 @@ class Attachment(BaseObjectModel):
     samples = models.ManyToManyField(Sample, related_name='attachments', blank=True)
     sample_tags = models.ManyToManyField(SampleTag, related_name='attachments', blank=True)
     terms = models.ManyToManyField(Term, related_name='attachments', blank=True)
+    term_tags = models.ManyToManyField(TermTag, related_name='attachments', blank=True)
 
     def delete(self, *args, **kwargs):
         # clear relations so they don't get deleted with attachments
         self.samples.clear()
         self.sample_tags.clear()
         self.terms.clear()
+        self.term_tags.clear()
         super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
@@ -756,7 +758,11 @@ class Attachment(BaseObjectModel):
 
         for term in self.terms.all():
             if term.project != self.project:
-                raise ValidationError({'samples': ['At least one related sample is of a different project']})
+                raise ValidationError({'samples': ['At least one related term is of a different project']})
+
+        for sample_tag in self.term_tags.all():
+            if sample_tag.object.project != self.project:
+                raise ValidationError({'term_tags': ['At least one related term tag is of a different project']})
 
     def get_absolute_url(self):
         return reverse_lazy('lims:attachment_detail', kwargs={'pk': self.pk})
@@ -770,6 +776,7 @@ class Attachment(BaseObjectModel):
         return object_queryset_for_user(Attachment, user=user, permission=permission)
 
 
+@reversion.register()
 class AttachmentTag(Tag):
     object = models.ForeignKey(Attachment, on_delete=models.CASCADE, related_name='tags')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_attachment_tags')

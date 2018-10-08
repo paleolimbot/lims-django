@@ -28,7 +28,7 @@ def resolve_validator_class(name):
     try:
         return _validators[name]
     except KeyError:
-        raise ValidatorError('Could not find validator: "%s"' % name)
+        raise ValidatorError('Validator must be one of %s' % ', '.join(str(x) for x in _validators.keys()))
 
 
 def resolve_validator(name, **kwargs):

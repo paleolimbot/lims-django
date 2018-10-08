@@ -42,14 +42,14 @@ def resolve_input_widget_class(name):
     try:
         return _input_widgets[name]
     except KeyError:
-        raise WidgetError('Could not find input widget: "%s"' % name)
+        raise WidgetError('Input widget class must be one of %s' % ', '.join(str(x) for x in _input_widgets.keys()))
 
 
 def resolve_output_widget_class(name):
     try:
         return _output_widgets[name]
     except KeyError:
-        raise WidgetError('Could not find output widget: "%s"' % name)
+        raise WidgetError('Output widget class must be one of %s' % ', '.join(str(x) for x in _output_widgets.keys()))
 
 
 def resolve_input_widget(name, **kwargs):

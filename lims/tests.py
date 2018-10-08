@@ -79,7 +79,7 @@ def populate_test_data(n_samples=700, n_sub_samples=150, max_tags=3, test_user=N
 
         for sample_num in range(n_sub_samples):
             if not quiet:
-                print("\r%d/%d" % (sample_num + 1, n_samples), end='')
+                print("\r%d/%d" % (sample_num + 1, n_sub_samples), end='')
 
             parent_sample_index = randint(0, len(parent_samples) - 1)
 
