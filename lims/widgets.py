@@ -1,5 +1,8 @@
 
 import django.forms as django_forms
+from django.urls import reverse_lazy
+
+from django_select2.forms import HeavySelect2Widget
 
 
 class WidgetError(Exception):
@@ -66,6 +69,9 @@ def resolve_output_widget(name, **kwargs):
         raise WidgetError('Could not instantiate output widget: %s' % e)
 
 
+# -------------- Register built-in input widgets ---------------
+
+
 register_input_widget(django_forms.CheckboxInput)
 register_input_widget(django_forms.DateInput)
 register_input_widget(django_forms.DateTimeInput)
@@ -81,6 +87,33 @@ register_input_widget(django_forms.SplitDateTimeWidget)
 register_input_widget(django_forms.TextInput)
 register_input_widget(django_forms.Textarea)
 register_input_widget(django_forms.TimeInput)
+
+
+# ----------------- Create custom widgets --------------------
+
+# this makes no sense for a tag but would be great for model forms
+@register_input_widget
+class LimsSelect2(HeavySelect2Widget):
+
+    def __init__(self, model_name='Term', attrs=None, **kwargs):
+        self.model_name = model_name
+        # having these be form fields that don't exist doesn't appear to cause problems
+        default_dependent_fields = {'project': 'project', 'taxonomy': 'taxonomy'}
+        dependent_fields = kwargs.pop('dependent_fields', {})
+        default_dependent_fields.update(**dependent_fields)
+        defaults = {
+            # can't call reverse_lazy until runtime
+            'data_url': 'not_a_url_but_cant_be_none',
+            'dependent_fields': default_dependent_fields
+        }
+        defaults.update(**kwargs)
+        super().__init__(attrs=attrs, **defaults)
+
+    def get_url(self):
+        return reverse_lazy('lims:ajax_select2', kwargs={'model_name': self.model_name})
+
+
+# ------------- Register output widgets --------------------
 
 
 class OutputWidget(metaclass=django_forms.MediaDefiningClass):

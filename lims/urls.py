@@ -39,7 +39,7 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[0-9]+)/user/(?P<pk>[0-9]+)$',
         views.UserDetailView.as_view(),
         name="project_user_detail"
-        ),
+    ),
 
     # term object views
     url(r'^term/(?P<pk>[0-9]+)$', views.TermDetailView.as_view(), name="term_detail"),
@@ -52,5 +52,11 @@ urlpatterns = [
     url(r'^(?P<model>[a-z]+)/(?P<pk>[0-9]+)/action/(?P<action>[a-z-]+)$', views.item_action_view, name='item_action'),
     url(r'^(?P<model>[a-z]+)/action/(?P<action>[a-z-]+)$', views.base_action_view, name='bulk_action'),
     url(r'^(?P<model>[a-z]+)/action/$', views.resolve_action_view, name='resolve_bulk_action'),
+
+    # ajax views
+    url(r'^ajax/select2/(?P<model_name>[A-Za-z]+)/$', views.LimsSelect2Ajax.as_view(), name='ajax_select2'),
+
+    # view to get things in order for select2
+    url(r'^ajax/test/$', views.AjaxTest.as_view(), name='ajax_test'),
 
 ]

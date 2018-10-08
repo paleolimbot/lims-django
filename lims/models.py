@@ -83,6 +83,14 @@ class LimsModelField(models.CharField):
             return Attachment
         elif model == 'AttachmentTag':
             return AttachmentTag
+        elif model == 'Term':
+            return Term
+        elif model == 'TermTag':
+            return TermTag
+        elif model == 'Project':
+            return Project
+        elif model == 'ProjectTag':
+            return ProjectTag
         else:
             raise ValueError('No such model: %s' % model)
 
@@ -108,11 +116,18 @@ def object_queryset_for_user(model, user, permission):
         return model.objects.all()
 
     model_name = model.__name__
-    return model.objects.filter(
-        models.Q(project__permissions__user=user) &
-        models.Q(project__permissions__permission=permission) &
-        models.Q(project__permissions__model=model_name)
-    )
+    if model_name == 'Project':
+        return Project.objects.filter(
+            models.Q(permissions__user=user) &
+            models.Q(permissions__permission=permission) &
+            models.Q(permissions__model='Project')
+        )
+    else:
+        return model.objects.filter(
+            models.Q(project__permissions__user=user) &
+            models.Q(project__permissions__permission=permission) &
+            models.Q(project__permissions__model=model_name)
+        )
 
 
 def tag_queryset_for_user(model, user, permission):
@@ -120,11 +135,31 @@ def tag_queryset_for_user(model, user, permission):
         return model.objects.all()
 
     model_name = re.sub(r'Tag$', '', model.__name__)
-    return model.objects.filter(
-        models.Q(object__project__permissions__user=user) &
-        models.Q(object__project__permissions__permission=permission) &
-        models.Q(object__project__permissions__model=model_name)
-    )
+    if model_name == 'Project':
+        return ProjectTag.objects.filter(
+            models.Q(object__permissions__user=user) &
+            models.Q(object__permissions__permission=permission) &
+            models.Q(object__permissions__model='Project')
+        )
+    elif model_name == 'SampleTag':
+        return model.objects.filter(
+            models.Q(object__object__project__permissions__user=user) &
+            models.Q(object__object__project__permissions__permission=permission) &
+            models.Q(object__object__project__permissions__model=model_name)
+        )
+    else:
+        return model.objects.filter(
+            models.Q(object__project__permissions__user=user) &
+            models.Q(object__project__permissions__permission=permission) &
+            models.Q(object__project__permissions__model=model_name)
+        )
+
+
+def queryset_for_user(model, user, permission):
+    if re.match(r'Tag$', model.__name__):
+        return tag_queryset_for_user(model, user, permission)
+    else:
+        return object_queryset_for_user(model, user, permission)
 
 
 def object_user_can(obj, user, permission, project=None):
@@ -251,6 +286,10 @@ class BaseObjectModel(TagsMixin, models.Model):
     geo_ymin = models.FloatField(editable=False, blank=True, null=True, default=None)
     geo_ymax = models.FloatField(editable=False, blank=True, null=True, default=None)
 
+    class Meta:
+        abstract = True
+        unique_together = ['project', 'slug']
+
     def _should_update_slug(self):
         return (self.status != 'published') or (not self.pk and not self.slug)
 
@@ -259,9 +298,6 @@ class BaseObjectModel(TagsMixin, models.Model):
             return self.parent.calculate_recursive_depth() + 1
         else:
             return 0
-
-    class Meta:
-        abstract = True
 
     def clean_fields(self, exclude=None):
         super().clean_fields(exclude=exclude)
@@ -291,11 +327,16 @@ class BaseObjectModel(TagsMixin, models.Model):
         super().save(*args, **kwargs)
 
     def auto_slug_use(self):
-        return [SlugIdField.idify(self.name), ]
+        return [SlugIdField.idify(self.name)]
+
+    def _duplicate_slug_queryset(self, possible_slug):
+        return type(self).objects.filter(project=self.project, slug=possible_slug)
+
+    def _possible_duplicate_slug_queryset(self, slug_prefix):
+        return type(self).objects.filter(project=self.project, slug__startswith=slug_prefix)
 
     def calculate_slug(self):
         slug_parts = self.auto_slug_use()
-        model = type(self)
 
         # this is constructed such that it should always finish in 2 iterations
         suffix_index = 0
@@ -309,7 +350,7 @@ class BaseObjectModel(TagsMixin, models.Model):
             id_str = id_str_prefix + suffix
 
             # make sure the id_str is unique
-            other_object_with_slug = model.objects.filter(slug=id_str)
+            other_object_with_slug = self._duplicate_slug_queryset(id_str)
 
             if other_object_with_slug.count() == 0:
                 # no object with this slug, use it!
@@ -318,9 +359,8 @@ class BaseObjectModel(TagsMixin, models.Model):
                 # an object exists with this slug, find objects that could
                 # possibly collide with the slug
 
-                possible_collisions = model.objects.filter(
-                    slug__startswith=id_str_prefix
-                ).values_list('slug', flat=True)
+                possible_collisions = self._possible_duplicate_slug_queryset(id_str_prefix).\
+                    values_list('slug', flat=True)
 
                 # find the maximum _suffix number for the slug
                 suffix_re = re.compile('_([0-9]+)$')
@@ -370,6 +410,12 @@ class Term(BaseObjectModel):
 
     class Meta:
         unique_together = ['project', 'taxonomy', 'slug']
+
+    def _duplicate_slug_queryset(self, possible_slug):
+        return type(self).objects.filter(project=self.project, taxonomy=self.taxonomy, slug=possible_slug)
+
+    def _possible_duplicate_slug_queryset(self, slug_prefix):
+        return type(self).objects.filter(project=self.project, taxonomy=self.taxonomy, slug__starts_with=slug_prefix)
 
     def user_can(self, user, permission):
         return object_user_can(self, user=user, permission=permission)
@@ -471,12 +517,6 @@ class Term(BaseObjectModel):
                     )
                 else:
                     return None
-
-    def __str__(self):
-        if self.project is None:
-            return '%s/%s' % (self.taxonomy, self.name)
-        else:
-            return '%s/%s/%s' % (self.project, self.taxonomy, self.name)
 
     @staticmethod
     def queryset_for_user(user, permission='view'):
@@ -587,6 +627,18 @@ class TermTag(Tag):
 @reversion.register(follow=('tags', 'permissions'))
 class Project(BaseObjectModel):
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_projects')
+
+    class Meta:
+        unique_together = ['slug']
+
+    def _duplicate_slug_queryset(self, possible_slug):
+        return type(self).objects.filter(slug=possible_slug)
+
+    def _possible_duplicate_slug_queryset(self, slug_prefix):
+        return type(self).objects.filter(slug__starts_with=slug_prefix)
+
+    def auto_slug_use(self):
+        return [SlugIdField.idify(self.name), ]
 
     def get_absolute_url(self):
         return reverse_lazy('lims:project_detail', kwargs={'pk': self.pk})

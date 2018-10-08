@@ -97,8 +97,9 @@ def query_string_filter(queryset, query_dict, use=(), search=(), search_func="ic
     else:
         q = query_dict.copy()
 
-    if 'q' in q and search:
-        query = q['q']
+    # ignore empty query
+    query = q.get('q', '')
+    if query and search:
         search_queries = [{field + "__" + search_func: query} for field in search]
         final_q = None
         for search_query in search_queries:
@@ -110,12 +111,13 @@ def query_string_filter(queryset, query_dict, use=(), search=(), search_func="ic
 
     for key in q:
         if key in use:
+            # make sure to ignore empty items! they cause errors
             value = q.getlist(key)
             if len(value) == 1:
                 filter_args = {key: value[0]}
             else:
-                filter_args = {key: value}
-            queryset = queryset.filter(**filter_args)
+                filter_args = {key: [v for v in value if v]}
+            queryset = queryset.filter(**{k: v for k, v in filter_args.items() if v})
         else:
             # ignore unwanted query string items
             pass
