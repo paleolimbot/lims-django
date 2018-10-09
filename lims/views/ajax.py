@@ -2,10 +2,8 @@
 import json
 
 from django.views import generic
-import django.forms as forms
-from django.http import HttpResponse, HttpResponseForbidden, QueryDict
+from django.http import HttpResponse, HttpResponseForbidden
 
-from .. import widgets
 from .. import models
 from .list import query_string_filter
 
@@ -49,52 +47,74 @@ class LimsSelect2Ajax(AjaxBaseView):
         search_fields = []
 
         # all models except project don't make sense without a project context
-        if model_name != 'Project':
+        if model_name not in ('Project', 'ProjectTag'):
             if not query_dict.get('project', ''):
                 return self.error_data('Please select a project')
-            use_fields.append('project')
 
-        # terms don't make sense in this widget without a taxonomy
-        if model_name == 'Term':
+        # terms need a taxonomy
+        if model_name in ('Term', 'TermTag'):
             if not query_dict.get('taxonomy', ''):
                 return self.error_data('Please select a taxonomy')
-            use_fields.append('taxonomy')
 
-        if issubclass(model, models.Tag):
-            search_fields = search_fields + ['object__name', 'object__slug']
-        elif issubclass(model, models.BaseObjectModel):
-            search_fields = search_fields + ['name', 'slug']
+        if model_name == 'Project':
+            query_dict['status'] = 'published'
+
+            use_fields = ['status']
+            search_fields = ['name', 'slug']
+
+        elif model_name in ('Sample', 'Attachment'):
+            query_dict['status'] = 'published'
+
+            use_fields = ['project', 'status']
+            search_fields = ['name', 'slug']
+
+        elif model_name == 'Term':
+            query_dict['status'] = 'published'
+
+            use_fields = ['project', 'taxonomy', 'status']
+            search_fields = ['name', 'slug']
+
+        elif model_name in ('SampleTag', 'AttachmentTag', 'TermTag'):
+            query_dict['object__project'] = query_dict['project']
+            del query_dict['project']
+            query_dict['object__status'] = 'published'
+
+            use_fields = ['object__project', 'object__status']
+            search_fields = ['object__name', 'object__slug', 'key__name', 'key__slug']
+
+        elif model_name == 'ProjectTag':
+            query_dict['object__status'] = 'published'
+
+            use_fields = ['object__status']
+            search_fields = ['object__name', 'object__slug', 'key__name', 'key__slug']
+
+        elif model_name == 'SampleTagTag':
+            query_dict['object__object__project'] = query_dict['project']
+            del query_dict['project']
+            query_dict['object__object__status'] = 'published'
+
+            use_fields = ['object__object__project']
+            search_fields = ['object__object__name', 'object__object__slug', 'key__name', 'key__slug']
+        else:
+            return self.error_data("Don't know how to filter for model '%s'" % model_name)
 
         queryset = query_string_filter(
-            queryset, query_dict,
+            queryset,
+            query_dict,
             search=search_fields,
             use=use_fields
         )
-
-        # I can't think of any situation in which an unpublished object should end up in a search for a select2
-        queryset = queryset.filter(status='published')
 
         # currently limiting to 100 could paginate here?
         # should also probably order_by(), probably by '-modified'
 
         return {
             'err': 'nil',
-            'results': [{'id': obj.pk, 'text': str(obj)} for obj in queryset[:100]]
+            'results': [{'id': obj.pk, 'text': str(obj)} for obj in queryset[:10]]
         }
 
     def error_data(self, message):
+        # not sure how to get this error message to show up on the widget
         return {
             'err': message
         }
-
-
-class TestForm(forms.Form):
-    project = forms.CharField(widget=widgets.LimsSelect2('Project'))
-    taxonomy = forms.CharField(initial='Sample')
-    select_term = forms.CharField(widget=widgets.LimsSelect2('Term'))
-    select_sample = forms.CharField(widget=widgets.LimsSelect2('Sample'))
-
-
-class AjaxTest(generic.FormView):
-    form_class = TestForm
-    template_name = 'lims/ajax_test.html'

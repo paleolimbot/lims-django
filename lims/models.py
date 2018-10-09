@@ -79,6 +79,8 @@ class LimsModelField(models.CharField):
             return Sample
         elif model == 'SampleTag':
             return SampleTag
+        elif model == 'SampleTagTag':
+            return SampleTagTag
         elif model == 'Attachment':
             return Attachment
         elif model == 'AttachmentTag':
@@ -145,7 +147,7 @@ def tag_queryset_for_user(model, user, permission):
         return model.objects.filter(
             models.Q(object__object__project__permissions__user=user) &
             models.Q(object__object__project__permissions__permission=permission) &
-            models.Q(object__object__project__permissions__model=model_name)
+            models.Q(object__object__project__permissions__model='Sample')
         )
     else:
         return model.objects.filter(
@@ -156,7 +158,7 @@ def tag_queryset_for_user(model, user, permission):
 
 
 def queryset_for_user(model, user, permission):
-    if re.match(r'Tag$', model.__name__):
+    if model.__name__.endswith('Tag'):
         return tag_queryset_for_user(model, user, permission)
     else:
         return object_queryset_for_user(model, user, permission)

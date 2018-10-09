@@ -56,7 +56,4 @@ urlpatterns = [
     # ajax views
     url(r'^ajax/select2/(?P<model_name>[A-Za-z]+)/$', views.LimsSelect2Ajax.as_view(), name='ajax_select2'),
 
-    # view to get things in order for select2
-    url(r'^ajax/test/$', views.AjaxTest.as_view(), name='ajax_test'),
-
 ]

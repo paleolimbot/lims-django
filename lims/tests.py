@@ -3,12 +3,13 @@ import re
 
 from random import randint
 from django.test import TestCase
+from django.http import QueryDict
 from django.utils import timezone
 from django.db import transaction
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
-from .models import Sample, SampleTag, Term, Project, ProjectPermission, Attachment
+from .models import Sample, SampleTag, SampleTagTag, Term, Project, ProjectPermission, Attachment
 
 
 def populate_test_data(n_samples=700, n_sub_samples=150, max_tags=3, test_user=None,
@@ -621,3 +622,169 @@ class DefaultObjectTestCase(TestCase):
             default_objects.get_or_create_user_project(user),
             user_proj
         )
+
+
+class AjaxWidgetTestCase(TestCase):
+
+    # class TestForm(forms.Form):
+    #     project = forms.CharField(widget=widgets.LimsSelect2('Project'))
+    #     taxonomy = forms.CharField(initial='Sample')
+    #     select_term = forms.CharField(widget=widgets.LimsSelect2('Term'))
+    #     select_sample = forms.CharField(widget=widgets.LimsSelect2('Sample'))
+    #     select_tag = forms.CharField(widget=widgets.LimsSelect2('SampleTag'))
+    #     select_tag_tag = forms.CharField(widget=widgets.LimsSelect2('SampleTagTag'))
+    #     select_project_tag = forms.CharField(widget=widgets.LimsSelect2('ProjectTag'))
+    #     select_attachment = forms.CharField(widget=widgets.LimsSelect2('Attachment'))
+    #     select_attachment_tag = forms.CharField(widget=widgets.LimsSelect2('AttachmentTag'))
+    #
+    # class AjaxTest(generic.FormView):
+    #     form_class = TestForm
+    #     template_name = 'lims/ajax_test.html'
+
+    # """
+    # <!DOCTYPE html>
+    # <html lang="en">
+    # <head>
+    #     {{ form.media.css }}
+    # </head>
+    # <body>
+    # <div>
+    #     <form method="post">{% csrf_token %}
+    #     {{ form.as_p }}
+    #     <input type="submit" value="Submit">
+    #     </form>
+    # </div>
+    #
+    #
+    # {% load static %}
+    # <script src="{% static 'lims/js/jquery-3.3.1.js' %}"></script>
+    # {{ form.media.js }}
+    #
+    # <script type="text/javascript">
+    #     $().ready(function() {
+    #         $('.select2-container').width('200px');
+    #     });
+    # </script>
+    #
+    # </body>
+    # </html>
+    # """
+
+    def setUp(self):
+        self.user = User.objects.create(username='testuser')
+        proj = Project.objects.create(name='project1')
+        for model in ('Project', 'Sample', 'Attachment', 'Term'):
+            ProjectPermission.objects.create(project=proj, user=self.user, model=model, permission='view')
+        self.proj = proj
+
+        models = ['Project', 'Sample', 'Attachment', 'Term']
+        models = models + [model + 'Tag' for model in models] + ['SampleTagTag']
+        self.models = models
+
+    def get(self, model, **kwargs):
+        qd = QueryDict()
+        qd = qd.copy()
+        qd.update(**kwargs)
+        self.client.get('/lims/ajax/select2/Sample')
+        return self.client.get('/lims/ajax/select2/%s/?%s' % (model, qd.urlencode()))
+
+    def test_authentication(self):
+
+        # non-200 status with no user (403 forbidden)
+        no_user = self.get('Sample')
+        self.assertNotEqual(no_user.status_code, 200)
+
+        self.client.force_login(self.user)
+        with_user = self.get('Sample')
+        self.assertEqual(with_user.status_code, 200)
+
+    def test_widget_endpoints(self):
+        self.client.force_login(self.user)
+
+        from . import widgets
+
+        widget_items = {model: widgets.LimsSelect2(model) for model in self.models}
+        for model, w in widget_items.items():
+            self.assertEqual(self.client.get(w.get_url()).status_code, 200)
+
+    def test_context(self):
+        self.client.force_login(self.user)
+
+        # some models need projects, terms need taxonomies, project and projecttag need neither
+        for model in ('Project', 'ProjectTag'):
+            response = self.get(model)
+            self.assertEqual(response.json()['err'], 'nil')
+
+        for model in set(self.models).difference(['Project', 'ProjectTag']):
+            response = self.get(model, taxonomy='Sample')
+            self.assertNotEqual(response.json()['err'], 'nil')
+        for model in set(self.models).difference(['Project', 'ProjectTag']):
+            response = self.get(model, project=0, taxonomy='Sample')
+            self.assertEqual(response.json()['err'], 'nil')
+            self.assertIsInstance(response.json()['results'], list)
+
+        for model in ('Term', 'TermTag'):
+            response_term = self.get(model, project=0)
+            self.assertNotEqual(response_term.json()['err'], 'nil')
+            response_term_valid = self.get(model, project=0, taxonomy='Sample')
+            self.assertEqual(response_term_valid.json()['err'], 'nil')
+
+    def test_with_typing(self):
+        self.client.force_login(self.user)
+
+        # we need something with the text '1' in all the categories (true for test data, test-1 and key1)
+        proj = self.proj
+        populate_test_data(n_samples=20, n_sub_samples=10, test_user=self.user, test_proj=proj, quiet=True)
+
+        # one attachment plus tag
+        attachment = Attachment.objects.create(project=proj, name='attachment1')
+        attachment.set_tags(key1='value1')
+
+        # give the project a tag
+        proj.set_tags(key1='value1')
+
+        # give at least one term a tag
+        term = proj.terms.filter(taxonomy='Sample')[0]
+        term.set_tags(termkey1='termvalue1')
+
+        # one sample tag tag
+        sample_tag = SampleTag.objects.filter(object__project=proj)[0]
+        sample_tag.set_tags(sampletagterm1='sampletagvalue1')
+
+        for model in self.models:
+            if model.endswith('Tag'):
+                taxonomy = re.sub('Tag$', '', model)
+            else:
+                taxonomy = 'Sample'
+
+            response_zero = self.get(
+                model,
+                project=proj.pk,
+                taxonomy=taxonomy,
+                q='typing that is in no search fields'
+            )
+            self.assertEqual(len(response_zero.json()['results']), 0)
+
+            response_valid = self.get(
+                model,
+                project=proj.pk,
+                taxonomy=taxonomy,
+                q='1'
+            )
+            self.assertGreater(len(response_valid.json()['results']), 0)
+
+        # if the permissions on the project are removed, nothing should be returned
+        ProjectPermission.objects.filter(user=self.user).delete()
+        for model in self.models:
+            if model.endswith('Tag'):
+                taxonomy = re.sub('Tag$', '', model)
+            else:
+                taxonomy = 'Sample'
+
+            response_valid = self.get(
+                model,
+                project=proj.pk,
+                taxonomy=taxonomy,
+                q='1'
+            )
+            self.assertEqual(len(response_valid.json()['results']), 0)
