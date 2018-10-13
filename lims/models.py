@@ -346,7 +346,7 @@ class BaseObjectModel(TagsMixin, models.Model):
         suffix_index = 0
         for iterations in range(20):
 
-            suffix = '_%d' % suffix_index if suffix_index else ''
+            suffix = '__%d' % suffix_index if suffix_index else ''
 
             # construct the sample slug
             id_str_prefix = '_'.join(item for item in slug_parts if item)
@@ -355,6 +355,8 @@ class BaseObjectModel(TagsMixin, models.Model):
 
             # make sure the id_str is unique
             other_object_with_slug = self._duplicate_slug_queryset(id_str)
+            if self.pk:
+                other_object_with_slug = other_object_with_slug.exclude(pk=self.pk)
 
             if other_object_with_slug.count() == 0:
                 # no object with this slug, use it!
@@ -367,7 +369,7 @@ class BaseObjectModel(TagsMixin, models.Model):
                     values_list('slug', flat=True)
 
                 # find the maximum _suffix number for the slug
-                suffix_re = re.compile('_([0-9]+)$')
+                suffix_re = re.compile('__([0-9]+)$')
                 possible_collision_suffixes = [
                     int(suffix_re.search(slug).group(1)) for slug in possible_collisions if suffix_re.search(slug)
                 ]

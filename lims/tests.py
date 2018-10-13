@@ -15,7 +15,7 @@ from django.contrib.staticfiles import finders
 from .models import Sample, SampleTag, Term, Project, ProjectPermission, Attachment
 
 
-def populate_halifax_lakes_data(test_user=None, test_proj=None, quiet=False, clear=True, max_samples=100):
+def populate_halifax_lakes_data(test_user=None, test_proj=None, quiet=False, clear=True, max_data=100):
     fname = finders.find('lims/Dunnington_et_al_2018.mudata.json')
 
     with transaction.atomic():
@@ -35,11 +35,11 @@ def populate_halifax_lakes_data(test_user=None, test_proj=None, quiet=False, cle
 
         if clear:
             if not quiet:
-                print("Clearing previous test data...")
+                print("Clearing previous Halifax test data...")
             clear_models(
                 models=(Sample, Term),
                 queryset=lambda model: model.objects.filter(
-                    slug__contains="_test-sub-sample", user=test_user
+                    project=proj
                 ),
                 quiet=quiet
             )
@@ -97,7 +97,7 @@ def populate_halifax_lakes_data(test_user=None, test_proj=None, quiet=False, cle
                 print("Adding data...")
             for i in range(n_data):
 
-                if max_samples and ((i + 1) > max_samples):
+                if max_data and ((i + 1) > max_data):
                     break
 
                 if not quiet:
@@ -113,7 +113,7 @@ def populate_halifax_lakes_data(test_user=None, test_proj=None, quiet=False, cle
                 try:
                     sample_object = parent_sample.children.get(name=sample_name)
                 except Sample.DoesNotExist:
-                    sample_object = Sample.objects.create(
+                    sample_object = parent_sample.children.create(
                         user=test_user,
                         project=proj,
                         parent=parent_sample,
@@ -507,6 +507,11 @@ class TestDataTestCase(TestCase):
         populate_test_data(n_samples=72, n_sub_samples=79, test_user=self.test_user, quiet=True, clear=True)
         self.assertEqual(Sample.objects.filter(user=self.test_user, recursive_depth=0).count(), 72)
         self.assertEqual(Sample.objects.filter(user=self.test_user, recursive_depth__gt=0).count(), 79)
+
+    def test_halifax_sample_data_creation(self):
+        populate_halifax_lakes_data(self.test_user, quiet=True, max_data=76)
+        slice_data = SampleTag.objects.filter(tags__value__isnull=False).distinct()
+        self.assertEqual(slice_data.count(), 76)
 
 
 class ProjectLayerTestCase(TestCase):
