@@ -209,8 +209,10 @@ class TagsMixin:
         if _values is not None:
             kwargs.update(_values)
 
-        # make sure all names are defined terms
+        # make sure all names are defined terms, ignore empty strings and None values
         for key, value in kwargs.items():
+            if not value:
+                continue
             term = Term.get_term(key, self.project, taxonomy=taxonomy, create=True)
             tag = self.tags.create(key=term, value=value)
             try:
@@ -417,7 +419,7 @@ class Term(BaseObjectModel):
         return type(self).objects.filter(project=self.project, taxonomy=self.taxonomy, slug=possible_slug)
 
     def _possible_duplicate_slug_queryset(self, slug_prefix):
-        return type(self).objects.filter(project=self.project, taxonomy=self.taxonomy, slug__starts_with=slug_prefix)
+        return type(self).objects.filter(project=self.project, taxonomy=self.taxonomy, slug__startswith=slug_prefix)
 
     def user_can(self, user, permission):
         return object_user_can(self, user=user, permission=permission)
@@ -592,15 +594,18 @@ class Tag(models.Model):
 
         # cache numeric value
         if self.numeric_value_autoset:
-            try:
-                self.numeric_value = float(self.value)
-            except ValueError:
-                if self.value.lower() == 'true':
-                    self.numeric_value = 1
-                elif self.value.lower() == 'false':
-                    self.numeric_value = 0
-                else:
-                    self.numeric_value = None
+            if self.value is None:
+                self.numeric_value = None
+            else:
+                try:
+                    self.numeric_value = float(self.value)
+                except ValueError:
+                    if self.value.lower() == 'true':
+                        self.numeric_value = 1
+                    elif self.value.lower() == 'false':
+                        self.numeric_value = 0
+                    else:
+                        self.numeric_value = None
 
         super().save(*args, **kwargs)
 
@@ -637,7 +642,7 @@ class Project(BaseObjectModel):
         return type(self).objects.filter(slug=possible_slug)
 
     def _possible_duplicate_slug_queryset(self, slug_prefix):
-        return type(self).objects.filter(slug__starts_with=slug_prefix)
+        return type(self).objects.filter(slug__startswith=slug_prefix)
 
     def auto_slug_use(self):
         return [SlugIdField.idify(self.name), ]
@@ -840,79 +845,3 @@ class AttachmentTag(Tag):
     def queryset_for_user(user, permission='view'):
         return tag_queryset_for_user(AttachmentTag, user=user, permission=permission)
 
-
-class EntryTemplate(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='templates')
-    user = models.ForeignKey(User, on_delete=models.PROTECT, blank=True, null=True)
-    name = models.CharField(max_length=55, unique=True)
-    model = LimsModelField()
-    last_used = models.DateTimeField('last_used', auto_now=True)
-
-    def get_model(self):
-        LimsModelField.get_model(self.model)
-
-    def get_model_fields(self):
-        if self.model == 'Sample':
-            return ['collected', 'name', 'description', 'parent', 'geometry']
-        elif self.model == 'SampleTag' or self.model == 'AttachmentTag':
-            return ['object', 'key', 'value', 'comment', 'meta']
-        elif self.model == 'Attachment':
-            return ['name', 'slug', 'description', 'parent', 'geometry']
-        else:
-            raise ValueError('No such model: %s' % self.model)
-
-    def get_fields_queryset(self):
-        return self.fields.order_by('order')
-
-    def get_absolute_url(self):
-        return reverse_lazy('lims:template_form', kwargs={'template_pk': self.pk})
-
-    def __str__(self):
-        return self.name
-
-    @staticmethod
-    def queryset_for_user(user, permission='view'):
-        return object_queryset_for_user(EntryTemplate, user=user, permission=permission)
-
-
-class EntryTemplateField(models.Model):
-    template = models.ForeignKey(EntryTemplate, on_delete=models.CASCADE, related_name='fields')
-    taxonomy = models.CharField(max_length=55, default='', blank=True)
-    target = models.CharField(max_length=55)
-    initial_value = models.TextField(blank=True)
-    order = models.IntegerField(default=1)
-
-    def clean_fields(self, exclude=None):
-        if exclude is None or 'target' not in exclude:
-            # target should be a field of self.template.model or a Term
-            if self.target not in self.template.get_model_fields() and self.term is None:
-                raise ValidationError(
-                    {'target': 'Target is not a field of %s and is not a defined term slug' % self.template.model}
-                )
-
-    @cached_property
-    def project(self):
-        return self.template.project
-
-    def default_taxonomy(self):
-        return self.template.get_model().__name__
-
-    @cached_property
-    def term(self):
-        if self.target in self.template.get_model_fields():
-            return None
-        try:
-            return Term.objects.get(
-                slug=self.target,
-                project=self.project,
-                taxonomy=self.taxonomy if self.taxonomy else self.default_taxonomy()
-            )
-        except Term.DoesNotExist:
-            return None
-
-    def __str__(self):
-        term = self.term
-        if term is None:
-            return self.target.replace('_', ' ').title()
-        else:
-            return str(term)

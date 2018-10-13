@@ -29,11 +29,6 @@ urlpatterns = [
     url(r'^sample/(?P<pk>[0-9]+)$', views.SampleDetailView.as_view(), name="sample_detail"),
     url(r'^sample/(?P<pk>[0-9]+)/change$', views.SampleChangeView.as_view(), name="sample_change"),
 
-    # template views
-    url(r'^project/(?P<project_id>[0-9]+)/template/$', views.TemplateListView.as_view(), name='project_template_list'),
-    url(r'^template/(?P<template_pk>[0-9]+)$', views.TemplateFormView.as_view(), name='template_form'),
-    url(r'^template/(?P<template_pk>[0-9]+)/bulk/$', views.TemplateBulkView.as_view(), name='template_bulk'),
-
     # user object views
     url(r'^user/(?P<pk>[0-9]+)$', views.UserDetailView.as_view(), name="user_detail"),
     url(r'^project/(?P<project_id>[0-9]+)/user/(?P<pk>[0-9]+)$',

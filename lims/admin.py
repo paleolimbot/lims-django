@@ -66,13 +66,6 @@ class ProjectPermissionInline(admin.TabularInline):
     autocomplete_fields = ['user', ]
 
 
-class SampleEntryTemplateFieldInline(admin.TabularInline):
-    model = models.EntryTemplateField
-    formfield_overrides = text_overrides
-    extra = 1
-    ordering = ('order', )
-
-
 class AttachmentTagInline(admin.TabularInline):
     model = models.AttachmentTag
     formfield_overrides = text_overrides
@@ -88,7 +81,7 @@ class TermAdmin(LimsAdmin):
     inlines = [TermValidatorInline, ]
     prepopulated_fields = {"slug": ("name",)}
     search_fields = ['name', 'slug']
-    autocomplete_fields = ['parent', 'project']
+    autocomplete_fields = ['parent', 'project', 'user']
     ordering = ['-modified', ]
 
 
@@ -118,12 +111,6 @@ class SampleAdmin(LimsAdmin):
     autocomplete_fields = ['project', 'user', 'parent']
     search_fields = ['slug', 'name']
     ordering = ['-modified', ]
-
-
-@admin.register(models.EntryTemplate)
-class SampleEntryTemplateAdmin(LimsAdmin):
-    inlines = [SampleEntryTemplateFieldInline, ]
-    ordering = ['name', ]
 
 
 # --------- Tag admins -------------

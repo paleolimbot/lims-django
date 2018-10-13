@@ -1,5 +1,7 @@
 
 import re
+import json
+import datetime
 
 from random import randint
 from django.test import TestCase
@@ -8,11 +10,130 @@ from django.utils import timezone
 from django.db import transaction
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.contrib.staticfiles import finders
 
-from .models import Sample, SampleTag, SampleTagTag, Term, Project, ProjectPermission, Attachment
+from .models import Sample, SampleTag, Term, Project, ProjectPermission, Attachment
 
 
-def populate_test_data(n_samples=700, n_sub_samples=150, max_tags=3, test_user=None,
+def populate_halifax_lakes_data(test_user=None, test_proj=None, quiet=False, clear=True, max_samples=100):
+    fname = finders.find('lims/Dunnington_et_al_2018.mudata.json')
+
+    with transaction.atomic():
+        if test_user is None:
+            try:
+                test_user = User.objects.get(username='tuser31848')
+            except User.DoesNotExist:
+                test_user = User.objects.create(username='tuser31848')
+
+        if test_proj is None:
+            try:
+                proj = Project.objects.get(slug='halifax-test-project-1')
+            except Project.DoesNotExist:
+                proj = Project.objects.create(name="Test Project 1", slug='halifax-test-project-1', user=test_user)
+        else:
+            proj = test_proj
+
+        if clear:
+            if not quiet:
+                print("Clearing previous test data...")
+            clear_models(
+                models=(Sample, Term),
+                queryset=lambda model: model.objects.filter(
+                    slug__contains="_test-sub-sample", user=test_user
+                ),
+                quiet=quiet
+            )
+
+        with open(fname, 'r') as f:
+            mdict = json.load(f)
+
+            # term for each parameter
+            params = mdict['params']
+            terms = {}
+            for i in range(len(params['dataset'])):
+                name = params['param'][i]
+                unit = params['unit'][i]
+                method = params['method'][i]
+
+                term = Term.objects.create(
+                    project=proj,
+                    user=test_user,
+                    name=name
+                )
+
+                term.set_tags(method=method, unit=unit)
+                terms[name] = term
+
+            # sample for each location
+            locations = mdict['locations']
+            cores = {}
+            for i in range(len(locations['dataset'])):
+                item = {k: locations[k][i] for k in locations}
+                del item['dataset']
+                collected_parse = datetime.datetime.strptime(item.pop('coring_date'), '%Y-%m-%d')
+                collected = datetime.datetime(
+                    collected_parse.year,
+                    collected_parse.month,
+                    collected_parse.day,
+                    hour=12,  # midday is most likely to be true
+                    tzinfo=timezone.get_current_timezone()
+                )
+
+                sample = Sample.objects.create(
+                    project=proj,
+                    user=test_user,
+                    collected=collected,
+                    geometry='POINT(%s %s)' % (item.pop('lon'), item.pop('lat')),
+                    name=item.pop('location')
+                )
+
+                sample.set_tags(**item)
+                cores[sample.name] = sample
+
+            data = mdict['data']
+            n_data = len(data['dataset'])
+
+            if not quiet:
+                print("Adding data...")
+            for i in range(n_data):
+
+                if max_samples and ((i + 1) > max_samples):
+                    break
+
+                if not quiet:
+                    print("\r%d/%d %0.1f%%" % (i + 1, n_data, (i + 1) / n_data), end='')
+
+                item = {k: data[k][i] for k in data}
+                del item['dataset']
+
+                term = terms[item.pop('param')]
+                parent_sample = cores[item.pop('location')]
+                sample_item = {k: item.pop(k) for k in ('depth', 'age', 'age_err')}
+                sample_name = '%s %s' % (parent_sample.get_tag('location_code'), sample_item['depth'])
+                try:
+                    sample_object = parent_sample.children.get(name=sample_name)
+                except Sample.DoesNotExist:
+                    sample_object = Sample.objects.create(
+                        user=test_user,
+                        project=proj,
+                        parent=parent_sample,
+                        name=sample_name
+                    )
+                    sample_object.set_tags(age=sample_item['age'], age_err=sample_item['age_err'])
+
+                value = item.pop('value')
+                tag = sample_object.tags.create(
+                    user=test_user,
+                    key=term,
+                    value=value if value else 'ND'
+                )
+                tag.set_tags(**item)
+
+            if not quiet:
+                print("\n")
+
+
+def populate_test_data(n_samples=100, n_sub_samples=50, max_tags=3, test_user=None,
                        test_proj=None, clear=True, quiet=False):
 
     with transaction.atomic():
