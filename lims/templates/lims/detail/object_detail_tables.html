@@ -10,12 +10,6 @@
 
     {% endif %}
 
-    {% if location_page_kwarg %}
-    <h2><a id="locations">{% block location_heading %}Recent Locations{% endblock %}</a></h2>
-
-    {% include 'lims/tables/location_table.html' with page_obj=location_page_obj page_kwarg=location_page_kwarg actions=location_actions %}
-    {% endif %}
-
 {% endblock %}
 
 {% block scripts %}

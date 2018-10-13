@@ -20,7 +20,7 @@ class DetailViewWithTablesBase(generic.DetailView):
             return None
 
     def get_sample_queryset(self):
-        return self.object.sample_set
+        return self.object.samples
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -79,6 +79,9 @@ class SampleDetailView(LimsLoginMixin, DetailViewWithTablesBase):
 class UserDetailView(LimsLoginMixin, DetailViewWithTablesBase):
     template_name = 'lims/detail/user_detail.html'
     model = User
+
+    def get_sample_queryset(self):
+        return self.object.lims_samples.all()
 
 
 class TermDetailView(LimsLoginMixin, DetailViewWithTablesBase):

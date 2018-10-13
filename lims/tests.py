@@ -58,7 +58,8 @@ def populate_halifax_lakes_data(test_user=None, test_proj=None, quiet=False, cle
                 term = Term.objects.create(
                     project=proj,
                     user=test_user,
-                    name=name
+                    name=name,
+                    status='published'
                 )
 
                 term.set_tags(method=method, unit=unit)
@@ -84,7 +85,8 @@ def populate_halifax_lakes_data(test_user=None, test_proj=None, quiet=False, cle
                     user=test_user,
                     collected=collected,
                     geometry='POINT(%s %s)' % (item.pop('lon'), item.pop('lat')),
-                    name=item.pop('location')
+                    name=item.pop('location'),
+                    status='published'
                 )
 
                 sample.set_tags(**item)
@@ -101,7 +103,7 @@ def populate_halifax_lakes_data(test_user=None, test_proj=None, quiet=False, cle
                     break
 
                 if not quiet:
-                    print("\r%d/%d %0.1f%%" % (i + 1, n_data, (i + 1) / n_data), end='')
+                    print("\r%d/%d %0.1f%%" % (i + 1, n_data, (i + 1) / n_data * 100), end='')
 
                 item = {k: data[k][i] for k in data}
                 del item['dataset']
@@ -117,7 +119,9 @@ def populate_halifax_lakes_data(test_user=None, test_proj=None, quiet=False, cle
                         user=test_user,
                         project=proj,
                         parent=parent_sample,
-                        name=sample_name
+                        collected=parent_sample.collected,
+                        name=sample_name,
+                        status='published'
                     )
                     sample_object.set_tags(age=sample_item['age'], age_err=sample_item['age_err'])
 

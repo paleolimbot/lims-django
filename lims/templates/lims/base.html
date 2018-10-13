@@ -22,27 +22,29 @@
             {% if view.request.user.pk %}
                 <div id="header-nav-menu">
                     <ul>
-                        <li>
-                            {% if project %}
-                                <a href="{% url 'lims:project_my_sample_list' project.pk %}">My Samples</a>
-                            {% else %}
-                                <a href="{% url 'lims:my_sample_list' %}">My Samples</a>
-                            {% endif %}
-                        </li>
+                        {% block header_nav_menu %}
                         <li>
                             {% if project %}
                                 <a href="{% url 'lims:project_sample_list' project.pk %}">Samples</a>
                             {% else %}
-                                <a href="{% url 'lims:sample_list' %}">All Samples</a>
+                                <a href="{% url 'lims:sample_list' %}">Samples</a>
                             {% endif %}
                         </li>
                         <li>
                             {% if project %}
-                                <a href="{% url 'lims:project_location_list' project.pk %}">Locations</a>
+                                <a href="">Terms</a>
                             {% else %}
-                                <a href="{% url 'lims:location_list' %}">All Locations</a>
+                                <a href="">Terms</a>
                             {% endif %}
                         </li>
+                        <li>
+                            {% if project %}
+                                <a href="">Attachments</a>
+                            {% else %}
+                                <a href="">Attachments</a>
+                            {% endif %}
+                        </li>
+                        {% endblock %}
                     </ul>
                 </div>
 

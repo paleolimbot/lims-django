@@ -14,65 +14,10 @@
         {% include 'lims/tables/object_table_actions.html' %}
 
         <table class="object-list">
-            <thead>
-                <tr>
-                    <th>
-                        <input title="Select all samples" type="checkbox" name="object-all-selected"/>
-                    </th>
-                    <th></th>
-                    {% if not project %}
-                    <th>Project</th>
-                    {% endif %}
-                    <th>Sample ID</th>
-                    <th>User</th>
-                    <th>Collected</th>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Tags</th>
-                    <th>Parent</th>
-                    <th>Location</th>
-                    <th>Geometry</th>
-                    <th>Status</th>
-                    <th>Modified</th>
-                </tr>
-            </thead>
-
+            {% include 'lims/tables/sample_table_header.html' %}
             {% for sample in page_obj %}
-                <tr class="object-row-{{ sample.status }}">
-                    <td>{{ sample.get_checkbox }}</td>
-                    <td>
-                        <a class="editlink" href="{% url 'lims:sample_change' sample.pk %}?from={{ view.request.get_full_path|urlencode }}">edit</a>
-                    </td>
-                    {% if not project %}
-                    <td>{{ sample.project.get_link }}</td>
-                    {% endif %}
-                    <td>{{ sample.get_link }}</td>
-                    {% if project %}
-                    <td>{% if sample.user %}<a href="{% url 'lims:project_user_detail' project.pk sample.user.pk %}">{{ sample.user }}</a>{% endif %}</td>
-                    {% else %}
-                    <td>{% if sample.user %}<a href="{% url 'lims:user_detail' sample.user.pk %}">{{ sample.user }}</a>{% endif %}</td>
-                    {% endif %}
-                    <td>{{ sample.collected }}</td>
-                    <td>{{ sample.name }}</td>
-                    <td>{{ sample.description|truncatechars:25 }}</td>
-                    <td>{% include 'lims/tables/tag_summary.html' with tags=sample.tags.all %}</td>
-                    <td>
-                        {% if sample.parent %}
-                            <a href="{% url 'lims:sample_detail' sample.parent.pk %}">{{ sample.parent }}</a>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if sample.location %}
-                            {{ sample.location.get_link }}
-                        {% endif %}
-                    </td>
-                    <td>{{ sample.geometry|truncatechars:25 }}</td>
-                    <td>{{ sample.status }}</td>
-                    <td>{{ sample.modified }}</td>
-                </tr>
-
+                {% include 'lims/tables/sample_table_row.html' %}
             {% endfor %}
-
         </table>
     </form>
 

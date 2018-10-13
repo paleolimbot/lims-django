@@ -20,8 +20,6 @@ urlpatterns = [
     # sample static views
     url(r'^sample/$', views.SampleListView.as_view(), name="sample_list"),
     url(r'^project/(?P<project_id>[0-9]+)/sample/$', views.SampleListView.as_view(), name="project_sample_list"),
-    url(r'^sample/my$', views.MySampleListView.as_view(), name="my_sample_list"),
-    url(r'^project/(?P<project_id>[0-9]+)/sample/my$', views.MySampleListView.as_view(), name="project_my_sample_list"),
     url(r'^project/(?P<project_id>[0-9]+)/sample/add_bulk$', views.SampleBulkAddView.as_view(), name="sample_add_bulk"),
     url(r'^project/(?P<project_id>[0-9]+)/sample/add$', views.SampleAddView.as_view(), name="sample_add"),
 
