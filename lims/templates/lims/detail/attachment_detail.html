@@ -1,4 +1,4 @@
-{% extends "lims/detail/object_detail_tables.html" %}
+{% extends "lims/base.html" %}
 
 {% block title %}{{ attachment.name }}{% endblock %}
 
@@ -51,8 +51,9 @@
         </tr>
     </table>
 
-    {{ block.super }}
+    <h2><a id="samples">Recent Samples</a></h2>
 
-    {# TODO: add tags here #}
+    {{ sample_dv }}
+
 
 {% endblock %}

@@ -1,0 +1,5 @@
+
+{% if dv.page.paginator.num_pages > 1 %}
+    {% load lims_extras %}
+    <p class="paginator">{% dv_paginate dv %}</p>
+{% endif %}

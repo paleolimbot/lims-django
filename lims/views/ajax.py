@@ -5,7 +5,7 @@ from django.views import generic
 from django.http import HttpResponse, HttpResponseForbidden
 
 from .. import models
-from .list import query_string_filter
+from lims.data_view import query_string_filter
 
 
 class AjaxBaseView(generic.View):

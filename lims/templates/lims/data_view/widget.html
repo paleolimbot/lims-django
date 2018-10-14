@@ -1,0 +1,30 @@
+
+
+<div class="object-list-container dv-list-container dv-{{ dv.name }}-list-container">
+
+    <form id="sample-viewlist-form" method="post" action="{% url 'lims:resolve_bulk_action' dv.model_name|lower %}?from={{ dv.request.get_full_path|urlencode }}">
+
+        {% csrf_token %}
+
+        <div class="dv-pre-table">
+
+            {% if dv.actions %}
+            <div class="dv-wrap-actions actions">
+                {% include dv.actions_template %}
+            </div>
+            {% endif %}
+
+            <div class="dv-wrap-paginator">
+                {% include dv.paginator_template %}
+            </div>
+
+
+        </div>
+
+        <div class="dv-wrap-table">
+            {% include dv.table_template %}
+        </div>
+
+    </form>
+
+</div>

@@ -18,6 +18,7 @@ from .utils.geometry import validate_wkt, wkt_bounds
 from .utils.barcode import qrcode_html
 from .validators import JSONDictValidator, resolve_validator, ValidatorError
 from .widgets import resolve_input_widget, resolve_output_widget, WidgetError
+from lims.data_view import filter_queryset_for_user
 
 
 class ObjectPermissionError(PermissionError):
@@ -113,55 +114,8 @@ class LimsStatusField(models.CharField):
         super().__init__(**defaults)
 
 
-def object_queryset_for_user(model, user, permission):
-    if user.is_staff:
-        return model.objects.all()
-
-    model_name = model.__name__
-    if model_name == 'Project':
-        return Project.objects.filter(
-            models.Q(permissions__user=user) &
-            models.Q(permissions__permission=permission) &
-            models.Q(permissions__model='Project')
-        )
-    else:
-        return model.objects.filter(
-            models.Q(project__permissions__user=user) &
-            models.Q(project__permissions__permission=permission) &
-            models.Q(project__permissions__model=model_name)
-        )
-
-
-def tag_queryset_for_user(model, user, permission):
-    if user.is_staff:
-        return model.objects.all()
-
-    model_name = re.sub(r'Tag$', '', model.__name__)
-    if model_name == 'Project':
-        return ProjectTag.objects.filter(
-            models.Q(object__permissions__user=user) &
-            models.Q(object__permissions__permission=permission) &
-            models.Q(object__permissions__model='Project')
-        )
-    elif model_name == 'SampleTag':
-        return model.objects.filter(
-            models.Q(object__object__project__permissions__user=user) &
-            models.Q(object__object__project__permissions__permission=permission) &
-            models.Q(object__object__project__permissions__model='Sample')
-        )
-    else:
-        return model.objects.filter(
-            models.Q(object__project__permissions__user=user) &
-            models.Q(object__project__permissions__permission=permission) &
-            models.Q(object__project__permissions__model=model_name)
-        )
-
-
 def queryset_for_user(model, user, permission):
-    if model.__name__.endswith('Tag'):
-        return tag_queryset_for_user(model, user, permission)
-    else:
-        return object_queryset_for_user(model, user, permission)
+    return filter_queryset_for_user(model.objects.all(), user, permission)
 
 
 def object_user_can(obj, user, permission, project=None):
@@ -526,7 +480,7 @@ class Term(BaseObjectModel):
 
     @staticmethod
     def queryset_for_user(user, permission='view'):
-        return object_queryset_for_user(Term, user=user, permission=permission)
+        return queryset_for_user(Term, user=user, permission=permission)
 
 
 class TermValidator(models.Model):
@@ -630,7 +584,7 @@ class TermTag(Tag):
 
     @staticmethod
     def queryset_for_user(user, permission='view'):
-        tag_queryset_for_user(TermTag, user=user, permission=permission)
+        queryset_for_user(TermTag, user=user, permission=permission)
 
 
 @reversion.register(follow=('tags', 'permissions'))
@@ -755,7 +709,7 @@ class Sample(BaseObjectModel):
 
     @staticmethod
     def queryset_for_user(user, permission='view'):
-        return object_queryset_for_user(Sample, user=user, permission=permission)
+        return queryset_for_user(Sample, user=user, permission=permission)
 
 
 @reversion.register(follow=('tags', ))
@@ -771,7 +725,7 @@ class SampleTag(TagsMixin, Tag):
 
     @staticmethod
     def queryset_for_user(user, permission='view'):
-        return tag_queryset_for_user(SampleTag, user=user, permission=permission)
+        return queryset_for_user(SampleTag, user=user, permission=permission)
 
 
 @reversion.register()
@@ -782,7 +736,7 @@ class SampleTagTag(Tag):
 
     @staticmethod
     def queryset_for_user(user, permission='view'):
-        return tag_queryset_for_user(SampleTagTag, user=user, permission=permission)
+        return queryset_for_user(SampleTagTag, user=user, permission=permission)
 
 
 @reversion.register(follow='tags')
@@ -834,7 +788,7 @@ class Attachment(BaseObjectModel):
 
     @staticmethod
     def queryset_for_user(user, permission='view'):
-        return object_queryset_for_user(Attachment, user=user, permission=permission)
+        return queryset_for_user(Attachment, user=user, permission=permission)
 
 
 @reversion.register()
@@ -845,5 +799,5 @@ class AttachmentTag(Tag):
 
     @staticmethod
     def queryset_for_user(user, permission='view'):
-        return tag_queryset_for_user(AttachmentTag, user=user, permission=permission)
+        return queryset_for_user(AttachmentTag, user=user, permission=permission)
 

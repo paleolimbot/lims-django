@@ -29,7 +29,9 @@ def populate_halifax_lakes_data(test_user=None, test_proj=None, quiet=False, cle
             try:
                 proj = Project.objects.get(slug='halifax-test-project-1')
             except Project.DoesNotExist:
-                proj = Project.objects.create(name="Test Project 1", slug='halifax-test-project-1', user=test_user)
+                proj = Project.objects.create(
+                    name="Halifax Test Project 1", slug='halifax-test-project-1', user=test_user
+                )
         else:
             proj = test_proj
 
@@ -59,6 +61,7 @@ def populate_halifax_lakes_data(test_user=None, test_proj=None, quiet=False, cle
                     project=proj,
                     user=test_user,
                     name=name,
+                    taxonomy='Sample',
                     status='published'
                 )
 

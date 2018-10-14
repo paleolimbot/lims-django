@@ -1,0 +1,10 @@
+
+<label>Action:
+    <select name="action">
+        <option value="" selected="">---------</option>
+        {% for action in dv.actions %}
+            <option value="{{ action.value }}">{{ action.label }}</option>
+        {% endfor %}
+    </select>
+</label>
+<button type="submit" class="button" title="Run the selected action" name="index">Go</button>

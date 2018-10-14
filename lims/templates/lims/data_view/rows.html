@@ -1,0 +1,17 @@
+
+{% if dv.page %}
+    {% for row in dv.rows %}
+        <tr id="dv-{{ dv.name }}-{{ row.0.object.pk }}" class="dv-{{ dv.name }}">
+            <td>
+                <input title="Select {{ row.0.object }}" type="checkbox" name="object-{{ row.0.object.pk }}-selected"/>
+            </td>
+            {% for bound_field in row %}
+            <td class="dv-{{ dv.name }}-{{ bound_field.target }}">{{ bound_field.output }}</td>
+            {% endfor %}
+        </tr>
+    {% endfor %}
+{% else %}
+    <tr>
+    <td colspan="{{ dv.fields|length }}">Zero objects were found.</td>
+    </tr>
+{% endif %}

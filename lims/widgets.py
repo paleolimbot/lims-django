@@ -1,6 +1,7 @@
 
 import django.forms as django_forms
 from django.urls import reverse_lazy
+from django.utils.html import format_html
 
 from django_select2.forms import HeavySelect2Widget
 
@@ -117,17 +118,17 @@ class LimsSelect2(HeavySelect2Widget):
 
 
 class OutputWidget(metaclass=django_forms.MediaDefiningClass):
-    def render(self, value, context):
+    def render(self, instance, context=None):
         raise NotImplementedError()
 
 
 @register_output_widget
 class EmptyOutput(OutputWidget):
-    def render(self, value, context):
+    def render(self, instance, context=None):
         return None
 
 
 @register_output_widget
 class IdentityOutput(OutputWidget):
-    def render(self, value, context):
-        return value
+    def render(self, instance, context=None):
+        return instance

@@ -1,0 +1,11 @@
+
+<thead class="dv-header">
+    <tr class="dv-header-row">
+    <th>
+        <input title="Select all objects" type="checkbox" name="object-all-selected"/>
+    </th>
+    {% for link in dv.header_links %}
+        <th>{{ link }}</th>
+    {% endfor %}
+    </tr>
+</thead>

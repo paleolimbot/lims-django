@@ -80,6 +80,7 @@ class AttachmentTagInline(admin.TabularInline):
 class TermAdmin(LimsAdmin):
     inlines = [TermValidatorInline, ]
     prepopulated_fields = {"slug": ("name",)}
+    list_display = ('slug', 'name', 'user', 'modified', 'taxonomy')
     search_fields = ['name', 'slug']
     autocomplete_fields = ['parent', 'project', 'user']
     ordering = ['-modified', ]

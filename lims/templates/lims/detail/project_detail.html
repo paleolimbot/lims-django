@@ -1,4 +1,4 @@
-{% extends "lims/detail/object_detail_tables.html" %}
+{% extends "lims/base.html" %}
 
 {% block title %}{{ project.name }}{% endblock %}
 
@@ -69,6 +69,14 @@
         </tr>
     </table>
 
-    {{ block.super }}
+    <h2><a id="samples">Recent Samples</a></h2>
 
+    {{ sample_dv }}
+
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    {% load static %}
+    <script src="{% static 'lims/js/tables.js' %}"></script>
 {% endblock %}

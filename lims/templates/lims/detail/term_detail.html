@@ -1,5 +1,5 @@
 
-{% extends "lims/detail/object_detail_tables.html" %}
+{% extends "lims/base.html" %}
 
 {% block title %}Term: {{ term.name }}{% endblock %}
 
@@ -13,7 +13,17 @@
 {% block object_tools %}
     <ul class="object-tools">
         {% if view.request.user.is_staff %}
-            <li><a href="{% url 'admin:lims_term_change' user.pk %}">admin</a></li>
+            <li><a href="{% url 'admin:lims_term_change' term.pk %}">admin</a></li>
         {% endif %}
     </ul>
+{% endblock %}
+
+{% block content_main %}
+
+    {% if sample_dv.page %}
+    <h2><a id="samples">Recent Samples</a></h2>
+
+    {{ sample_dv }}
+    {% endif %}
+
 {% endblock %}

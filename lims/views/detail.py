@@ -2,13 +2,12 @@
 from django.views import generic
 from django.shortcuts import get_object_or_404
 from django.http import FileResponse
-from django.core.paginator import Paginator
 from django.contrib.auth.models import User
 
 from .. import models
 from .accounts import LimsLoginMixin
-from .list import query_string_filter, default_published_filter
 from .actions import SAMPLE_ACTIONS
+from lims.data_view import SampleDataViewWidget, TermDataViewWidget, AttachmentDataViewWidget, TagDataViewWidget
 
 
 class DetailViewWithTablesBase(generic.DetailView):
@@ -20,7 +19,16 @@ class DetailViewWithTablesBase(generic.DetailView):
             return None
 
     def get_sample_queryset(self):
-        return self.object.samples
+        return self.object.samples.all()
+
+    def get_term_queryset(self):
+        return None
+
+    def get_tag_queryset(self):
+        return self.object.tags.filter(key__taxonomy=self.model.__name__)
+
+    def get_attachment_queryset(self):
+        return self.object.attachments.all()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -33,26 +41,32 @@ class DetailViewWithTablesBase(generic.DetailView):
             view_project = context['project']
 
         sample_queryset = self.get_sample_queryset()
-
         if sample_queryset is not None:
-            if view_project is not None:
-                sample_queryset = sample_queryset.filter(project=view_project)
+            context['sample_dv'] = SampleDataViewWidget(
+                name='samples',
+                actions=SAMPLE_ACTIONS
+            ).bind(sample_queryset, self.request, project=view_project)
 
-            # setup the child samples list
-            samples = query_string_filter(
-                default_published_filter(
-                    sample_queryset.order_by('-modified'),
-                    self.request.user
-                ),
-                self.request.GET,
-                prefix='sample_'
-            )
-            sample_paginator = Paginator(samples, per_page=100)
-            context['sample_page_obj'] = sample_paginator.page(self.request.GET.get('sample_page', 1))
-            context['sample_page_kwarg'] = 'sample_page'
+        term_queryset = self.get_term_queryset()
+        if term_queryset is not None:
+            context['term_dv'] = TermDataViewWidget(
+                name='terms',
+                actions=()  # no term actions yet
+            ).bind(term_queryset, self.request, project=view_project)
 
-            # add some actions for the child samples
-            context['sample_actions'] = SAMPLE_ACTIONS
+        attachment_queryset = self.get_attachment_queryset()
+        if attachment_queryset is not None:
+            context['attachment_dv'] = AttachmentDataViewWidget(
+                name='attachments',
+                actions=()  # no attachment actions yet
+            ).bind(attachment_queryset, self.request, project=view_project)
+
+        tags_queryset = self.get_tag_queryset()
+        if tags_queryset is not None:
+            context['tags_dv'] = TagDataViewWidget(
+                name='tags',
+                actions=()  # no tag actions yet
+            ).bind(tags_queryset, self.request, project=view_project)
 
         return context
 
