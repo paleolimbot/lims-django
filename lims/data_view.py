@@ -4,7 +4,7 @@ import re
 from django.core.exceptions import FieldError
 from django.http import QueryDict
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, F, Case, When, prefetch_related_objects, Func
 from django.urls import reverse_lazy
 from django.utils.html import format_html
 from django.template.loader import get_template
@@ -15,8 +15,15 @@ _RE_TARGET = re.compile('^[A-Za-z0-9_]*$')
 _RE_TARGET_FIRST = re.compile(r'^([A-Za-z0-9_]+)__(.*)')
 
 
+class IsNull(Func):
+    function = None
+    template = '%(expressions)s IS NULL'
+
+
 def _get_value(obj, target):
-    if callable(target):
+    if target is None:
+        return None
+    elif callable(target):
         return target(obj)
 
     target_match = _RE_TARGET_FIRST.match(target)
@@ -50,12 +57,12 @@ def _get_value(obj, target):
 
 class DataViewField:
 
-    def __init__(self, target=None, label=None, slug=None, sortable=False, queryable=(), output_widget=None):
+    def __init__(self, slug, target=None, label=None, sortable=False, queryable=(), output_widget=None):
         self.sortable = sortable
         self.queryable = queryable
-        self.target = target
+        self.slug = str(slug)
+        self.target = target if target is not None else self.slug
         self.label = label
-        self.slug = str(target) if slug is None else slug
         self.output_widget = output_widget if output_widget is not None \
             else widgets.resolve_output_widget('IdentityOutput')
 
@@ -63,9 +70,40 @@ class DataViewField:
         if not callable(self.target) and not _RE_TARGET.match(self.target):
             raise ValueError('Invalid target: "%s"' % self.target)
 
+    def prepare_queryset(self, queryset):
+        return queryset
+
+    def sort_by(self, queryset, ascending=True):
+        if not self.sortable:
+            return queryset
+
+        previous_sort = queryset.query.order_by
+        previous_sort = [] if not previous_sort else previous_sort
+
+        if ascending:
+            return queryset.order_by(*previous_sort, self.target)
+        else:
+            return queryset.order_by(*previous_sort, '-' + str(self.target))
+
+    def get_values_iter(self, queryset, context=None):
+        target = self.target
+        try:
+            # TODO: this currently fails every time, because what's getting passed in is a page,
+            # not a queryset
+            value_qs = queryset.values_list(target, flat=True)
+            for obj, value in zip(queryset, value_qs):
+                yield self.bind(obj, value, context=context)
+        except (FieldError, AttributeError):
+            for obj in queryset:
+                try:
+                    yield self.bind(obj, _get_value(obj, target), context=context)
+                except Exception as e:
+                    yield self.bind(obj, None, context=context)
+
     def bind(self, obj, value, context=None):
         return {
             'object': obj,
+            'slug': self.slug,
             'target': self.target,
             'label': self.label,
             'value': value,
@@ -75,21 +113,21 @@ class DataViewField:
 
 class ModelField(DataViewField):
 
-    def __init__(self, **kwargs):
+    def __init__(self, slug, **kwargs):
         defaults = {
             'sortable': True,
             'queryable': ('exact', 'iexact', 'contains', 'icontains', 'gt', 'lt', 'gte', 'lte',
                           'year', 'month', 'day', 'range', 'regex', 'iregex')
         }
         defaults.update(**kwargs)
-        super().__init__(**defaults)
+        super().__init__(slug, **defaults)
 
 
 class ModelLinkField(ModelField):
 
-    def __init__(self, **kwargs):
+    def __init__(self, slug, **kwargs):
         self.link = kwargs.pop('link', 'get_absolute_url')
-        super().__init__(**kwargs)
+        super().__init__(slug, **kwargs)
 
     def bind(self, obj, value, context=None):
         vals = super().bind(obj, value, context=None)
@@ -97,6 +135,73 @@ class ModelLinkField(ModelField):
         if output:
             vals['output'] = format_html('<a href="{}">{}</a>', _get_value(obj, self.link), output)
         return vals
+
+
+class TermField(DataViewField):
+    tag_fields = ['comment', 'created', 'id', 'key_id', 'modified', 'numeric_value',
+                  'numeric_value_autoset', 'object_id', 'user_id', 'value']
+
+    def __init__(self, term, **kwargs):
+        defaults = {
+            'slug': term.slug,
+            'label': term.name,
+            'target': None,
+            'sortable': True,
+            'queryable': ()
+        }
+        defaults.update(**kwargs)
+        self.term = term
+        slug = defaults.pop('slug')
+        super().__init__(slug, **defaults)
+
+    def _case_when(self, target):
+        return Case(When(Q(tags__key=self.term), then=F(target)))
+
+    def sort_by(self, queryset, ascending=True):
+        if not self.sortable:
+            return queryset
+
+        previous_sort = queryset.query.order_by
+        previous_sort = [] if not previous_sort else previous_sort
+
+        # tags get sorted by existence, with numerics sorted in front of non-numerics
+        dummy_name = '_case_when_' + self.slug
+        numeric_dummy_name = dummy_name + '_numeric'
+        is_numeric_dummy_name = dummy_name + '_is_numeric'
+        null_dummy_name = dummy_name + '_null'
+        annotate_args = {
+            dummy_name: self._case_when('tags__value'),
+            # numeric_dummy_name: self._case_when('tags__numeric_value'),
+            # is_numeric_dummy_name: Q(**{numeric_dummy_name: None}),
+            null_dummy_name: IsNull(dummy_name)
+        }
+        queryset = queryset.annotate(**annotate_args)
+        if ascending:
+            return queryset.order_by(
+                *previous_sort, null_dummy_name, dummy_name
+            )
+        else:
+            return queryset.order_by(
+                *previous_sort, null_dummy_name, '-' + dummy_name
+            )
+
+    def get_values_iter(self, queryset, context=None):
+        prefetch_related_objects(queryset, 'tags')
+        for obj in queryset:
+            tags = obj.tags.filter(key=self.term)
+            # TODO: support multiple tags
+            tag = tags[0] if tags else None
+            yield self.bind(obj, tag, context=context)
+
+    def bind(self, obj, value, context=None):
+        return {
+            'object': obj,
+            'slug': self.slug,
+            'target': self.target,
+            'label': self.label,
+            'value': value,
+            'output': self.output_widget.render(value.value if value else None, context=context)
+        }
 
 
 class DataView:
@@ -114,7 +219,7 @@ class DataView:
         self.default_order = default_order
 
         if hasattr(self, 'fields'):
-            fields = self.fields
+            fields = list(self.fields)
         else:
             fields = []
 
@@ -126,7 +231,16 @@ class DataView:
 
         self.fields = fields
 
+    def get_field(self, slug):
+        for field in self.fields:
+            if field.slug == slug:
+                return field
+        return None
+
     def prepare_queryset(self, queryset, query_dict=None, user=None):
+        for field in self.fields:
+            queryset = field.prepare_queryset(queryset)
+
         return self._paginate(
             self._order(
                 self._filter(
@@ -168,31 +282,27 @@ class DataView:
             prefix=self.name + '_'
         )
 
-    def _order(self, queryset, query_dict=None, user=None):
-        return query_string_order(
-            queryset,
-            query_dict,
-            use=[f.target for f in self.fields if f.sortable],
-            prefix=self.name + '_',
-            default_order_vars=self.default_order
-        )
+    def _order(self, queryset, query_dict, user=None):
+        if query_dict is None:
+            return queryset.order_by('-modified')
+        else:
+            order_var = self.name + '_' + 'order_variable'
+            order_values = query_dict.getlist(order_var, [])
+            if not order_values:
+                return queryset.order_by('-modified')
 
-    def _values(self, queryset, field, context=None):
-        target = field.target
-        try:
-            value_qs = queryset.values_list(target, flat=True)
-            for obj, value in zip(queryset, value_qs):
-                yield field.bind(obj, value, context=context)
-        except (FieldError, AttributeError):
-            for obj in queryset:
-                try:
-                    yield field.bind(obj, _get_value(obj, target), context=context)
-                except Exception as e:
-                    yield field.bind(obj, None, context=context)
+            order_slugs = [re.sub('^-', '', o) for o in order_values]
+            order_fields = [self.get_field(slug) for slug in order_slugs]
+            for field, order_val in zip(order_fields, order_values):
+                if field:
+                    ascending = re.match('^-', order_val) is None
+                    queryset = field.sort_by(queryset, ascending=ascending)
+
+        return queryset
 
     def columns(self, queryset, context=None):
         for field in self.fields:
-            yield self._values(queryset, field, context=context)
+            yield field.get_values_iter(queryset, context=context)
 
     def rows(self, queryset, context=None):
         for row in zip(*self.columns(queryset, context=context)):
@@ -230,14 +340,14 @@ class BoundDataView:
             if field.sortable:
                 qd = self.query_dict.copy()
                 cls = ''
-                if field.target in current_sort:
+                if field.slug in current_sort:
                     qd[sort_var] = '-' + field.target
                     cls = 'dsc-sort'
-                elif '-' + field.target in current_sort:
+                elif '-' + field.slug in current_sort:
                     qd[sort_var] = field.target
                     cls = 'asc-sort'
                 else:
-                    qd[sort_var] = field.target
+                    qd[sort_var] = field.slug
                 yield format_html(
                     '<a class="{cls}" href="{url}">{label}</a>',
                     cls=cls,
@@ -289,65 +399,65 @@ class BaseObjectDataViewWidget(DataView):
 
 class SampleDataViewWidget(BaseObjectDataViewWidget):
     fields = [
-        ModelLinkField(target='slug', label='ID'),
+        ModelLinkField(slug='slug', label='ID'),
         ModelLinkField(
-            target='user', label='User',
+            slug='user', label='User',
             link=lambda obj: reverse_lazy('lims:user_detail', kwargs={'pk': obj.user.pk})
         ),
-        ModelField(target='collected', label='Collected'),
-        ModelField(target='name', label='Name'),
-        ModelField(target='status', label='Status'),
-        ModelField(target='modified', label='Modified')
+        ModelField(slug='collected', label='Collected'),
+        ModelField(slug='name', label='Name'),
+        ModelField(slug='status', label='Status'),
+        ModelField(slug='modified', label='Modified')
     ]
 
 
 class TermDataViewWidget(BaseObjectDataViewWidget):
     fields = [
-        ModelLinkField(target='slug', label='ID'),
+        ModelLinkField(slug='slug', label='ID'),
         ModelLinkField(
-            target='user', label='User',
+            slug='user', label='User',
             link=lambda obj: reverse_lazy('lims:user_detail', kwargs={'pk': obj.user.pk})
         ),
-        ModelField(target='name', label='Name'),
-        ModelField(target='status', label='Status'),
-        ModelField(target='modified', label='Modified')
+        ModelField(slug='name', label='Name'),
+        ModelField(slug='status', label='Status'),
+        ModelField(slug='modified', label='Modified')
     ]
 
 
 class AttachmentDataViewWidget(BaseObjectDataViewWidget):
     fields = [
-        ModelLinkField(target='slug', label='ID'),
+        ModelLinkField(slug='slug', label='ID'),
         ModelLinkField(
-            target='user', label='User',
+            slug='user', label='User',
             link=lambda obj: reverse_lazy('lims:user_detail', kwargs={'pk': obj.user.pk})
         ),
-        ModelField(target='name', label='Name'),
-        ModelField(target='modified', label='Modified'),
+        ModelField(slug='name', label='Name'),
+        ModelField(slug='modified', label='Modified'),
     ]
 
 
 class ProjectDataViewWidget(BaseObjectDataViewWidget):
     fields = [
-        ModelLinkField(target='slug', label='ID'),
+        ModelLinkField(slug='slug', label='ID'),
         ModelLinkField(
-            target='user', label='User',
+            slug='user', label='User',
             link=lambda obj: reverse_lazy('lims:user_detail', kwargs={'pk': obj.user.pk})
         ),
-        ModelField(target='name', label='Name'),
-        ModelField(target='modified', label='Modified'),
+        ModelField(slug='name', label='Name'),
+        ModelField(slug='modified', label='Modified'),
     ]
 
 
 class TagDataViewWidget(DataView):
     fields = [
-        ModelLinkField(target='object', label='Object', link='object__get_absolute_url'),
-        ModelLinkField(target='key', label='Term', link='key__get_absolute_url'),
-        ModelField(target='value', label='Value'),
+        ModelLinkField(slug='object', label='Object', link='object__get_absolute_url'),
+        ModelLinkField(slug='key', label='Term', link='key__get_absolute_url'),
+        ModelField(slug='value', label='Value'),
         ModelLinkField(
-            target='user', label='User',
+            slug='user', label='User',
             link=lambda obj: reverse_lazy('lims:user_detail', kwargs={'pk': obj.user.pk})
         ),
-        ModelField(target='modified', label='Modified')
+        ModelField(slug='modified', label='Modified')
     ]
 
     def bind(self, queryset, request, *args, **kwargs):

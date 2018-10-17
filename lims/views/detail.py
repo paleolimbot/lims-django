@@ -7,7 +7,8 @@ from django.contrib.auth.models import User
 from .. import models
 from .accounts import LimsLoginMixin
 from .actions import SAMPLE_ACTIONS
-from lims.data_view import SampleDataViewWidget, TermDataViewWidget, AttachmentDataViewWidget, TagDataViewWidget
+from lims.data_view import SampleDataViewWidget, \
+    TermDataViewWidget, AttachmentDataViewWidget, TagDataViewWidget, TermField
 
 
 class DetailViewWithTablesBase(generic.DetailView):
@@ -43,6 +44,7 @@ class DetailViewWithTablesBase(generic.DetailView):
         sample_queryset = self.get_sample_queryset()
         if sample_queryset is not None:
             context['sample_dv'] = SampleDataViewWidget(
+                TermField(models.Term.objects.get(slug='location_code')),
                 name='samples',
                 actions=SAMPLE_ACTIONS
             ).bind(sample_queryset, self.request, project=view_project)
