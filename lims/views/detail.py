@@ -1,4 +1,6 @@
 
+from collections import OrderedDict
+
 from django.views import generic
 from django.shortcuts import get_object_or_404
 from django.http import FileResponse
@@ -8,7 +10,7 @@ from .. import models
 from .accounts import LimsLoginMixin
 from .actions import SAMPLE_ACTIONS
 from lims.data_view import SampleDataViewWidget, \
-    TermDataViewWidget, AttachmentDataViewWidget, TagDataViewWidget, TermField
+    TermDataViewWidget, AttachmentDataViewWidget, TagDataViewWidget, TermField, get_widget_class
 
 
 class DetailViewWithTablesBase(generic.DetailView):
@@ -23,7 +25,7 @@ class DetailViewWithTablesBase(generic.DetailView):
         return self.object.samples.all()
 
     def get_term_queryset(self):
-        return None
+        return models.Term.objects.none()
 
     def get_tag_queryset(self):
         return self.object.tags.filter(key__taxonomy=self.model.__name__)
@@ -44,7 +46,6 @@ class DetailViewWithTablesBase(generic.DetailView):
         sample_queryset = self.get_sample_queryset()
         if sample_queryset is not None:
             context['sample_dv'] = SampleDataViewWidget(
-                TermField(models.Term.objects.get(slug='location_code')),
                 name='samples',
                 actions=SAMPLE_ACTIONS
             ).bind(sample_queryset, self.request, project=view_project)
@@ -108,7 +109,23 @@ class TermDetailView(LimsLoginMixin, DetailViewWithTablesBase):
         return self.object.project
 
     def get_sample_queryset(self):
-        return models.Sample.objects.filter(tags__key=self.object).distinct()
+        return None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        view_project = context['project'] if 'project' in context else None
+
+        value_data_views = OrderedDict()
+        for model in (models.Project, models.Sample, models.SampleTag, models.Attachment):
+            widget_class = get_widget_class(model)
+
+            value_data_views[model.__name__] = widget_class(
+                TermField(self.object),
+                name='tags_' + model.__name__.lower()
+            ).bind(model.objects.filter(tags__key=self.object).distinct(), self.request, project=view_project)
+
+        context['value_dvs'] = value_data_views
+        return context
 
 
 class AttachmentDetailView(LimsLoginMixin, DetailViewWithTablesBase):

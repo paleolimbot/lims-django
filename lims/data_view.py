@@ -4,7 +4,7 @@ import re
 from django.core.exceptions import FieldError
 from django.http import QueryDict
 from django.core.paginator import Paginator
-from django.db.models import Q, F, Case, When, prefetch_related_objects, Func
+from django.db.models import Q, F, Case, When, prefetch_related_objects, Func, Max, Min
 from django.urls import reverse_lazy
 from django.utils.html import format_html
 from django.template.loader import get_template
@@ -154,8 +154,8 @@ class TermField(DataViewField):
         slug = defaults.pop('slug')
         super().__init__(slug, **defaults)
 
-    def _case_when(self, target):
-        return Case(When(Q(tags__key=self.term), then=F(target)))
+    def _case_when(self, target, aggregation=Max):
+        return aggregation(Case(When(Q(tags__key=self.term), then=F(target))))
 
     def sort_by(self, queryset, ascending=True):
         if not self.sortable:
@@ -169,20 +169,24 @@ class TermField(DataViewField):
         numeric_dummy_name = dummy_name + '_numeric'
         is_numeric_dummy_name = dummy_name + '_is_numeric'
         null_dummy_name = dummy_name + '_null'
+
+        aggregator = Min if ascending else Max
         annotate_args = {
-            dummy_name: self._case_when('tags__value'),
-            # numeric_dummy_name: self._case_when('tags__numeric_value'),
-            # is_numeric_dummy_name: Q(**{numeric_dummy_name: None}),
+            dummy_name: self._case_when('tags__value', aggregator),
+            numeric_dummy_name: self._case_when('tags__numeric_value', aggregator),
+            is_numeric_dummy_name: IsNull(numeric_dummy_name),
             null_dummy_name: IsNull(dummy_name)
         }
+
         queryset = queryset.annotate(**annotate_args)
         if ascending:
             return queryset.order_by(
-                *previous_sort, null_dummy_name, dummy_name
+                *previous_sort, null_dummy_name, is_numeric_dummy_name, numeric_dummy_name, dummy_name
             )
         else:
             return queryset.order_by(
-                *previous_sort, null_dummy_name, '-' + dummy_name
+                *previous_sort, null_dummy_name, '-' + is_numeric_dummy_name, '-' + numeric_dummy_name,
+                '-' + dummy_name
             )
 
     def get_values_iter(self, queryset, context=None):
@@ -284,12 +288,12 @@ class DataView:
 
     def _order(self, queryset, query_dict, user=None):
         if query_dict is None:
-            return queryset.order_by('-modified')
+            return queryset.order_by(*self.default_order)
         else:
             order_var = self.name + '_' + 'order_variable'
             order_values = query_dict.getlist(order_var, [])
             if not order_values:
-                return queryset.order_by('-modified')
+                return queryset.order_by(*self.default_order)
 
             order_slugs = [re.sub('^-', '', o) for o in order_values]
             order_fields = [self.get_field(slug) for slug in order_slugs]
@@ -314,7 +318,8 @@ class DataView:
 
 class BoundDataView:
 
-    def __init__(self, dv, queryset, request, context=None):
+    def __init__(self, dv, queryset, request, context=None, **kwargs):
+        self.kwargs = kwargs
         self.dv = dv
         self.context = context
         self.query_dict = request.GET
@@ -436,7 +441,7 @@ class AttachmentDataViewWidget(BaseObjectDataViewWidget):
     ]
 
 
-class ProjectDataViewWidget(BaseObjectDataViewWidget):
+class ProjectDataViewWidget(DataView):
     fields = [
         ModelLinkField(slug='slug', label='ID'),
         ModelLinkField(
@@ -453,6 +458,7 @@ class TagDataViewWidget(DataView):
         ModelLinkField(slug='object', label='Object', link='object__get_absolute_url'),
         ModelLinkField(slug='key', label='Term', link='key__get_absolute_url'),
         ModelField(slug='value', label='Value'),
+        ModelField(slug='numeric_value', label='Numeric Value'),
         ModelLinkField(
             slug='user', label='User',
             link=lambda obj: reverse_lazy('lims:user_detail', kwargs={'pk': obj.user.pk})
@@ -474,6 +480,23 @@ class TagDataViewWidget(DataView):
                     )
 
         return super().bind(queryset, request, *args, **kwargs)
+
+
+def get_widget_class(model):
+    if isinstance(model, type):
+        model = model.__name__
+    if model == 'Sample':
+        return SampleDataViewWidget
+    elif model == 'Term':
+        return TermDataViewWidget
+    elif model == 'Attachment':
+        return AttachmentDataViewWidget
+    elif model == 'Project':
+        return ProjectDataViewWidget
+    elif model.endswith('Tag'):
+        return TagDataViewWidget
+    else:
+        raise ValueError('Unknown class: ' + model)
 
 
 def filter_object_queryset_for_user(queryset, user, permission):

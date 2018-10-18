@@ -131,4 +131,4 @@ class EmptyOutput(OutputWidget):
 @register_output_widget
 class IdentityOutput(OutputWidget):
     def render(self, instance, context=None):
-        return instance
+        return instance if instance else ''

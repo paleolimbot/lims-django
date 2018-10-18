@@ -46,24 +46,6 @@
             </td>
         </tr>
         <tr>
-            <th>Tags</th>
-            <td></td>
-        </tr>
-        {% if project.tags.all %}
-            {% for tag in project.tags.all %}
-                <tr>
-                    <td>
-                        <a href="{% url 'lims:term_detail' tag.key.pk %}" title="{{ tag.key }}">
-                            {{ tag.key|truncatechars:20 }}
-                        </a>
-                    </td>
-                    <td>{{ tag.value|truncatechars:250|linebreaksbr }}</td>
-                </tr>
-            {% endfor %}
-        {% else %}
-            <tr><td>(none specified)</td><td></td></tr>
-        {% endif %}
-        <tr>
             <th>Date Modified (Created)</th>
             <td>{{ project.modified }} ({{ project.created }})</td>
         </tr>

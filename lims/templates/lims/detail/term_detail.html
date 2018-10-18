@@ -20,10 +20,11 @@
 
 {% block content_main %}
 
-    {% if sample_dv.page %}
-    <h2><a id="samples">Recent Samples</a></h2>
-
-    {{ sample_dv }}
-    {% endif %}
+    {% for model, dv in value_dvs.items %}
+        {% if dv.page %}
+            <h2>{{ model }}{{ dv.page|length|pluralize }}</h2>
+            {{ dv }}
+        {% endif %}
+    {% endfor %}
 
 {% endblock %}
