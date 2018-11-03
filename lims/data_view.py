@@ -398,6 +398,11 @@ class BaseObjectDataViewWidget(DataView):
                         'lims:project_user_detail',
                         kwargs={'project_id': view_project.pk, 'pk': obj.user.pk}
                     )
+        else:
+            # add a project field
+            self.fields = [
+                ModelLinkField(slug='project', label='Project')
+            ] + self.fields
 
         return super().bind(queryset, request, *args, **kwargs)
 

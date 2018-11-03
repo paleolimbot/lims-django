@@ -12,6 +12,6 @@
     {% endfor %}
 {% else %}
     <tr>
-    <td colspan="{{ dv.fields|length }}">Zero objects were found.</td>
+    <td colspan="{{ dv.fields|length|add:1 }}">Zero objects were found.</td>
     </tr>
 {% endif %}

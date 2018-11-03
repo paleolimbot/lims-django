@@ -66,10 +66,17 @@ class DetailViewWithTablesBase(generic.DetailView):
 
         tags_queryset = self.get_tag_queryset()
         if tags_queryset is not None:
-            context['tags_dv'] = TagDataViewWidget(
+            tag_dv = TagDataViewWidget(
                 name='tags',
                 actions=()  # no tag actions yet
-            ).bind(tags_queryset, self.request, project=view_project)
+            )
+
+            # remove the 'object' field, because we're already on the detail page
+            for i, field in enumerate(list(tag_dv.fields)):
+                if field.slug == 'object':
+                    tag_dv.fields.pop(i)
+
+            context['tags_dv'] = tag_dv.bind(tags_queryset, self.request, project=view_project)
 
         return context
 
@@ -99,6 +106,12 @@ class UserDetailView(LimsLoginMixin, DetailViewWithTablesBase):
 
     def get_sample_queryset(self):
         return self.object.lims_samples.all()
+
+    def get_attachment_queryset(self):
+        return self.object.lims_attachments.all()
+
+    def get_tag_queryset(self):
+        return None
 
 
 class TermDetailView(LimsLoginMixin, DetailViewWithTablesBase):
