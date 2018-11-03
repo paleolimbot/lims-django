@@ -4,6 +4,11 @@
 
 {% block content_title %}Attachment: {{ attachment.name }}{% endblock %}
 
+{% block breadcrumbs %}
+    &rsaquo; <a href="{% url 'lims:project_attachment_list' project.pk %}">Attachments</a>
+    &rsaquo; {{ attachment.get_link }}
+{% endblock %}
+
 {% block object_tools %}
     <ul class="object-tools">
         {% if view.request.user.is_staff %}
@@ -34,6 +39,12 @@
         <tr>
             <th>Description</th>
             <td>{{ attachment.description|linebreaksbr|default:'(none provided)' }}</td>
+        </tr>
+        <tr>
+            <th>Download</th>
+            <td>
+                <a href="{% url 'lims:attachment_download' attachment.pk %}">Download attachment</a>
+            </td>
         </tr>
         <tr>
             <th>Geometry</th>

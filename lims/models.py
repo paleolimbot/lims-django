@@ -739,7 +739,7 @@ class SampleTagTag(Tag):
         return queryset_for_user(SampleTagTag, user=user, permission=permission)
 
 
-@reversion.register(follow='tags')
+@reversion.register(follow=('tags', ))
 class Attachment(BaseObjectModel):
     project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='attachments')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name='lims_attachments')

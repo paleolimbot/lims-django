@@ -2,10 +2,9 @@ from django.views import generic
 from django.shortcuts import get_object_or_404
 
 from .. import models
-from lims.data_view import query_string_filter
 from .accounts import LimsLoginMixin
 from .actions import SAMPLE_ACTIONS
-from ..data_view import SampleDataViewWidget, ProjectDataViewWidget
+from ..data_view import SampleDataViewWidget, ProjectDataViewWidget, AttachmentDataViewWidget, TermDataViewWidget
 
 
 class LimsListView(generic.TemplateView):
@@ -55,3 +54,23 @@ class SampleListView(LimsLoginMixin, LimsListView):
 
     def get_queryset(self):
         return models.Sample.objects.all()
+
+
+class AttachmentListView(LimsLoginMixin, LimsListView):
+    template_name = 'lims/lists/attachment_list.html'
+
+    def get_data_view(self):
+        return AttachmentDataViewWidget()
+
+    def get_queryset(self):
+        return models.Attachment.objects.all()
+
+
+class TermListView(LimsLoginMixin, LimsListView):
+    template_name = 'lims/lists/term_list.html'
+
+    def get_data_view(self):
+        return TermDataViewWidget()
+
+    def get_queryset(self):
+        return models.Term.objects.all()

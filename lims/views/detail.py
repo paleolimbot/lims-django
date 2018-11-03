@@ -151,6 +151,9 @@ class AttachmentDetailView(LimsLoginMixin, DetailViewWithTablesBase):
     def get_sample_queryset(self):
         return self.object.samples.all()
 
+    def get_attachment_queryset(self):
+        return None
+
 
 class AttachmentDownloadView(LimsLoginMixin, generic.View):
 

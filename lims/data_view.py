@@ -400,9 +400,9 @@ class BaseObjectDataViewWidget(DataView):
                     )
         else:
             # add a project field
-            self.fields = [
+            self.fields = self.fields + [
                 ModelLinkField(slug='project', label='Project')
-            ] + self.fields
+            ]
 
         return super().bind(queryset, request, *args, **kwargs)
 
@@ -410,12 +410,12 @@ class BaseObjectDataViewWidget(DataView):
 class SampleDataViewWidget(BaseObjectDataViewWidget):
     fields = [
         ModelLinkField(slug='slug', label='ID'),
+        ModelField(slug='name', label='Name'),
         ModelLinkField(
             slug='user', label='User',
             link=lambda obj: reverse_lazy('lims:user_detail', kwargs={'pk': obj.user.pk})
         ),
         ModelField(slug='collected', label='Collected'),
-        ModelField(slug='name', label='Name'),
         ModelField(slug='status', label='Status'),
         ModelField(slug='modified', label='Modified')
     ]
@@ -424,11 +424,12 @@ class SampleDataViewWidget(BaseObjectDataViewWidget):
 class TermDataViewWidget(BaseObjectDataViewWidget):
     fields = [
         ModelLinkField(slug='slug', label='ID'),
+        ModelField(slug='name', label='Name'),
+        ModelField(slug='taxonomy', label='Taxonomy'),
         ModelLinkField(
             slug='user', label='User',
             link=lambda obj: reverse_lazy('lims:user_detail', kwargs={'pk': obj.user.pk})
         ),
-        ModelField(slug='name', label='Name'),
         ModelField(slug='status', label='Status'),
         ModelField(slug='modified', label='Modified')
     ]
@@ -437,11 +438,15 @@ class TermDataViewWidget(BaseObjectDataViewWidget):
 class AttachmentDataViewWidget(BaseObjectDataViewWidget):
     fields = [
         ModelLinkField(slug='slug', label='ID'),
+        ModelField(slug='name', label='Name'),
         ModelLinkField(
             slug='user', label='User',
             link=lambda obj: reverse_lazy('lims:user_detail', kwargs={'pk': obj.user.pk})
         ),
-        ModelField(slug='name', label='Name'),
+        ModelLinkField(
+            slug='file__name', label='File Name', sortable=False, queryable=[],
+            link=lambda obj: reverse_lazy('lims:attachment_download', kwargs={'pk': obj.pk})
+        ),
         ModelField(slug='modified', label='Modified'),
     ]
 
@@ -449,11 +454,11 @@ class AttachmentDataViewWidget(BaseObjectDataViewWidget):
 class ProjectDataViewWidget(DataView):
     fields = [
         ModelLinkField(slug='slug', label='ID'),
+        ModelField(slug='name', label='Name'),
         ModelLinkField(
             slug='user', label='User',
             link=lambda obj: reverse_lazy('lims:user_detail', kwargs={'pk': obj.user.pk})
         ),
-        ModelField(slug='name', label='Name'),
         ModelField(slug='modified', label='Modified'),
     ]
 

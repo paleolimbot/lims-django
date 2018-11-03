@@ -32,16 +32,16 @@
                         </li>
                         <li>
                             {% if project %}
-                                <a href="">Terms</a>
+                                <a href="{% url 'lims:project_term_list' project.pk %}">Terms</a>
                             {% else %}
-                                <a href="">Terms</a>
+                                <a href="{% url 'lims:term_list' %}">Terms</a>
                             {% endif %}
                         </li>
                         <li>
                             {% if project %}
-                                <a href="">Attachments</a>
+                                <a href="{% url 'lims:project_attachment_list' project.pk %}">Attachments</a>
                             {% else %}
-                                <a href="">Attachments</a>
+                                <a href="{% url 'lims:attachment_list' %}">Attachments</a>
                             {% endif %}
                         </li>
                         {% endblock %}

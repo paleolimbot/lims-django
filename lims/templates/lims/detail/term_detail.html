@@ -4,7 +4,11 @@
 {% block title %}Term: {{ term.name }}{% endblock %}
 
 {% block breadcrumbs %}
-    &rsaquo; Terms
+    {% if project %}
+        &rsaquo; <a href="{% url 'lims:project_term_list' project.pk %}">Terms</a>
+    {% else %}
+        &rsaquo; <a href="{% url 'lims:term_list' %}">Terms</a>
+    {% endif %}
     &rsaquo; {{ term.get_link }}
 {% endblock %}
 

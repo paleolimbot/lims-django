@@ -35,9 +35,17 @@ urlpatterns = [
     ),
 
     # term object views
+    url(r'^term/$', views.TermListView.as_view(), name="term_list"),
+    url(r'^project/(?P<project_id>[0-9]+)/term/$', views.TermListView.as_view(), name="project_term_list"),
     url(r'^term/(?P<pk>[0-9]+)$', views.TermDetailView.as_view(), name="term_detail"),
 
     # attachment object views
+    url(r'^attachment/$', views.AttachmentListView.as_view(), name='attachment_list'),
+    url(
+        r'^project/(?P<project_id>[0-9]+)/attachment/$',
+        views.AttachmentListView.as_view(),
+        name='project_attachment_list'
+    ),
     url(r'^attachment/(?P<pk>[0-9]+)$', views.AttachmentDetailView.as_view(), name="attachment_detail"),
     url(r'^attachment/(?P<pk>[0-9]+)/download$', views.AttachmentDownloadView.as_view(), name="attachment_download"),
 

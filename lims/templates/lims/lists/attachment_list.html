@@ -1,0 +1,49 @@
+{% extends "lims/base.html" %}
+
+{% load static %}
+
+{% block title %}Attachments{% endblock %}
+
+{% block breadcrumbs %}
+    {% if project %}
+        &rsaquo; <a href="{% url 'lims:project_attachment_list' project.pk %}">Attachments</a>
+    {% else %}
+        &rsaquo; <a href="{% url 'lims:attachment_list' %}">Attachments</a>
+    {% endif %}
+{% endblock %}
+
+{% block content_title %}Recent Samples{% endblock %}
+
+{% block object_tools %}
+    <ul class="object-tools">
+        {% if view.request.user.is_staff %}
+             <li><a href="{% url 'admin:lims_attachment_changelist' %}">admin</a></li>
+        {% endif %}
+    </ul>
+{% endblock %}
+
+{% block content_main %}
+
+    <div id="viewlist">
+        <div id="toolbar">
+            <div>
+                <form id="object-list-search">
+                    <label for="searchbar">
+                        <img src="{% static 'admin/img/search.svg' %}"/>
+                    </label>
+                    <input id="searchbar" name="sample_q" value="{{ view.request.GET.sample_q }}" type="text"/>
+                    <input value="Search" type="Submit"/>
+                </form>
+            </div>
+        </div>
+
+    {{ dv }}
+
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    <script src="{% static 'lims/js/tables.js' %}"></script>
+{% endblock %}
