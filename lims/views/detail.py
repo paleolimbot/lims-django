@@ -88,6 +88,9 @@ class ProjectDetailView(LimsLoginMixin, DetailViewWithTablesBase):
     def get_project(self):
         return self.object
 
+    def get_term_queryset(self):
+        return models.Term.objects.filter(project=self.object)
+
 
 class SampleDetailView(LimsLoginMixin, DetailViewWithTablesBase):
     template_name = 'lims/detail/sample_detail.html'

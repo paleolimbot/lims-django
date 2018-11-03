@@ -51,14 +51,22 @@
         </tr>
     </table>
 
-    <h2><a id="samples">Recent Samples</a></h2>
+    <h2><a id="samples">Samples</a></h2>
 
     {{ sample_dv }}
+
+    <h2><a id="attachments">Attachments</a></h2>
+
+    {{ attachment_dv }}
+
+     <h2><a id="terms">Terms</a></h2>
+
+    {{ term_dv }}
 
 {% endblock %}
 
 {% block scripts %}
     {{ block.super }}
     {% load static %}
-    <script src="{% static 'lims/js/tables.js' %}"></script>
+    <script src="{% static 'lims/js/data_view.js' %}"></script>
 {% endblock %}

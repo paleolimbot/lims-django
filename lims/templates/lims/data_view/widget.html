@@ -2,7 +2,7 @@
 
 <div class="object-list-container dv-list-container dv-{{ dv.name }}-list-container">
 
-    <form id="sample-viewlist-form" method="post" action="{% url 'lims:resolve_bulk_action' dv.model_name|lower %}?from={{ dv.request.get_full_path|urlencode }}">
+    <form class="dv-form dv-{{ dv.name }}-form" id="{{ dv.name }}-viewlist-form" method="post" action="{% url 'lims:resolve_bulk_action' dv.model_name|lower %}?from={{ dv.request.get_full_path|urlencode }}">
 
         {% csrf_token %}
 
