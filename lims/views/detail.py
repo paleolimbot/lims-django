@@ -9,8 +9,8 @@ from django.contrib.auth.models import User
 from .. import models
 from .accounts import LimsLoginMixin
 from .actions import SAMPLE_ACTIONS
-from lims.data_view import SampleDataViewWidget, \
-    TermDataViewWidget, AttachmentDataViewWidget, TagDataViewWidget, TermField, get_widget_class
+from ..widgets.data_widget import SampleDataWidget, \
+    TermDataWidget, AttachmentDataWidget, TagDataWidget, TermField, get_widget_class
 
 
 class DetailViewWithTablesBase(generic.DetailView):
@@ -45,28 +45,28 @@ class DetailViewWithTablesBase(generic.DetailView):
 
         sample_queryset = self.get_sample_queryset()
         if sample_queryset is not None:
-            context['sample_dv'] = SampleDataViewWidget(
+            context['sample_dv'] = SampleDataWidget(
                 name='samples',
                 actions=SAMPLE_ACTIONS
             ).bind(sample_queryset, self.request, project=view_project)
 
         term_queryset = self.get_term_queryset()
         if term_queryset is not None:
-            context['term_dv'] = TermDataViewWidget(
+            context['term_dv'] = TermDataWidget(
                 name='terms',
                 actions=()  # no term actions yet
             ).bind(term_queryset, self.request, project=view_project)
 
         attachment_queryset = self.get_attachment_queryset()
         if attachment_queryset is not None:
-            context['attachment_dv'] = AttachmentDataViewWidget(
+            context['attachment_dv'] = AttachmentDataWidget(
                 name='attachments',
                 actions=()  # no attachment actions yet
             ).bind(attachment_queryset, self.request, project=view_project)
 
         tags_queryset = self.get_tag_queryset()
         if tags_queryset is not None:
-            tag_dv = TagDataViewWidget(
+            tag_dv = TagDataWidget(
                 name='tags',
                 actions=()  # no tag actions yet
             )

@@ -9,7 +9,7 @@ from django.urls import reverse_lazy
 from django.utils.html import format_html
 from django.template.loader import get_template
 
-from lims import widgets
+from . import widgets
 
 _RE_TARGET = re.compile('^[A-Za-z0-9_]*$')
 _RE_TARGET_FIRST = re.compile(r'^([A-Za-z0-9_]+)__(.*)')
@@ -55,7 +55,7 @@ def _get_value(obj, target):
         return value
 
 
-class DataViewField:
+class DataWidgetField:
 
     def __init__(self, slug, target=None, label=None, sortable=False, queryable=(), output_widget=None):
         self.sortable = sortable
@@ -111,7 +111,7 @@ class DataViewField:
         }
 
 
-class ModelField(DataViewField):
+class ModelField(DataWidgetField):
 
     def __init__(self, slug, **kwargs):
         defaults = {
@@ -137,7 +137,7 @@ class ModelLinkField(ModelField):
         return vals
 
 
-class TermField(DataViewField):
+class TermField(DataWidgetField):
     tag_fields = ['comment', 'created', 'id', 'key_id', 'modified', 'numeric_value',
                   'numeric_value_autoset', 'object_id', 'user_id', 'value']
 
@@ -208,7 +208,7 @@ class TermField(DataViewField):
         }
 
 
-class DataView:
+class DataWidget:
     widget_template = 'lims/data_view/widget.html'
     actions_template = 'lims/data_view/actions.html'
     table_template = 'lims/data_view/table.html'
@@ -313,10 +313,10 @@ class DataView:
             yield tuple(row)
 
     def bind(self, queryset, request, *args, **kwargs):
-        return BoundDataView(self, queryset, request, *args, **kwargs)
+        return BoundDataWidget(self, queryset, request, *args, **kwargs)
 
 
-class BoundDataView:
+class BoundDataWidget:
 
     def __init__(self, dv, queryset, request, context=None, **kwargs):
         self.kwargs = kwargs
@@ -384,7 +384,7 @@ class BoundDataView:
         return self.as_widget()
 
 
-class BaseObjectDataViewWidget(DataView):
+class BaseObjectDataWidget(DataWidget):
 
     def bind(self, queryset, request, *args, **kwargs):
         view_project = kwargs.pop('project', None)
@@ -407,7 +407,7 @@ class BaseObjectDataViewWidget(DataView):
         return super().bind(queryset, request, *args, **kwargs)
 
 
-class SampleDataViewWidget(BaseObjectDataViewWidget):
+class SampleDataWidget(BaseObjectDataWidget):
     fields = [
         ModelLinkField(slug='slug', label='ID'),
         ModelField(slug='name', label='Name'),
@@ -421,7 +421,7 @@ class SampleDataViewWidget(BaseObjectDataViewWidget):
     ]
 
 
-class TermDataViewWidget(BaseObjectDataViewWidget):
+class TermDataWidget(BaseObjectDataWidget):
     fields = [
         ModelLinkField(slug='slug', label='ID'),
         ModelField(slug='name', label='Name'),
@@ -435,7 +435,7 @@ class TermDataViewWidget(BaseObjectDataViewWidget):
     ]
 
 
-class AttachmentDataViewWidget(BaseObjectDataViewWidget):
+class AttachmentDataWidget(BaseObjectDataWidget):
     fields = [
         ModelLinkField(slug='slug', label='ID'),
         ModelField(slug='name', label='Name'),
@@ -451,7 +451,7 @@ class AttachmentDataViewWidget(BaseObjectDataViewWidget):
     ]
 
 
-class ProjectDataViewWidget(DataView):
+class ProjectDataWidget(DataWidget):
     fields = [
         ModelLinkField(slug='slug', label='ID'),
         ModelField(slug='name', label='Name'),
@@ -463,7 +463,7 @@ class ProjectDataViewWidget(DataView):
     ]
 
 
-class TagDataViewWidget(DataView):
+class TagDataWidget(DataWidget):
     fields = [
         ModelLinkField(slug='object', label='Object', link='object__get_absolute_url'),
         ModelLinkField(slug='key', label='Term', link='key__get_absolute_url'),
@@ -496,15 +496,15 @@ def get_widget_class(model):
     if isinstance(model, type):
         model = model.__name__
     if model == 'Sample':
-        return SampleDataViewWidget
+        return SampleDataWidget
     elif model == 'Term':
-        return TermDataViewWidget
+        return TermDataWidget
     elif model == 'Attachment':
-        return AttachmentDataViewWidget
+        return AttachmentDataWidget
     elif model == 'Project':
-        return ProjectDataViewWidget
+        return ProjectDataWidget
     elif model.endswith('Tag'):
-        return TagDataViewWidget
+        return TagDataWidget
     else:
         raise ValueError('Unknown class: ' + model)
 

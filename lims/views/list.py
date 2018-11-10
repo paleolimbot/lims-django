@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from .. import models
 from .accounts import LimsLoginMixin
 from .actions import SAMPLE_ACTIONS
-from ..data_view import SampleDataViewWidget, ProjectDataViewWidget, AttachmentDataViewWidget, TermDataViewWidget
+from ..widgets.data_widget import SampleDataWidget, ProjectDataWidget, AttachmentDataWidget, TermDataWidget
 
 
 class LimsListView(generic.TemplateView):
@@ -40,7 +40,7 @@ class ProjectListView(LimsLoginMixin, LimsListView):
     template_name = "lims/lists/project_list.html"
 
     def get_data_view(self):
-        return ProjectDataViewWidget()
+        return ProjectDataWidget()
 
     def get_queryset(self):
         return models.Project.objects.all()
@@ -50,7 +50,7 @@ class SampleListView(LimsLoginMixin, LimsListView):
     template_name = 'lims/lists/sample_list.html'
 
     def get_data_view(self):
-        return SampleDataViewWidget(actions=SAMPLE_ACTIONS)
+        return SampleDataWidget(actions=SAMPLE_ACTIONS)
 
     def get_queryset(self):
         return models.Sample.objects.all()
@@ -60,7 +60,7 @@ class AttachmentListView(LimsLoginMixin, LimsListView):
     template_name = 'lims/lists/attachment_list.html'
 
     def get_data_view(self):
-        return AttachmentDataViewWidget()
+        return AttachmentDataWidget()
 
     def get_queryset(self):
         return models.Attachment.objects.all()
@@ -70,7 +70,7 @@ class TermListView(LimsLoginMixin, LimsListView):
     template_name = 'lims/lists/term_list.html'
 
     def get_data_view(self):
-        return TermDataViewWidget()
+        return TermDataWidget()
 
     def get_queryset(self):
         return models.Term.objects.all()

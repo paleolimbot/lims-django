@@ -17,8 +17,8 @@ import reversion
 from .utils.geometry import validate_wkt, wkt_bounds
 from .utils.barcode import qrcode_html
 from .validators import JSONDictValidator, resolve_validator, ValidatorError
-from .widgets import resolve_input_widget, resolve_output_widget, WidgetError
-from lims.data_view import filter_queryset_for_user
+from .widgets.widgets import resolve_input_widget, resolve_output_widget, WidgetError
+from .widgets.data_widget import filter_queryset_for_user
 
 
 class ObjectPermissionError(PermissionError):
