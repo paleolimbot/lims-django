@@ -126,7 +126,7 @@ class ModelField(DataWidgetField):
 class ModelLinkField(ModelField):
 
     def __init__(self, slug, **kwargs):
-        self.link = kwargs.pop('link', 'get_absolute_url')
+        self.link = kwargs.pop('link', slug + '__' + 'get_absolute_url')
         super().__init__(slug, **kwargs)
 
     def bind(self, obj, value, output_type=None):
@@ -215,6 +215,7 @@ class DataWidget:
     header_template = 'lims/data_view/header.html'
     rows_template = 'lims/data_view/rows.html'
     paginator_template = 'lims/data_view/paginator.html'
+    data_view_template = 'lims/data_view/data_view.html'
 
     def __init__(self, *extra_fields, name='default', actions=(), default_limit=10, max_limit=1000,
                  default_order=('-modified', )):
@@ -327,16 +328,19 @@ class DataWidget:
 
 class BoundDataWidget:
 
-    def __init__(self, dv, queryset, request, output_type=None, url='', **kwargs):
+    def __init__(self, dv, queryset, request, output_type=None, url='', context=None, **kwargs):
         self.dv = dv
         self.output_type = output_type
         self.query_dict = request.GET.copy()
         for key, value in kwargs.items():
-            self.query_dict[dv.name + '_' + key] = value
+            if value:
+                dv.filter_fields.append(key)
+                self.query_dict[dv.name + '_' + key] = value
         self.model = queryset.model
         self.model_name = self.model.__name__
         self.request = request
         self.url = url
+        self.context = context if context is not None else {}
         self.page = dv.prepare_queryset(queryset, self.query_dict, self.request.user)
 
         self.name = dv.name
@@ -372,6 +376,11 @@ class BoundDataWidget:
             else:
                 yield field.label
 
+    def get_context(self):
+        context = self.context.copy()
+        context.update({'dv': self})
+        return context
+
     def rows(self):
         return self.dv.rows(self.page, output_type=self.output_type)
 
@@ -379,22 +388,26 @@ class BoundDataWidget:
         return self.dv.columns(self.page, output_type=self.output_type)
 
     def as_table(self):
-        return get_template(self.dv.table_template).render({'dv': self})
+        return get_template(self.dv.table_template).render(self.get_context())
 
     def as_rows(self):
-        return get_template(self.dv.rows_template).render({'dv': self})
+        return get_template(self.dv.rows_template).render(self.get_context())
 
     def as_paginator(self):
-        return get_template(self.dv.paginator_template).render({'dv': self})
+        return get_template(self.dv.paginator_template).render(self.get_context())
 
     def as_widget(self):
-        return get_template(self.dv.widget_template).render({'dv': self}, request=self.request)
+        return get_template(self.dv.widget_template).render(self.get_context(), request=self.request)
+
+    def as_data_view(self):
+        return get_template(self.dv.data_view_template).render(self.get_context(), request=self.request)
 
     def __str__(self):
         return self.as_widget()
 
 
 class BaseObjectDataWidget(DataWidget):
+    filter_fields = ['project_id']
 
     def bind(self, queryset, request, output_type=None, project_id=None, **kwargs):
 
@@ -415,7 +428,7 @@ class BaseObjectDataWidget(DataWidget):
 
 class SampleDataWidget(BaseObjectDataWidget):
     fields = [
-        ModelLinkField(slug='slug', label='ID'),
+        ModelLinkField(slug='slug', label='ID', link='get_absolute_url'),
         ModelField(slug='name', label='Name'),
         ModelLinkField(
             slug='user', label='User',
@@ -429,7 +442,7 @@ class SampleDataWidget(BaseObjectDataWidget):
 
 class TermDataWidget(BaseObjectDataWidget):
     fields = [
-        ModelLinkField(slug='slug', label='ID'),
+        ModelLinkField(slug='slug', label='ID', link='get_absolute_url'),
         ModelField(slug='name', label='Name'),
         ModelField(slug='taxonomy', label='Taxonomy'),
         ModelLinkField(
@@ -443,7 +456,7 @@ class TermDataWidget(BaseObjectDataWidget):
 
 class AttachmentDataWidget(BaseObjectDataWidget):
     fields = [
-        ModelLinkField(slug='slug', label='ID'),
+        ModelLinkField(slug='slug', label='ID', link='get_absolute_url'),
         ModelField(slug='name', label='Name'),
         ModelLinkField(
             slug='user', label='User',
@@ -459,7 +472,7 @@ class AttachmentDataWidget(BaseObjectDataWidget):
 
 class ProjectDataWidget(DataWidget):
     fields = [
-        ModelLinkField(slug='slug', label='ID'),
+        ModelLinkField(slug='slug', label='ID', link='get_absolute_url'),
         ModelField(slug='name', label='Name'),
         ModelLinkField(
             slug='user', label='User',

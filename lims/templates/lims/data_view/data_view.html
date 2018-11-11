@@ -1,0 +1,20 @@
+{% extends "lims/base.html" %}
+
+{% block title %}{{ dv.name }}{% endblock %}
+
+{% block content_title %}Attachment: {{ dv.name }}{% endblock %}
+
+{% block breadcrumbs %}
+    &rsaquo; Data Views
+    &rsaquo; <a href="{{ dv.url }}">{{ dv.name }}</a>
+{% endblock %}
+
+{% block content_main %}
+    {{ dv }}
+{% endblock %}
+
+{% block scripts %}
+    {{ block.super }}
+    {% load static %}
+    <script src="{% static 'lims/js/data_view.js' %}"></script>
+{% endblock %}

@@ -61,8 +61,8 @@ urlpatterns = [
 
     # data views
     url(
-        r'^(?P<model>[A-Za-z])/data-view/(?P<data_widget>[A-Za-z0-9_-]+)/' + \
-        r'(?P<output_type>[A-Za-z0-9_-])/(?P<scope>[A-Za-z0-9_-]+)$',
+        r'^(?P<model>[A-Za-z]+)/data-view/(?P<data_widget>[A-Za-z0-9_-]+)/' + \
+        r'(?P<output_type>[A-Za-z0-9_-]+)/(?P<scope>[A-Za-z0-9_-]+)$',
         views.DataWidgetView.as_view(),
         name="data_view"
     ),

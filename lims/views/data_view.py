@@ -1,6 +1,7 @@
 
 import re
 
+from django.shortcuts import get_object_or_404
 from django.views import generic
 from django.http import HttpResponse, HttpResponseForbidden, Http404
 
@@ -61,12 +62,26 @@ class DataWidgetView(generic.View):
     def data_widget(self, data_widget, **kwargs):
         if data_widget is None or data_widget not in _data_widgets:
             raise Http404("Cannot find data widget '%s'" % data_widget)
+        kwargs.update({'name': data_widget})
         return _data_widgets[data_widget](**kwargs)
 
     def bound_data_widget(self, request, model, data_widget, output_type='html', **kwargs):
-        return self.data_widget(data_widget).bind(
-            request,
+        dw = self.data_widget(data_widget)
+        project_id = kwargs.pop('project_id') if 'project_id' in kwargs else \
+            request.GET.get(dw.name + '_project_id', None)
+
+        context = kwargs.pop('context', {})
+        if 'view' not in context:
+            context['view'] = self
+
+        if project_id is not None and 'project' not in context:
+            context['project'] = get_object_or_404(models.Project, pk=project_id)
+
+        return dw.bind(
             self.get_queryset(model),
+            request,
             output_type,
+            project_id=project_id,
+            context=context,
             **kwargs
         )
