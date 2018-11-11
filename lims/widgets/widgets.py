@@ -1,7 +1,6 @@
 
 import django.forms as django_forms
 from django.urls import reverse_lazy
-from django.utils.html import format_html
 
 from django_select2.forms import HeavySelect2Widget
 
@@ -111,24 +110,24 @@ class LimsSelect2(HeavySelect2Widget):
         super().__init__(attrs=attrs, **defaults)
 
     def get_url(self):
-        return reverse_lazy('lims:ajax_select2', kwargs={'model_name': self.model_name})
+        return reverse_lazy('lims:ajax_select2', kwargs={'model': self.model_name})
 
 
 # ------------- Register output widgets --------------------
 
 
 class OutputWidget(metaclass=django_forms.MediaDefiningClass):
-    def render(self, instance, context=None):
+    def render(self, instance, output_type=None):
         raise NotImplementedError()
 
 
 @register_output_widget
 class EmptyOutput(OutputWidget):
-    def render(self, instance, context=None):
-        return None
+    def render(self, instance, output_type=None):
+        return ''
 
 
 @register_output_widget
 class IdentityOutput(OutputWidget):
-    def render(self, instance, context=None):
+    def render(self, instance, output_type=None):
         return instance if instance else ''

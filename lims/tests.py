@@ -818,8 +818,8 @@ class AjaxWidgetTestCase(TestCase):
         qd = QueryDict()
         qd = qd.copy()
         qd.update(**kwargs)
-        self.client.get('/lims/ajax/select2/Sample')
-        return self.client.get('/lims/ajax/select2/%s/?%s' % (model, qd.urlencode()))
+        self.client.get('/lims/Sample/select2/')
+        return self.client.get('/lims/%s/select2/?%s' % (model, qd.urlencode()))
 
     def test_authentication(self):
 
@@ -834,7 +834,7 @@ class AjaxWidgetTestCase(TestCase):
     def test_widget_endpoints(self):
         self.client.force_login(self.user)
 
-        from . import widgets
+        from .widgets import widgets
 
         widget_items = {model: widgets.LimsSelect2(model) for model in self.models}
         for model, w in widget_items.items():

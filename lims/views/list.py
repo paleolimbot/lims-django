@@ -25,7 +25,7 @@ class LimsListView(generic.TemplateView):
             context['dv'] = dv.bind(
                 self.get_queryset(),
                 self.request,
-                project=context['project'] if 'project' in context else None
+                project_id=context['project'].pk if 'project' in context else None
             )
         return context
 

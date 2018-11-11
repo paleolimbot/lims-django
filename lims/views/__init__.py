@@ -5,6 +5,7 @@ from .edit import *
 from .list import *
 from .detail import *
 from .ajax import *
+from .data_view import *
 
 from django.views import generic
 

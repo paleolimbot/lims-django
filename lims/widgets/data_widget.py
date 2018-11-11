@@ -85,29 +85,29 @@ class DataWidgetField:
         else:
             return queryset.order_by(*previous_sort, '-' + str(self.target))
 
-    def get_values_iter(self, queryset, context=None):
+    def get_values_iter(self, queryset, output_type=None):
         target = self.target
         try:
             # TODO: this currently fails every time, because what's getting passed in is a page,
             # not a queryset
             value_qs = queryset.values_list(target, flat=True)
             for obj, value in zip(queryset, value_qs):
-                yield self.bind(obj, value, context=context)
+                yield self.bind(obj, value, output_type=output_type)
         except (FieldError, AttributeError):
             for obj in queryset:
                 try:
-                    yield self.bind(obj, _get_value(obj, target), context=context)
+                    yield self.bind(obj, _get_value(obj, target), output_type=output_type)
                 except Exception as e:
-                    yield self.bind(obj, None, context=context)
+                    yield self.bind(obj, None, output_type=output_type)
 
-    def bind(self, obj, value, context=None):
+    def bind(self, obj, value, output_type=None):
         return {
             'object': obj,
             'slug': self.slug,
             'target': self.target,
             'label': self.label,
             'value': value,
-            'output': self.output_widget.render(value, context=context)
+            'output': self.output_widget.render(value, output_type=output_type)
         }
 
 
@@ -129,8 +129,8 @@ class ModelLinkField(ModelField):
         self.link = kwargs.pop('link', 'get_absolute_url')
         super().__init__(slug, **kwargs)
 
-    def bind(self, obj, value, context=None):
-        vals = super().bind(obj, value, context=None)
+    def bind(self, obj, value, output_type=None):
+        vals = super().bind(obj, value, output_type=None)
         output = vals['output']
         if output:
             vals['output'] = format_html('<a href="{}">{}</a>', _get_value(obj, self.link), output)
@@ -189,22 +189,22 @@ class TermField(DataWidgetField):
                 '-' + dummy_name
             )
 
-    def get_values_iter(self, queryset, context=None):
+    def get_values_iter(self, queryset, output_type=None):
         prefetch_related_objects(queryset, 'tags')
         for obj in queryset:
             tags = obj.tags.filter(key=self.term)
             # TODO: support multiple tags
             tag = tags[0] if tags else None
-            yield self.bind(obj, tag, context=context)
+            yield self.bind(obj, tag, output_type=output_type)
 
-    def bind(self, obj, value, context=None):
+    def bind(self, obj, value, output_type=None):
         return {
             'object': obj,
             'slug': self.slug,
             'target': self.target,
             'label': self.label,
             'value': value,
-            'output': self.output_widget.render(value.value if value else None, context=context)
+            'output': self.output_widget.render(value.value if value else None, output_type=output_type)
         }
 
 
@@ -216,11 +216,13 @@ class DataWidget:
     rows_template = 'lims/data_view/rows.html'
     paginator_template = 'lims/data_view/paginator.html'
 
-    def __init__(self, *extra_fields, name='default', actions=(), default_limit=10, default_order=('-modified', )):
+    def __init__(self, *extra_fields, name='default', actions=(), default_limit=10, max_limit=1000,
+                 default_order=('-modified', )):
         self.name = str(name)
         self.actions = actions
         self.default_limit = default_limit
         self.default_order = default_order
+        self.max_limit = max_limit
 
         if hasattr(self, 'fields'):
             fields = list(self.fields)
@@ -233,7 +235,13 @@ class DataWidget:
         for field in fields:
             field.validate()
 
+        if hasattr(self, 'filter_fields'):
+            filter_fields = list(self.filter_fields)
+        else:
+            filter_fields = []
+
         self.fields = fields
+        self.filter_fields = filter_fields
 
     def get_field(self, slug):
         for field in self.fields:
@@ -261,7 +269,7 @@ class DataWidget:
 
     def _filter(self, queryset, query_dict=None, user=None):
         search = [f.target for f in self.fields if f.queryable]
-        use = ['%s__%s' % (f.target, q) for f in self.fields for q in f.queryable]
+        use = ['%s__%s' % (f.target, q) for f in self.fields for q in f.queryable] + list(self.filter_fields)
 
         return default_published_filter(
             filter_queryset_for_user(
@@ -283,7 +291,8 @@ class DataWidget:
             queryset,
             query_dict,
             default_limit=self.default_limit,
-            prefix=self.name + '_'
+            prefix=self.name + '_',
+            max_limit=self.max_limit
         )
 
     def _order(self, queryset, query_dict, user=None):
@@ -304,29 +313,30 @@ class DataWidget:
 
         return queryset
 
-    def columns(self, queryset, context=None):
+    def columns(self, queryset, output_type=None):
         for field in self.fields:
-            yield field.get_values_iter(queryset, context=context)
+            yield field.get_values_iter(queryset, output_type=output_type)
 
-    def rows(self, queryset, context=None):
-        for row in zip(*self.columns(queryset, context=context)):
+    def rows(self, queryset, output_type=None):
+        for row in zip(*self.columns(queryset, output_type=output_type)):
             yield tuple(row)
 
-    def bind(self, queryset, request, *args, **kwargs):
-        return BoundDataWidget(self, queryset, request, *args, **kwargs)
+    def bind(self, queryset, request, output_type=None, **kwargs):
+        return BoundDataWidget(self, queryset, request, output_type, **kwargs)
 
 
 class BoundDataWidget:
 
-    def __init__(self, dv, queryset, request, context=None, **kwargs):
-        self.kwargs = kwargs
+    def __init__(self, dv, queryset, request, output_type=None, url='', **kwargs):
         self.dv = dv
-        self.context = context
-        self.query_dict = request.GET
+        self.output_type = output_type
+        self.query_dict = request.GET.copy()
+        for key, value in kwargs.items():
+            self.query_dict[dv.name + '_' + key] = value
         self.model = queryset.model
         self.model_name = self.model.__name__
         self.request = request
-        self.url = ''  # may be able to get this off of the request
+        self.url = url
         self.page = dv.prepare_queryset(queryset, self.query_dict, self.request.user)
 
         self.name = dv.name
@@ -363,10 +373,10 @@ class BoundDataWidget:
                 yield field.label
 
     def rows(self):
-        return self.dv.rows(self.page, context=self.context)
+        return self.dv.rows(self.page, output_type=self.output_type)
 
     def columns(self):
-        return self.dv.columns(self.page, context=self.context)
+        return self.dv.columns(self.page, output_type=self.output_type)
 
     def as_table(self):
         return get_template(self.dv.table_template).render({'dv': self})
@@ -386,25 +396,21 @@ class BoundDataWidget:
 
 class BaseObjectDataWidget(DataWidget):
 
-    def bind(self, queryset, request, *args, **kwargs):
-        view_project = kwargs.pop('project', None)
+    def bind(self, queryset, request, output_type=None, project_id=None, **kwargs):
 
-        # need to assign project context
-        if view_project is not None:
-            queryset = queryset.filter(project=view_project)
+        # need to assign project context to link fields
+        if project_id is not None:
             for field in self.fields:
                 if field.target == 'user':
                     field.link = lambda obj: reverse_lazy(
                         'lims:project_user_detail',
-                        kwargs={'project_id': view_project.pk, 'pk': obj.user.pk}
+                        kwargs={'project_id': project_id, 'pk': obj.user.pk}
                     )
         else:
             # add a project field
-            self.fields = self.fields + [
-                ModelLinkField(slug='project', label='Project')
-            ]
+            self.fields = self.fields + [ModelLinkField(slug='project', label='Project'), ]
 
-        return super().bind(queryset, request, *args, **kwargs)
+        return super().bind(queryset, request, output_type, project_id=project_id, **kwargs)
 
 
 class SampleDataWidget(BaseObjectDataWidget):
@@ -476,20 +482,19 @@ class TagDataWidget(DataWidget):
         ModelField(slug='modified', label='Modified')
     ]
 
-    def bind(self, queryset, request, *args, **kwargs):
-        view_project = kwargs.pop('project', None)
+    def bind(self, queryset, request, output_type=None, project_id=None, **kwargs):
 
         # need to assign project context
-        # not filtering because this is not consistent between tag types
-        if view_project is not None:
+        if project_id is not None:
             for field in self.fields:
                 if field.target == 'user':
                     field.link = lambda obj: reverse_lazy(
                         'lims:project_user_detail',
-                        kwargs={'project_id': view_project.pk, 'pk': obj.user.pk}
+                        kwargs={'project_id': project_id, 'pk': obj.user.pk}
                     )
 
-        return super().bind(queryset, request, *args, **kwargs)
+        # not passing along project information to the super
+        return super().bind(queryset, request, output_type, **kwargs)
 
 
 def get_widget_class(model):
