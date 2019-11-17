@@ -11,8 +11,8 @@ from django.template.loader import get_template
 
 from . import widgets
 
-_RE_TARGET = re.compile('^[A-Za-z0-9_]*$')
-_RE_TARGET_FIRST = re.compile(r'^([A-Za-z0-9_]+)__(.*)')
+_RE_TARGET = re.compile('^[A-Za-z0-9_-]*$')
+_RE_TARGET_FIRST = re.compile(r'^([A-Za-z0-9_-]+)__(.*)')
 
 
 class IsNull(Func):
@@ -627,7 +627,14 @@ def query_string_filter(queryset, query_dict, use=(), search=(), search_func="ic
         prefix_re = re.compile('^' + prefix)
         for key in query_dict:
             if prefix_re.match(key):
-                q.setlist(prefix_re.sub('', key), query_dict.getlist(key))
+                # make sure key is actually queryable
+                field_key = prefix_re.sub('', key)
+                try:
+                    queryset.model._meta.get_field(field_key)
+                except Exception:
+                    continue
+
+                q.setlist(field_key, query_dict.getlist(key))
     else:
         q = query_dict.copy()
 

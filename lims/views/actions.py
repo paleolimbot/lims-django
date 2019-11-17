@@ -296,6 +296,11 @@ class SampleBulkEditView(SampleBulkAddView, ActionListView):
     def get_extra_forms(self):
         return 0
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["project"] = self.get_project()
+        return kwargs
+
 
 SAMPLE_ACTIONS = [
     {'value': 'delete', 'label': 'Delete samples', 'view': SampleDeleteView},

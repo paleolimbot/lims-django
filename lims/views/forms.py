@@ -142,7 +142,7 @@ class BaseObjectModelForm(ModelForm):
             # add the field
             field_id = 'tag_form_field_' + term.slug
             self.tag_field_names[term] = field_id
-            self.fields[field_id] = term.form_field
+            self.fields[field_id] = term.field
             initial_val = self.instance.get_tag(term)
             if initial_val:
                 self.initial[field_id] = initial_val
