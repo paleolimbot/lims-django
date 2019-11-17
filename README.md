@@ -13,4 +13,5 @@ pip install django django-reversion django-select2 qrcode
 python3 manage.py migrate
 python3 manage.py createsuperuser
 python3 manage.py shell --command="from lims.tests import populate_test_data; populate_test_data()"
+python3 manage.py runserver
 ```
