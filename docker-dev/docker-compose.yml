@@ -1,0 +1,11 @@
+version: '2'
+services:
+  lims:
+    build: .
+    entrypoint: python manage.py
+    command: runserver 0.0.0.0:8000
+    volumes:
+      - ..:/app
+    ports:
+      - '8000:8000'
+
